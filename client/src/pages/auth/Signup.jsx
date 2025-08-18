@@ -63,6 +63,7 @@ const Signup = () => {
     gender: { valid: true, message: "" },
   });
 
+  // Network status effect
   useEffect(() => {
     const handleOnline = () => setUi((u) => ({ ...u, isOnline: true }));
     const handleOffline = () => setUi((u) => ({ ...u, isOnline: false }));
@@ -78,6 +79,7 @@ const Signup = () => {
     };
   }, []);
 
+  // Caps lock detection effect
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (
@@ -108,7 +110,7 @@ const Signup = () => {
     [ui.signupError]
   );
 
-  const calculatePasswordStrength = useCallback((password) => {
+  const calculatePasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength++;
     if (/[a-z]/.test(password)) strength++;
@@ -116,7 +118,7 @@ const Signup = () => {
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
     return strength;
-  }, []);
+  };
 
   const validateField = useCallback(
     (field, value) => {
@@ -201,28 +203,37 @@ const Signup = () => {
         setUi((u) => ({ ...u, passwordStrength: strength }));
       }
     },
-    [formData.password, formData.role, calculatePasswordStrength]
+    [formData.password, formData.role]
   );
 
+  // Optimized validation effect
   useEffect(() => {
-    Object.keys(formData).forEach((field) => {
-      if (
-        [
-          "firstName",
-          "lastName",
-          "email",
-          "password",
-          "confirmPassword",
-          "role",
-        ].includes(field)
-      ) {
+    const fieldsToValidate = [
+      "firstName",
+      "lastName",
+      "email",
+      "password",
+      "confirmPassword",
+      "role",
+    ].filter(field => formData[field] !== initialForm[field]);
+
+    if (fieldsToValidate.length > 0) {
+      fieldsToValidate.forEach((field) => {
         validateField(field, formData[field]);
-      }
-    });
-  }, [formData, validateField]);
+      });
+    }
+  }, [
+    formData.firstName,
+    formData.lastName,
+    formData.email,
+    formData.password,
+    formData.confirmPassword,
+    formData.role,
+    validateField
+  ]);
 
   const isFormFullyValid = useCallback(() => {
-    const isValid =
+    return (
       validation.firstName.valid &&
       (formData.lastName === "" || validation.lastName.valid) &&
       validation.email.valid &&
@@ -231,12 +242,21 @@ const Signup = () => {
       validation.role.valid &&
       (formData.role !== "teacher" || validation.gender.valid) &&
       formData.acceptTerms &&
-      ui.isOnline;
-    return isValid;
+      ui.isOnline
+    );
   }, [validation, formData, ui.isOnline]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!isFormFullyValid()) {
+      setUi(prev => ({
+        ...prev,
+        signupError: "Please complete all required fields correctly."
+      }));
+      return;
+    }
+
     setUi((prev) => ({ ...prev, isSubmitting: true }));
 
     try {
@@ -248,16 +268,12 @@ const Signup = () => {
         body: JSON.stringify(formData),
       });
 
-      if (!response) {
-        throw new Error("No response from server");
-      }
-
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
       if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Registration failed");
       }
+
+      const data = await response.json();
 
       if (data.token) {
         setToLocalStorage("token", data.token);
@@ -266,14 +282,15 @@ const Signup = () => {
         setToLocalStorage("currentUser", data.user);
       }
 
-      // Redirect to profile setup page based on role
-      if (formData.role === "student") {
-        navigate("/student/profile-setup");
-      } else if (formData.role === "teacher") {
-        navigate("/teacher/profile-setup");
-      } else {
-        navigate("/login");
-      }
+      // Ensure state updates complete before navigation
+      setTimeout(() => {
+        if (formData.role === "student") {
+          navigate("/student/profile-setup");
+        } else if (formData.role === "teacher") {
+          navigate("/teacher/profile-setup");
+        }
+      }, 100);
+
     } catch (error) {
       console.error("Signup submission error:", error);
       setUi((prev) => ({

@@ -5,7 +5,6 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import mongoose from 'mongoose';
 
 export const bookingController = {
-  // Get all bookings for a teacher
   getTeacherBookings: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const teacherId = req.user?.id;
@@ -16,7 +15,6 @@ export const bookingController = {
       const { status, page = 1, limit = 10, search, dateFilter } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
-      // Build query
       const query: any = { 'teacher.id': teacherId };
 
       if (status && status !== 'all') {
@@ -50,7 +48,6 @@ export const bookingController = {
         }
       }
 
-      // Get bookings with pagination
       const bookings = await Booking.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -58,7 +55,6 @@ export const bookingController = {
 
       const total = await Booking.countDocuments(query);
 
-      // Get statistics
       const stats = {
         total: await Booking.countDocuments({ 'teacher.id': teacherId }),
         pending: await Booking.countDocuments({ 'teacher.id': teacherId, status: 'pending' }),
@@ -82,7 +78,6 @@ export const bookingController = {
     }
   },
 
-  // Get all bookings for a student
   getStudentBookings: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const studentId = req.user?.id;
@@ -119,34 +114,49 @@ export const bookingController = {
     }
   },
 
-  // Create a new booking
   createBooking: async (req: AuthenticatedRequest, res: Response) => {
     try {
+      console.log('Incoming booking request:', {
+        body: req.body,
+        headers: req.headers,
+        user: req.user
+      });
       const studentId = req.user?.id;
       if (!studentId) {
+        console.log('Booking failed: Unauthorized');
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const { teacherId, subject, date, time, duration, notes } = req.body;
+      // Support both legacy (time/duration) and new (slots) booking
+      let { teacherId, subject, date, time, duration, notes, slots } = req.body;
 
-      // Validate required fields
+      // If slots is provided (multi-slot booking)
+      if (Array.isArray(slots) && slots.length > 0) {
+        // Assume slot format is "HH:mm - HH:mm" or "HH:mm"
+        // Use the first slot's start as time, duration = slots.length
+        const firstSlot = slots[0];
+        // Extract start time (before ' - ' if present)
+        time = typeof firstSlot === 'string' ? firstSlot.split(' - ')[0] : firstSlot;
+        duration = slots.length;
+      }
+
       if (!teacherId || !subject || !date || !time || !duration) {
+        console.log('Booking failed: Missing required fields', req.body);
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
-      // Get teacher details
       const teacher = await UserModel.findById(teacherId);
       if (!teacher || teacher.role !== 'teacher') {
+        console.log('Booking failed: Teacher not found', teacherId);
         return res.status(404).json({ message: 'Teacher not found' });
       }
 
-      // Get student details
       const student = await UserModel.findById(studentId);
       if (!student || student.role !== 'student') {
+        console.log('Booking failed: Student not found', studentId);
         return res.status(404).json({ message: 'Student not found' });
       }
 
-      // Check for booking conflicts - manual implementation for now
       const existingBookings = await Booking.find({
         'teacher.id': teacherId,
         date: {
@@ -166,20 +176,19 @@ export const bookingController = {
       });
 
       if (hasConflict) {
+        console.log('Booking failed: Conflict detected');
         return res.status(409).json({ message: 'Teacher is not available at the selected time' });
       }
 
-      // Calculate amount based on teacher's hourly rate
       const hourlyRate = teacher.teacherProfile?.hourlyRate || 800;
       const amount = hourlyRate * duration;
 
-      // Create booking
       const booking = new Booking({
         student: {
           id: studentId,
           name: `${student.firstName} ${student.lastName}`,
           email: student.email,
-          phone: 'N/A' // Phone not available in student profile
+          phone: student.studentProfile?.phone || 'N/A'
         },
         teacher: {
           id: teacherId,
@@ -190,24 +199,51 @@ export const bookingController = {
         date: new Date(date),
         time,
         duration,
+        slots: Array.isArray(slots) && slots.length > 0 ? slots : undefined,
         amount,
         notes: notes || '',
         status: 'pending'
       });
 
       await booking.save();
+      console.log('Booking created successfully:', booking._id);
 
       res.status(201).json({
         message: 'Booking created successfully',
-        booking
+        booking: {
+          id: booking._id,
+          status: booking.status,
+          student: booking.student,
+          teacher: booking.teacher,
+          subject: booking.subject,
+          date: booking.date,
+          time: booking.time,
+          duration: booking.duration,
+          slots: booking.slots,
+          amount: booking.amount,
+          notes: booking.notes
+        }
       });
     } catch (error) {
       console.error('Error creating booking:', error);
-      res.status(500).json({ message: 'Error creating booking' });
+      if (error instanceof Error) {
+        // Log stack and error details
+        console.error('Error stack:', error.stack);
+        if ((error as any).errors) {
+          // Mongoose validation errors
+          for (const [field, err] of Object.entries((error as any).errors)) {
+            console.error(`Validation error for ${field}:`, (err as any).message);
+          }
+        }
+        res.status(500).json({ message: 'Error creating booking', error: error.message, stack: error.stack, details: (error as any).errors });
+      } else if (typeof error === 'string') {
+        res.status(500).json({ message: 'Error creating booking', error });
+      } else {
+        res.status(500).json({ message: 'Error creating booking', error: 'Unknown error' });
+      }
     }
   },
 
-  // Update booking status
   updateBookingStatus: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { bookingId } = req.params;
@@ -223,7 +259,6 @@ export const bookingController = {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
-      // Check if user is authorized to update this booking
       const isTeacher = booking.teacher.id.toString() === userId;
       const isStudent = booking.student.id.toString() === userId;
 
@@ -231,7 +266,6 @@ export const bookingController = {
         return res.status(403).json({ message: 'Unauthorized to update this booking' });
       }
 
-      // Validate status transitions
       const validTransitions: { [key: string]: string[] } = {
         pending: ['confirmed', 'cancelled'],
         confirmed: ['completed', 'cancelled', 'rescheduled'],
@@ -246,7 +280,6 @@ export const bookingController = {
         });
       }
 
-      // Update booking
       booking.status = status;
 
       if (status === 'cancelled') {
@@ -270,7 +303,6 @@ export const bookingController = {
     }
   },
 
-  // Reschedule booking
   rescheduleBooking: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { bookingId } = req.params;
@@ -286,7 +318,6 @@ export const bookingController = {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
-      // Check if user is authorized to reschedule
       const isTeacher = booking.teacher.id.toString() === userId;
       const isStudent = booking.student.id.toString() === userId;
 
@@ -294,12 +325,10 @@ export const bookingController = {
         return res.status(403).json({ message: 'Unauthorized to reschedule this booking' });
       }
 
-      // Check if booking can be rescheduled
       if (!['pending', 'confirmed'].includes(booking.status)) {
         return res.status(400).json({ message: 'Booking cannot be rescheduled' });
       }
 
-      // Check for conflicts - manual implementation
       const existingBookings = await Booking.find({
         'teacher.id': booking.teacher.id,
         date: {
@@ -323,13 +352,11 @@ export const bookingController = {
         return res.status(409).json({ message: 'Teacher is not available at the selected time' });
       }
 
-      // Store original date/time
       booking.rescheduledFrom = {
         date: booking.date,
         time: booking.time
       };
 
-      // Update with new date/time
       booking.date = new Date(date);
       booking.time = time;
       booking.status = 'rescheduled';
@@ -346,7 +373,6 @@ export const bookingController = {
     }
   },
 
-  // Get booking details
   getBookingDetails: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { bookingId } = req.params;
@@ -361,7 +387,6 @@ export const bookingController = {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
-      // Check if user is authorized to view this booking
       const isTeacher = booking.teacher.id.toString() === userId;
       const isStudent = booking.student.id.toString() === userId;
 
@@ -376,7 +401,6 @@ export const bookingController = {
     }
   },
 
-  // Get teacher availability
   getTeacherAvailability: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { teacherId } = req.params;
@@ -386,7 +410,6 @@ export const bookingController = {
         return res.status(400).json({ message: 'Date is required' });
       }
 
-      // Get all confirmed and pending bookings for the teacher on the specified date
       const bookings = await Booking.find({
         'teacher.id': teacherId,
         date: {
@@ -396,17 +419,15 @@ export const bookingController = {
         status: { $in: ['pending', 'confirmed'] }
       });
 
-      // Default available hours (9 AM to 9 PM)
       const availableSlots = [];
       for (let hour = 9; hour < 21; hour++) {
         const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
         
-        // Check if this slot conflicts with any booking
         const hasConflict = bookings.some(booking => {
           const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.time}:00`);
           const bookingEnd = new Date(bookingStart.getTime() + booking.duration * 60 * 60 * 1000);
           const slotStart = new Date(`${booking.date.toISOString().split('T')[0]}T${timeSlot}:00`);
-          const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000); // 1-hour slot
+          const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
           
           return slotStart < bookingEnd && slotEnd > bookingStart;
         });

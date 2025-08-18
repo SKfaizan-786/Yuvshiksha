@@ -1,10 +1,14 @@
 // API service for booking operations
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// Get auth token from localStorage
+// Get auth token from localStorage and remove extra quotes if present
 const getAuthToken = () => {
-  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  return user.token;
+  let token = localStorage.getItem('token');
+  if (token && token.startsWith('"') && token.endsWith('"')) {
+    token = token.slice(1, -1);
+  }
+  console.log('[bookingAPI] Using token:', token);
+  return token;
 };
 
 // Create API headers
@@ -50,18 +54,21 @@ export const bookingAPI = {
 
   // Create new booking
   createBooking: async (bookingData) => {
-    const response = await fetch(`${API_BASE_URL}/bookings`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(bookingData)
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error creating booking');
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(bookingData)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Error creating booking');
+      }
+      return data;
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
     }
-    
-    return response.json();
   },
 
   // Update booking status
@@ -112,15 +119,13 @@ export const bookingAPI = {
 
   // Get teacher availability
   getTeacherAvailability: async (teacherId, date) => {
-    const response = await fetch(`${API_BASE_URL}/bookings/teacher/${teacherId}/availability?date=${date}`, {
+    const response = await fetch(`${API_BASE_URL}/teachers/${teacherId}/availability?date=${date}`, {
       method: 'GET',
       headers: getHeaders()
     });
-    
     if (!response.ok) {
       throw new Error(`Error fetching availability: ${response.statusText}`);
     }
-    
-    return response.json();
+    return await response.json();
   }
 };

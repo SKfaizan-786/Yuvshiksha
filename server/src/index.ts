@@ -1,6 +1,6 @@
+import dotenv from 'dotenv';
 import express, { Application } from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -10,10 +10,9 @@ import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
+import paymentRoutes from './routes/payments';
 
-// Initialize passport configuration
-// Change this line to the new file name
-import './passport-config'; // ✅ CORRECT IMPORT
+import './passport-config';
 
 dotenv.config();
 
@@ -21,7 +20,7 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true,
@@ -42,8 +41,8 @@ app.use(session({
 }));
 
 // Passport
-app.use(passport.initialize()); // This will now correctly use the npm package
-app.use(passport.session()); // This will now correctly use the npm package
+app.use(passport.initialize());
+app.use(passport.session());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
@@ -59,29 +58,33 @@ mongoose.connection.on('error', (err) => {
 });
 
 console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
+console.log('CASHFREE_APP_ID:', process.env.CASHFREE_APP_ID);
+console.log('CASHFREE_SECRET_KEY:', process.env.CASHFREE_SECRET_KEY ? '***' : 'MISSING');
 
-// Routes
-// Debug logging middleware (TEMPORARY)
+// Debug logging middleware - MOVED to a higher level
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   console.log('Headers:', req.headers);
   if (req.body) console.log('Body:', req.body);
   next();
 });
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
   res.send('🚀 API is running...');
 });
 
-// ✅ Test DB Connection Route with TypeScript-safe check
+// Test DB Connection Route with TypeScript-safe check
 app.get('/test-db-connection', async (_req, res) => {
   try {
-    await mongoose.connection.asPromise(); // ensures the connection is ready
+    await mongoose.connection.asPromise();
     const db = mongoose.connection.db;
 
     if (!db) {

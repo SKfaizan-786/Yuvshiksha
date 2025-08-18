@@ -6,7 +6,10 @@ import {
   Save,
   Home,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Clock,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 
@@ -21,15 +24,16 @@ const TeacherProfileEdit = () => {
     bio: '',
     qualifications: '',
     experienceYears: '',
-    currentOccupation: '', // Added missing field
+    currentOccupation: '',
     subjects: [],
     boards: [],
     classes: [],
     teachingMode: '',
-    preferredSchedule: '', // Added missing field
-    teachingApproach: '', // Added missing field
+    preferredSchedule: '',
+    teachingApproach: '',
     hourlyRate: '',
-    photoUrl: ''
+    photoUrl: '',
+    availability: []
   });
   const [photoPreview, setPhotoPreview] = useState('');
   const fileInputRef = useRef(null);
@@ -37,6 +41,16 @@ const TeacherProfileEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
+  // State for new availability slot
+  const [newSlot, setNewSlot] = useState({
+    day: '',
+    startTime: '',
+    endTime: ''
+  });
+
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Main useEffect to initialize user and form data
   useEffect(() => {
     const user = getFromLocalStorage('currentUser');
     if (!user || user.role !== 'teacher') {
@@ -62,11 +76,23 @@ const TeacherProfileEdit = () => {
       preferredSchedule: teacherData.preferredSchedule || '',
       teachingApproach: teacherData.teachingApproach || '',
       hourlyRate: teacherData.hourlyRate || '',
-      photoUrl: teacherData.photoUrl || ''
+      photoUrl: teacherData.photoUrl || '',
+      availability: teacherData.availability || []
     });
     setPhotoPreview(teacherData.photoUrl || '');
     setLoading(false);
   }, [navigate]);
+
+  // Additional useEffect to properly initialize availability
+  useEffect(() => {
+    const user = getFromLocalStorage('currentUser');
+    if (user?.teacherProfile?.availability) {
+      setFormData(prev => ({
+        ...prev,
+        availability: user.teacherProfile.availability
+      }));
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -83,6 +109,52 @@ const TeacherProfileEdit = () => {
     }
   };
 
+  const handleSlotChange = (e) => {
+    const { name, value } = e.target;
+    setNewSlot(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addAvailabilitySlot = () => {
+    if (newSlot.day && newSlot.startTime && newSlot.endTime) {
+      if (newSlot.startTime >= newSlot.endTime) {
+        setMessage({ text: 'End time must be after start time', type: 'error' });
+        return;
+      }
+
+      // Check for overlapping slots
+      const hasOverlap = formData.availability.some(slot => 
+        slot.day === newSlot.day && 
+        (
+          (newSlot.startTime >= slot.startTime && newSlot.startTime < slot.endTime) ||
+          (newSlot.endTime > slot.startTime && newSlot.endTime <= slot.endTime) ||
+          (newSlot.startTime <= slot.startTime && newSlot.endTime >= slot.endTime)
+        )
+      );
+
+      if (hasOverlap) {
+        setMessage({ text: 'This time slot overlaps with an existing slot', type: 'error' });
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        availability: [...prev.availability, newSlot]
+      }));
+      setNewSlot({ day: '', startTime: '', endTime: '' });
+      setMessage({ text: '', type: '' }); // Clear any previous error messages
+    } else {
+      setMessage({ text: 'Please fill all slot fields', type: 'error' });
+    }
+  };
+
+  const removeAvailabilitySlot = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      availability: prev.availability.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Updated handleSubmit to properly handle availability
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -90,7 +162,6 @@ const TeacherProfileEdit = () => {
 
     try {
       // Prepare the data for the API
-      // Helper to map comma-separated string to array of {id, text}
       const mapToObjArray = (str) => str.split(',').map((s, idx) => {
         const text = s.trim();
         return text ? { id: idx + 1, text } : null;
@@ -101,9 +172,9 @@ const TeacherProfileEdit = () => {
         subjects: mapToObjArray(formData.subjects),
         boards: mapToObjArray(formData.boards),
         classes: mapToObjArray(formData.classes),
-        achievements: formData.achievements ? mapToObjArray(formData.achievements) : undefined,
         experience: formData.experienceYears,
-        photoUrl: formData.photoUrl || ''
+        photoUrl: formData.photoUrl || '',
+        availability: formData.availability
       };
 
       // Get token
@@ -128,18 +199,28 @@ const TeacherProfileEdit = () => {
       }
 
       const result = await response.json();
-      // Update localStorage with new user data
+      
+      // Update local storage with the new data
       const updatedUser = {
         ...currentUser,
         ...result.user,
-        teacherProfile: result.user.teacherProfile,
-        teacherProfileData: result.user.teacherProfile
+        teacherProfile: {
+          ...currentUser.teacherProfile,
+          ...result.user.teacherProfile,
+          availability: result.user.teacherProfile.availability || []
+        },
+        teacherProfileData: {
+          ...currentUser.teacherProfileData,
+          ...result.user.teacherProfile,
+          availability: result.user.teacherProfile.availability || []
+        }
       };
+      
       setToLocalStorage('currentUser', updatedUser);
       setCurrentUser(updatedUser);
 
       setMessage({ text: 'Profile updated successfully!', type: 'success' });
-      setTimeout(() => navigate('/teacher/profile'), 2000);
+      setTimeout(() => navigate('/teacher/profile'), 1500);
     } catch (error) {
       setMessage({ text: error.message || 'Failed to save profile. Please try again.', type: 'error' });
     } finally {
@@ -255,7 +336,7 @@ const TeacherProfileEdit = () => {
                       ></textarea>
                     </div>
                     
-                    {/* Profile Image Upload - Moved after Bio */}
+                    {/* Profile Image Upload */}
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">Profile Image</label>
                       <div className="flex items-center gap-4">
@@ -371,28 +452,6 @@ const TeacherProfileEdit = () => {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="preferredSchedule" className="block text-sm font-semibold text-slate-700 mb-1">Preferred Schedule</label>
-                      <input
-                        type="text"
-                        name="preferredSchedule"
-                        id="preferredSchedule"
-                        value={formData.preferredSchedule}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="teachingApproach" className="block text-sm font-semibold text-slate-700 mb-1">Teaching Approach</label>
-                      <textarea
-                        name="teachingApproach"
-                        id="teachingApproach"
-                        value={formData.teachingApproach}
-                        onChange={handleChange}
-                        rows="3"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      ></textarea>
-                    </div>
-                    <div>
                       <label htmlFor="hourlyRate" className="block text-sm font-semibold text-slate-700 mb-1">Hourly Rate (INR)</label>
                       <input
                         type="number"
@@ -402,6 +461,76 @@ const TeacherProfileEdit = () => {
                         onChange={handleChange}
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
+                    </div>
+
+                    {/* Availability Section */}
+                    <div className="pt-4">
+                      <h4 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                        <Clock className="w-5 h-5" /> Weekly Availability
+                      </h4>
+                      
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <select
+                            name="day"
+                            value={newSlot.day}
+                            onChange={handleSlotChange}
+                            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          >
+                            <option value="">Select day</option>
+                            {daysOfWeek.map(day => (
+                              <option key={day} value={day}>{day}</option>
+                            ))}
+                          </select>
+                          
+                          <input
+                            type="time"
+                            name="startTime"
+                            value={newSlot.startTime}
+                            onChange={handleSlotChange}
+                            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                          
+                          <input
+                            type="time"
+                            name="endTime"
+                            value={newSlot.endTime}
+                            onChange={handleSlotChange}
+                            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={addAvailabilitySlot}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Time Slot
+                        </button>
+                        
+                        {formData.availability.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <h5 className="text-sm font-medium text-slate-700">Current Availability:</h5>
+                            <div className="space-y-2">
+                              {formData.availability.map((slot, index) => (
+                                <div key={index} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                  <span className="font-medium">
+                                    {slot.day}: {slot.startTime} - {slot.endTime}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAvailabilitySlot(index)}
+                                    className="text-red-500 hover:text-red-700 p-1"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

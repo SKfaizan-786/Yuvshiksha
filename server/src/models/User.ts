@@ -24,7 +24,9 @@ export interface ITeachingAchievement {
 
 export interface IAvailability {
   day: string;
-  slots: string[];
+  startTime: string;
+  endTime: string;
+  slots?: string[];
 }
 
 export interface IStudentProfile {
@@ -100,7 +102,8 @@ const TeachingAchievementSchema = new Schema({
 
 const AvailabilitySchema = new Schema({
   day: String,
-  slots: [String]
+  startTime: String,
+  endTime: String
 });
 
 const TeacherProfileSchema = new Schema({

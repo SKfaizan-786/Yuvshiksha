@@ -1,11 +1,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Calendar, CalendarDays, Clock, User, BookOpen, DollarSign, Filter, 
+  Calendar, CalendarDays, Clock, User, BookOpen, DollarSign, Filter,
   Search, CheckCircle, XCircle, AlertCircle, Eye, MessageSquare,
   ChevronLeft, ChevronRight, Download, RefreshCw, Users, MapPin,
   Phone, Mail, GraduationCap, Loader2, Plus, Edit, Trash2
 } from 'lucide-react';
+
+// Import the date range picker components and styles
+import { DateRange } from 'react-date-range';
+import 'react-date-range/dist/styles.css'; // main style file
+import 'react-date-range/dist/theme/default.css'; // theme css file
 
 // Import storage utilities
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
@@ -14,7 +19,7 @@ import { bookingAPI } from '../../services/bookingAPI';
 // Booking status configurations
 const BOOKING_STATUS = {
   PENDING: 'pending',
-  CONFIRMED: 'confirmed', 
+  CONFIRMED: 'confirmed',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   RESCHEDULED: 'rescheduled'
@@ -22,52 +27,62 @@ const BOOKING_STATUS = {
 
 const STATUS_CONFIG = {
   [BOOKING_STATUS.PENDING]: {
-    color: 'bg-amber-500',
+    color: 'bg-amber-100',
     textColor: 'text-amber-800',
     bgColor: 'bg-amber-50',
     borderColor: 'border-amber-200',
+    dotColor: 'bg-amber-500',
     icon: AlertCircle
   },
   [BOOKING_STATUS.CONFIRMED]: {
-    color: 'bg-emerald-500',
-    textColor: 'text-emerald-800', 
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
+    color: 'bg-green-100',
+    textColor: 'text-green-800',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    dotColor: 'bg-green-500',
     icon: CheckCircle
   },
   [BOOKING_STATUS.COMPLETED]: {
-    color: 'bg-blue-500',
+    color: 'bg-blue-100',
     textColor: 'text-blue-800',
-    bgColor: 'bg-blue-50', 
+    bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
+    dotColor: 'bg-blue-500',
     icon: CheckCircle
   },
   [BOOKING_STATUS.CANCELLED]: {
-    color: 'bg-red-500',
+    color: 'bg-red-100',
     textColor: 'text-red-800',
     bgColor: 'bg-red-50',
-    borderColor: 'border-red-200', 
+    borderColor: 'border-red-200',
+    dotColor: 'bg-red-500',
     icon: XCircle
   },
   [BOOKING_STATUS.RESCHEDULED]: {
-    color: 'bg-purple-500',
+    color: 'bg-purple-100',
     textColor: 'text-purple-800',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
+    dotColor: 'bg-purple-500',
     icon: Calendar
   }
 };
 
 export default function TeacherBookings() {
   const navigate = useNavigate();
-  
+
   // State management
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [dateRange, setDateRange] = useState([{
+    startDate: null,
+    endDate: null,
+    key: 'selection'
+  }]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -90,7 +105,7 @@ export default function TeacherBookings() {
   const initializeBookings = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Get current user
       const user = getFromLocalStorage('currentUser');
       if (!user || user.role !== 'teacher') {
@@ -105,10 +120,10 @@ export default function TeacherBookings() {
           page: 1,
           limit: 100 // Get all bookings for now
         });
-        
+
         setBookings(response.bookings || []);
         updateStats(response.bookings || []);
-        
+
         // Update stats from API response if available
         if (response.stats) {
           setStats(response.stats);
@@ -119,7 +134,7 @@ export default function TeacherBookings() {
         setBookings([]);
         updateStats([]);
       }
-      
+
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
@@ -142,6 +157,7 @@ export default function TeacherBookings() {
   // Filter and search bookings
   useEffect(() => {
     let filtered = [...bookings];
+    const { startDate, endDate } = dateRange[0];
 
     // Apply search filter
     if (searchTerm) {
@@ -157,23 +173,17 @@ export default function TeacherBookings() {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
-    // Apply date filter
-    const now = new Date();
-    if (dateFilter !== 'all') {
+    // Apply date range filter
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
       filtered = filtered.filter(booking => {
         const bookingDate = new Date(booking.date);
-        switch (dateFilter) {
-          case 'today':
-            return bookingDate.toDateString() === now.toDateString();
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return bookingDate >= weekAgo && bookingDate <= now;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return bookingDate >= monthAgo && bookingDate <= now;
-          default:
-            return true;
-        }
+        return bookingDate >= startOfDay && bookingDate <= endOfDay;
       });
     }
 
@@ -182,28 +192,28 @@ export default function TeacherBookings() {
 
     setFilteredBookings(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [bookings, searchTerm, statusFilter, dateFilter]);
+  }, [bookings, searchTerm, statusFilter, dateRange]);
 
   // Handle booking status change
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
       // Update status via API
-      await bookingAPI.updateBookingStatus(bookingId, { 
+      await bookingAPI.updateBookingStatus(bookingId, {
         status: newStatus,
         meetingLink: newStatus === 'confirmed' ? 'https://meet.google.com/new' : undefined
       });
 
       // Update local state
       const updatedBookings = bookings.map(booking =>
-        (booking.id === bookingId || booking._id === bookingId) 
-          ? { ...booking, status: newStatus } 
+        (booking.id === bookingId || booking._id === bookingId)
+          ? { ...booking, status: newStatus }
           : booking
       );
       setBookings(updatedBookings);
       updateStats(updatedBookings);
-      
+
       console.log(`Booking ${bookingId} status updated to ${newStatus}`);
-      
+
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert(`Error updating booking status: ${error.message}`);
@@ -236,155 +246,167 @@ export default function TeacherBookings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="flex items-center space-x-3 text-purple-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <span className="text-xl font-medium">Loading bookings...</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          </div>
+          <p className="text-xl font-semibold text-gray-900 mt-6">Loading bookings...</p>
+          <p className="text-gray-600 text-sm mt-2">Please wait while we fetch your sessions</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400 flex items-center gap-3">
-              <Calendar className="w-10 h-10 text-purple-400" />
-              My Bookings
-            </h1>
-            <p className="text-gray-400 mt-2">Manage your student sessions and appointments</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-2">
+                <Calendar className="w-8 h-8 text-blue-600" />
+                My Bookings
+              </h1>
+              <p className="text-gray-600">Manage your student sessions and appointments</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => initializeBookings()}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2 shadow-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => initializeBookings()}
-              className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
-            <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+            <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+                <Users className="w-8 h-8 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Pending</p>
+                  <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+                </div>
+                <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Confirmed</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
+                </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Completed</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
+                </div>
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Cancelled</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+                </div>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
-          <div className="bg-gray-800/60 backdrop-blur-xl p-4 rounded-xl border border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total</p>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
+        {/* Filters and Search */}
+        <div className="mb-6">
+          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search students, subjects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors duration-200"
+                />
               </div>
-              <Users className="w-8 h-8 text-gray-400" />
-            </div>
-          </div>
-          
-          <div className="bg-amber-500/10 backdrop-blur-xl p-4 rounded-xl border border-amber-500/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-amber-400 text-sm">Pending</p>
-                <p className="text-2xl font-bold text-amber-300">{stats.pending}</p>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors duration-200 bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value={BOOKING_STATUS.PENDING}>Pending</option>
+                <option value={BOOKING_STATUS.CONFIRMED}>Confirmed</option>
+                <option value={BOOKING_STATUS.COMPLETED}>Completed</option>
+                <option value={BOOKING_STATUS.CANCELLED}>Cancelled</option>
+              </select>
+
+              {/* Date Range Picker */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors duration-200 bg-white flex items-center justify-between"
+                >
+                  <span>
+                    {dateRange[0].startDate && dateRange[0].endDate
+                      ? `${formatDate(dateRange[0].startDate)} - ${formatDate(dateRange[0].endDate)}`
+                      : 'Select Date Range'}
+                  </span>
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                </button>
+                {showDatePicker && (
+                  <div className="absolute z-10 top-full mt-2 left-0 right-0">
+                    <DateRange
+                      editableDateInputs={true}
+                      onChange={item => setDateRange([item.selection])}
+                      moveRangeOnFirstSelection={false}
+                      ranges={dateRange}
+                    />
+                  </div>
+                )}
               </div>
-              <AlertCircle className="w-8 h-8 text-amber-400" />
-            </div>
-          </div>
-          
-          <div className="bg-emerald-500/10 backdrop-blur-xl p-4 rounded-xl border border-emerald-500/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-emerald-400 text-sm">Confirmed</p>
-                <p className="text-2xl font-bold text-emerald-300">{stats.confirmed}</p>
+
+              {/* Results Count */}
+              <div className="flex items-center text-gray-600">
+                <Filter className="w-4 h-4 mr-2" />
+                <span className="text-sm font-medium">{filteredBookings.length} results</span>
               </div>
-              <CheckCircle className="w-8 h-8 text-emerald-400" />
-            </div>
-          </div>
-          
-          <div className="bg-blue-500/10 backdrop-blur-xl p-4 rounded-xl border border-blue-500/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-400 text-sm">Completed</p>
-                <p className="text-2xl font-bold text-blue-300">{stats.completed}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-blue-400" />
-            </div>
-          </div>
-          
-          <div className="bg-red-500/10 backdrop-blur-xl p-4 rounded-xl border border-red-500/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-red-400 text-sm">Cancelled</p>
-                <p className="text-2xl font-bold text-red-300">{stats.cancelled}</p>
-              </div>
-              <XCircle className="w-8 h-8 text-red-400" />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Filters and Search */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-gray-800/60 backdrop-blur-xl p-6 rounded-xl border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search students, subjects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none"
-            >
-              <option value="all">All Status</option>
-              <option value={BOOKING_STATUS.PENDING}>Pending</option>
-              <option value={BOOKING_STATUS.CONFIRMED}>Confirmed</option>
-              <option value={BOOKING_STATUS.COMPLETED}>Completed</option>
-              <option value={BOOKING_STATUS.CANCELLED}>Cancelled</option>
-            </select>
-
-            {/* Date Filter */}
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none"
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
-
-            {/* Results Count */}
-            <div className="flex items-center text-gray-400">
-              <Filter className="w-4 h-4 mr-2" />
-              <span>{filteredBookings.length} results</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bookings List */}
-      <div className="max-w-7xl mx-auto">
+        {/* Bookings List */}
         {currentBookings.length === 0 ? (
-          <div className="bg-gray-800/60 backdrop-blur-xl p-12 rounded-xl border border-gray-700 text-center">
-            <Calendar className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">No bookings found</h3>
-            <p className="text-gray-500 mb-6">
-              {bookings.length === 0 
+          <div className="bg-white border border-gray-200 p-12 rounded-lg text-center shadow-sm">
+            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings found</h3>
+            <p className="text-gray-600 mb-6">
+              {bookings.length === 0
                 ? "You haven't received any booking requests yet. Students will be able to book sessions with you once you're listed."
                 : "No bookings match your current filters. Try adjusting your search criteria."
               }
@@ -392,7 +414,7 @@ export default function TeacherBookings() {
             {bookings.length === 0 && (
               <button
                 onClick={() => navigate('/teacher/dashboard')}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
               >
                 Go to Dashboard
               </button>
@@ -422,19 +444,19 @@ export default function TeacherBookings() {
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            
-            <span className="text-gray-400">
+
+            <span className="text-gray-700 px-4 font-medium">
               Page {currentPage} of {totalPages}
             </span>
-            
+
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -463,21 +485,21 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
   const bookingId = booking._id || booking.id;
 
   return (
-    <div className="bg-gray-800/60 backdrop-blur-xl p-6 rounded-xl border border-gray-700 hover:border-gray-600 transition-all duration-200">
+    <div className="bg-white border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors duration-200 shadow-sm">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Main Info */}
         <div className="flex-1">
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-400" />
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                <User className="w-5 h-5 text-gray-600" />
                 {booking.student.name}
               </h3>
-              <p className="text-gray-400 text-sm">{booking.student.email}</p>
+              <p className="text-gray-600 text-sm">{booking.student.email}</p>
             </div>
-            
-            <div className={`px-3 py-1 rounded-full flex items-center gap-1 ${statusConfig.bgColor} ${statusConfig.borderColor} border`}>
-              <StatusIcon className={`w-4 h-4 ${statusConfig.color.replace('bg-', 'text-')}`} />
+
+            <div className={`px-3 py-1 rounded-full flex items-center gap-2 ${statusConfig.bgColor} ${statusConfig.borderColor} border`}>
+              <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}></div>
               <span className={`text-sm font-medium capitalize ${statusConfig.textColor}`}>
                 {booking.status}
               </span>
@@ -485,30 +507,30 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-300">
-              <BookOpen className="w-4 h-4 text-blue-400" />
-              <span>{booking.subject}</span>
+            <div className="flex items-center gap-2 text-gray-600">
+              <BookOpen className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">{booking.subject}</span>
             </div>
-            
-            <div className="flex items-center gap-2 text-gray-300">
-              <CalendarDays className="w-4 h-4 text-green-400" />
-              <span>{formatDate(booking.date)}</span>
+
+            <div className="flex items-center gap-2 text-gray-600">
+              <CalendarDays className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">{formatDate(booking.date)}</span>
             </div>
-            
-            <div className="flex items-center gap-2 text-gray-300">
-              <Clock className="w-4 h-4 text-orange-400" />
-              <span>{booking.time} ({booking.duration}h)</span>
+
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">{booking.time} ({booking.duration}h)</span>
             </div>
-            
-            <div className="flex items-center gap-2 text-gray-300">
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-              <span>{formatCurrency(booking.amount)}</span>
+
+            <div className="flex items-center gap-2 text-gray-600">
+              <DollarSign className="w-4 h-4 text-gray-500" />
+              <span className="font-semibold text-gray-900">{formatCurrency(booking.amount)}</span>
             </div>
           </div>
 
           {booking.notes && (
-            <div className="mt-3 p-3 bg-gray-700/50 rounded-lg">
-              <p className="text-gray-300 text-sm">{booking.notes}</p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <p className="text-gray-700 text-sm">{booking.notes}</p>
             </div>
           )}
         </div>
@@ -517,7 +539,7 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
         <div className="flex flex-col sm:flex-row gap-2 lg:min-w-[200px]">
           <button
             onClick={() => onViewDetails(booking)}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm"
           >
             <Eye className="w-4 h-4" />
             Details
@@ -527,31 +549,19 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
             <div className="flex gap-2">
               <button
                 onClick={() => onStatusChange(bookingId, BOOKING_STATUS.CONFIRMED)}
-                className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 flex items-center justify-center gap-1"
+                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm"
               >
                 <CheckCircle className="w-4 h-4" />
                 Accept
               </button>
               <button
                 onClick={() => onStatusChange(bookingId, BOOKING_STATUS.CANCELLED)}
-                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-1"
+                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm"
               >
                 <XCircle className="w-4 h-4" />
                 Reject
               </button>
             </div>
-          )}
-
-          {booking.status === BOOKING_STATUS.CONFIRMED && booking.meetingLink && (
-            <a
-              href={booking.meetingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4" />
-              Join
-            </a>
           )}
         </div>
       </div>
@@ -566,15 +576,15 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
   const bookingId = booking._id || booking.id;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Header */}
-        <div className="p-6 border-b border-gray-700">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">Booking Details</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
             >
               <XCircle className="w-6 h-6" />
             </button>
@@ -585,9 +595,9 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
         <div className="p-6 space-y-6">
           {/* Status */}
           <div className="flex items-center justify-between">
-            <span className="text-gray-400">Status</span>
+            <span className="text-gray-600 font-medium">Status</span>
             <div className={`px-4 py-2 rounded-full flex items-center gap-2 ${statusConfig.bgColor} ${statusConfig.borderColor} border`}>
-              <StatusIcon className={`w-5 h-5 ${statusConfig.color.replace('bg-', 'text-')}`} />
+              <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}></div>
               <span className={`font-medium capitalize ${statusConfig.textColor}`}>
                 {booking.status}
               </span>
@@ -596,21 +606,21 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
 
           {/* Student Info */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-              <User className="w-5 h-5 text-purple-400" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <User className="w-5 h-5 text-gray-600" />
               Student Information
             </h3>
-            <div className="space-y-2 text-gray-300">
+            <div className="space-y-3 text-gray-700 bg-gray-50 p-4 rounded-lg">
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-blue-400" />
-                <span>{booking.student.name}</span>
+                <GraduationCap className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">{booking.student.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-green-400" />
+                <Mail className="w-4 h-4 text-gray-500" />
                 <span>{booking.student.email}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-orange-400" />
+                <Phone className="w-4 h-4 text-gray-500" />
                 <span>{booking.student.phone}</span>
               </div>
             </div>
@@ -618,34 +628,34 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
 
           {/* Session Details */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-400" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-gray-600" />
               Session Details
             </h3>
-            <div className="grid grid-cols-2 gap-4 text-gray-300">
+            <div className="grid grid-cols-2 gap-4 text-gray-700 bg-gray-50 p-4 rounded-lg">
               <div>
-                <span className="text-gray-400 block text-sm">Subject</span>
-                <span className="font-medium">{booking.subject}</span>
+                <span className="text-gray-500 block text-sm font-medium">Subject</span>
+                <span className="font-semibold text-gray-900">{booking.subject}</span>
               </div>
               <div>
-                <span className="text-gray-400 block text-sm">Date</span>
-                <span className="font-medium">{formatDate(booking.date)}</span>
+                <span className="text-gray-500 block text-sm font-medium">Date</span>
+                <span className="font-semibold text-gray-900">{formatDate(booking.date)}</span>
               </div>
               <div>
-                <span className="text-gray-400 block text-sm">Time</span>
-                <span className="font-medium">{booking.time}</span>
+                <span className="text-gray-500 block text-sm font-medium">Time</span>
+                <span className="font-semibold text-gray-900">{booking.time}</span>
               </div>
               <div>
-                <span className="text-gray-400 block text-sm">Duration</span>
-                <span className="font-medium">{booking.duration} hours</span>
+                <span className="text-gray-500 block text-sm font-medium">Duration</span>
+                <span className="font-semibold text-gray-900">{booking.duration} hours</span>
               </div>
               <div>
-                <span className="text-gray-400 block text-sm">Amount</span>
-                <span className="font-medium text-emerald-400">{formatCurrency(booking.amount)}</span>
+                <span className="text-gray-500 block text-sm font-medium">Amount</span>
+                <span className="font-semibold text-green-600">{formatCurrency(booking.amount)}</span>
               </div>
               <div>
-                <span className="text-gray-400 block text-sm">Booked On</span>
-                <span className="font-medium">{formatDate(booking.createdAt || booking.date)}</span>
+                <span className="text-gray-500 block text-sm font-medium">Booked On</span>
+                <span className="font-semibold text-gray-900">{formatDate(booking.createdAt || booking.date)}</span>
               </div>
             </div>
           </div>
@@ -653,30 +663,15 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
           {/* Notes */}
           {booking.notes && (
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Notes</h3>
-              <div className="p-4 bg-gray-700/50 rounded-lg">
-                <p className="text-gray-300">{booking.notes}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes</h3>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-gray-700">{booking.notes}</p>
               </div>
             </div>
           )}
 
-          {/* Meeting Link */}
-          {booking.meetingLink && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Meeting Link</h3>
-              <a
-                href={booking.meetingLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline break-all"
-              >
-                {booking.meetingLink}
-              </a>
-            </div>
-          )}
-
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-700">
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
             {booking.status === BOOKING_STATUS.PENDING && (
               <>
                 <button
@@ -684,7 +679,7 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
                     onStatusChange(bookingId, BOOKING_STATUS.CONFIRMED);
                     onClose();
                   }}
-                  className="flex-1 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm"
                 >
                   <CheckCircle className="w-5 h-5" />
                   Accept Booking
@@ -694,7 +689,7 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
                     onStatusChange(bookingId, BOOKING_STATUS.CANCELLED);
                     onClose();
                   }}
-                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm"
                 >
                   <XCircle className="w-5 h-5" />
                   Reject Booking
@@ -703,34 +698,21 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
             )}
 
             {booking.status === BOOKING_STATUS.CONFIRMED && (
-              <>
-                {booking.meetingLink && (
-                  <a
-                    href={booking.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                  >
-                    <MessageSquare className="w-5 h-5" />
-                    Join Meeting
-                  </a>
-                )}
-                <button
-                  onClick={() => {
-                    onStatusChange(bookingId, BOOKING_STATUS.COMPLETED);
-                    onClose();
-                  }}
-                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  Mark Complete
-                </button>
-              </>
+              <button
+                onClick={() => {
+                  onStatusChange(bookingId, BOOKING_STATUS.COMPLETED);
+                  onClose();
+                }}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Mark Complete
+              </button>
             )}
 
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors duration-200"
+              className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
             >
               Close
             </button>

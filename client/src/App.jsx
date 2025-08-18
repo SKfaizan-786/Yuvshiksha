@@ -1,7 +1,11 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 
+// Payment Pages
+import PaymentPage from "./pages/PaymentPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
+
 // Shared Components
-// Paths are relative to the App.jsx file itself, assuming it's in the 'src' directory.
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -27,12 +31,11 @@ import BookClass from "./pages/student/BookClass.jsx";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard.jsx";
 import TeacherProfileForm from "./pages/teacher/TeacherProfileForm.jsx";
 import TeacherProfile from "./pages/teacher/TeacherProfile.jsx";
-// NEW: Import the TeacherProfileEdit component
 import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit.jsx";
-import TeacherScheduleForm from "./pages/teacher/TeacherScheduleForm.jsx";
+import TeacherSchedule from "./pages/teacher/TeacherSchedule.jsx";
 import Bookings from "./pages/teacher/Bookings.jsx";
 
-// Define constants for roles (consistent across Login.jsx and ProtectedRoute.jsx)
+// Define constants for roles
 const USER_ROLES = {
   STUDENT: 'student',
   TEACHER: 'teacher',
@@ -51,8 +54,8 @@ function App() {
     '/teacher/profile-setup',
     '/student/profile',
     '/teacher/profile',
-    // NEW: Add the edit profile route to the list
     '/teacher/profile/edit',
+    '/teacher/profile/edit-availability',
     '/student/find-teachers',
     '/student/book-class',
     '/teacher/schedule',
@@ -66,6 +69,11 @@ function App() {
     <>
       {shouldShowNavbar && <Navbar />}
       <Routes>
+        {/* Payment Routes */}
+        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-failed" element={<PaymentFailed />} />
+
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -75,7 +83,6 @@ function App() {
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Student Routes */}
-        {/* Student Profile Setup: Requires student role, profile MUST NOT be complete yet */}
         <Route
           path="/student/profile-setup"
           element={
@@ -84,7 +91,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Student Dashboard: Requires student role, profile MUST be complete */}
         <Route
           path="/student/dashboard"
           element={
@@ -93,7 +99,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Other Student Protected Routes: Require student role, profile MUST be complete */}
         <Route
           path="/student/find-teachers"
           element={
@@ -110,7 +115,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Student Profile View: Redirect to profile setup */}
+        <Route
+          path="/student/book-class/:teacherId"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.STUDENT]} profileCompleteRequired={true}>
+              <BookClass />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/student/profile"
           element={
@@ -121,7 +133,6 @@ function App() {
         />
 
         {/* Teacher Routes */}
-        {/* Teacher Profile Setup: Requires teacher role, profile can be incomplete or complete */}
         <Route
           path="/teacher/profile-setup"
           element={
@@ -130,7 +141,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Teacher Dashboard: Requires teacher role, profile MUST be complete */}
         <Route
           path="/teacher/dashboard"
           element={
@@ -139,12 +149,11 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Other Teacher Protected Routes: Require teacher role, profile MUST be complete */}
         <Route
           path="/teacher/schedule"
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
-              <TeacherScheduleForm />
+              <TeacherSchedule />
             </ProtectedRoute>
           }
         />
@@ -156,7 +165,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Teacher Profile View: Redirect to profile setup */}
         <Route
           path="/teacher/profile"
           element={
@@ -165,9 +173,16 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* NEW: Teacher Profile Edit Route */}
         <Route
           path="/teacher/profile/edit"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
+              <TeacherProfileEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/profile/edit-availability"
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
               <TeacherProfileEdit />

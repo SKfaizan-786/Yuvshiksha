@@ -1,280 +1,122 @@
+
 import { Request, Response } from 'express';
-import { AuthenticatedRequest, getUserFromRequest } from '../utils/authHelpers';
-import Payment from '../models/Payment';
-import Booking from '../models/Booking';
-import Course from '../models/Course';
+import axios from 'axios';
 
-// Create payment intent (initiate payment)
-export const createPaymentIntent = async (req: AuthenticatedRequest, res: Response) => {
+// No SDK needed for direct axios call
+
+export const createCashfreeOrder = async (req: Request, res: Response) => {
   try {
-    const user = getUserFromRequest(req);
-    
-    if (!user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { bookingId, gateway = 'razorpay' } = req.body;
-
-    // Verify booking exists and belongs to user
-    const booking = await Booking.findById(bookingId).populate('course');
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    if (booking.student.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized for this booking' });
-    }
-
-    // Check if payment already exists
-    const existingPayment = await Payment.findOne({ booking: bookingId });
-    if (existingPayment && existingPayment.status === 'completed') {
-      return res.status(400).json({ message: 'Payment already completed for this booking' });
-    }
-
-    // Create payment record
-    const payment = new Payment({
-      user: user._id,
-      booking: bookingId,
-      amount: booking.price,
-      paymentMethod: gateway as any,
-      status: 'pending',
-      teacher: booking.teacher,
-      description: `Payment for booking ${bookingId}`
-    });
-
-    await payment.save();
-
-    // Here you would integrate with actual payment gateway
-    // For now, we'll simulate payment intent creation
-    const paymentIntent = {
-      id: payment._id,
-      amount: payment.amount,
-      currency: payment.currency,
-      client_secret: `pi_${payment._id}_secret_${Date.now()}`, // Simulated
-      paymentMethod: payment.paymentMethod
-    };
-
-    res.status(201).json({
-      message: 'Payment intent created successfully',
-      paymentIntent,
-      payment
-    });
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    res.status(500).json({ message: 'Failed to create payment intent' });
-  }
-};
-
-// Confirm payment (webhook or manual confirmation)
-export const confirmPayment = async (req: Request, res: Response) => {
-  try {
-    const { paymentId, transactionId, status } = req.body;
-
-    const payment = await Payment.findById(paymentId);
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
-
-    // Update payment status
-    payment.status = status;
-    payment.transactionId = transactionId;
-    payment.paidAt = new Date();
-
-    await payment.save();
-
-    // If payment is successful, update booking status
-    if (status === 'completed') {
-      await Booking.findByIdAndUpdate(payment.booking, {
-        paymentStatus: 'paid',
-        status: 'confirmed'
-      });
-    }
-
-    res.json({
-      message: 'Payment confirmed successfully',
-      payment
-    });
-  } catch (error) {
-    console.error('Error confirming payment:', error);
-    res.status(500).json({ message: 'Failed to confirm payment' });
-  }
-};
-
-// Get payment history for user
-export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const user = getUserFromRequest(req);
-    
-    if (!user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { page = 1, limit = 10, status } = req.query;
-
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const skip = (pageNum - 1) * limitNum;
-
-    const query: any = { user: user._id };
-    
-    if (status) {
-      query.status = status;
-    }
-
-    const payments = await Payment.find(query)
-      .populate({
-        path: 'booking',
-        populate: [
-          { path: 'course', select: 'title subject' },
-          { path: 'teacher', select: 'firstName lastName' }
-        ]
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
-
-    const total = await Payment.countDocuments(query);
-
-    res.json({
-      payments,
-      pagination: {
-        currentPage: pageNum,
-        totalPages: Math.ceil(total / limitNum),
-        totalPayments: total
+    const { amount, customerId, customerName, customerEmail, customerPhone, purpose } = req.body;
+    const orderPayload = {
+      order_amount: amount,
+      order_currency: 'INR',
+      order_note: purpose || '',
+      customer_details: {
+        customer_id: customerId,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+      },
+      order_meta: {
+        // Unified return_url for both listing and booking payments
+        return_url: `http://localhost:5173/payment-success?order_id={order_id}`
       }
+    };
+    const response = await axios.post(
+      'https://sandbox.cashfree.com/pg/orders',
+      orderPayload,
+      {
+        headers: {
+          'x-client-id': process.env.CASHFREE_APP_ID,
+          'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+          'x-api-version': '2022-09-01',
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    const data: any = response.data;
+    res.json({
+      orderId: data.order_id,
+      paymentSessionId: data.payment_session_id,
+      ...data // include all original fields for debugging
     });
-  } catch (error) {
-    console.error('Error fetching payment history:', error);
-    res.status(500).json({ message: 'Failed to fetch payment history' });
+  } catch (error: any) {
+    console.error('Cashfree Order Creation Error:', error.response?.data || error.message);
+    res.status(500).json({
+      message: 'Failed to create order',
+      error: error.response?.data || error.message
+    });
   }
 };
 
-// Get payment details by ID
-export const getPaymentById = async (req: AuthenticatedRequest, res: Response) => {
+// Verify payment
+export const verifyPayment = async (req: Request, res: Response) => {
   try {
-    const user = getUserFromRequest(req);
-    const { paymentId } = req.params;
-
-    if (!user) {
-      return res.status(401).json({ message: 'Authentication required' });
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' });
     }
-
-    const payment = await Payment.findById(paymentId)
-      .populate({
-        path: 'booking',
-        populate: [
-          { path: 'course', select: 'title subject pricing' },
-          { path: 'teacher', select: 'firstName lastName email' },
-          { path: 'student', select: 'firstName lastName email' }
-        ]
+    const response = await axios.get(
+      `https://sandbox.cashfree.com/pg/orders/${orderId}`,
+      {
+        headers: {
+          'x-client-id': process.env.CASHFREE_APP_ID,
+          'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+          'x-api-version': '2022-09-01',
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    const data: any = response.data;
+    if (data && data.order_status === 'PAID') {
+      res.json({ success: true, message: 'Payment verified and successful', order: data });
+    } else {
+      res.status(200).json({
+        success: false,
+        message: data?.order_status || 'Payment not yet successful or failed',
+        status: data?.order_status || 'pending'
       });
-
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
     }
-
-    // Check authorization
-    const isAuthorized = 
-      payment.user.toString() === user._id.toString() ||
-      user.role === 'admin';
-
-    if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to view this payment' });
-    }
-
-    res.json(payment);
-  } catch (error) {
-    console.error('Error fetching payment:', error);
-    res.status(500).json({ message: 'Failed to fetch payment' });
+  } catch (error: any) {
+    console.error('Payment verification error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Payment verification failed',
+      error: error.response?.data || error.message
+    });
   }
 };
 
-// Request refund
-export const requestRefund = async (req: AuthenticatedRequest, res: Response) => {
+// Get payment status (polling)
+export const getPaymentStatus = async (req: Request, res: Response) => {
   try {
-    const user = getUserFromRequest(req);
-    const { paymentId } = req.params;
-    const { reason } = req.body;
-
-    if (!user) {
-      return res.status(401).json({ message: 'Authentication required' });
+    const { orderId } = req.query;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' });
     }
-
-    const payment = await Payment.findById(paymentId).populate('booking');
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
-
-    // Check if user owns this payment
-    if (payment.user.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized for this payment' });
-    }
-
-    // Check if payment is eligible for refund
-    if (payment.status !== 'completed') {
-      return res.status(400).json({ message: 'Only completed payments can be refunded' });
-    }
-
-    if (payment.refundStatus && payment.refundStatus !== 'none') {
-      return res.status(400).json({ message: 'Refund already requested or processed' });
-    }
-
-    // Update payment with refund request
-    payment.refundStatus = 'requested';
-    payment.refundReason = reason;
-    payment.refundRequestedAt = new Date();
-
-    await payment.save();
-
+    const response = await axios.get(
+      `https://sandbox.cashfree.com/pg/orders/${orderId}`,
+      {
+        headers: {
+          'x-client-id': process.env.CASHFREE_APP_ID,
+          'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+          'x-api-version': '2022-09-01',
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    const data: any = response.data;
     res.json({
-      message: 'Refund request submitted successfully',
-      payment
+      success: true,
+      orderId,
+      status: data?.order_status || 'unknown'
     });
-  } catch (error) {
-    console.error('Error requesting refund:', error);
-    res.status(500).json({ message: 'Failed to request refund' });
-  }
-};
-
-// Process refund (Admin only)
-export const processRefund = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const user = getUserFromRequest(req);
-    const { paymentId } = req.params;
-    const { action, adminNotes } = req.body; // action: 'approve' | 'reject'
-
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
-    const payment = await Payment.findById(paymentId);
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
-
-    if (payment.refundStatus !== 'requested') {
-      return res.status(400).json({ message: 'No refund request found' });
-    }
-
-    if (action === 'approve') {
-      payment.refundStatus = 'completed';
-      payment.refundAmount = payment.amount; // Full refund for now
-      payment.refundedAt = new Date();
-    } else if (action === 'reject') {
-      payment.refundStatus = 'rejected';
-    }
-
-    payment.adminNotes = adminNotes;
-    payment.processedBy = user._id as any;
-
-    await payment.save();
-
-    res.json({
-      message: `Refund ${action}d successfully`,
-      payment
+  } catch (error: any) {
+    console.error('Get payment status error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get payment status',
+      error: error.response?.data || error.message
     });
-  } catch (error) {
-    console.error('Error processing refund:', error);
-    res.status(500).json({ message: 'Failed to process refund' });
   }
 };

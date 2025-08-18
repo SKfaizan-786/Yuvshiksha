@@ -10,8 +10,9 @@ import {
   Star,
   Users,
   Home,
+  Clock,
+  Edit3
 } from 'lucide-react';
-// Correct import: Changed saveToLocalStorage to setToLocalStorage
 import { getFromLocalStorage } from '../utils/storage';
 
 const TeacherProfile = () => {
@@ -39,6 +40,12 @@ const TeacherProfile = () => {
     });
   };
 
+  const formatTimeSlot = (slot) => {
+    const start = new Date(`2000-01-01T${slot.startTime}`);
+    const end = new Date(`2000-01-01T${slot.endTime}`);
+    return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center">
@@ -54,9 +61,25 @@ const TeacherProfile = () => {
 
   const teacherData = currentUser.teacherProfileData || currentUser.teacherProfile || {};
 
-  // FIX: Access the 'createdAt' field from the nested teacherProfile object
-  const memberSinceDate = teacherData.createdAt;
+  // Group availability by day
+  const groupedAvailability = teacherData.availability?.reduce((acc, slot) => {
+    if (!acc[slot.day]) acc[slot.day] = [];
+    acc[slot.day].push(slot);
+    return acc;
+  }, {});
 
+  // Sort days in order
+  const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const sortedAvailability = groupedAvailability ? 
+    Object.entries(groupedAvailability)
+      .sort(([a], [b]) => daysOrder.indexOf(a) - daysOrder.indexOf(b))
+      .reduce((acc, [day, slots]) => {
+        acc[day] = slots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        return acc;
+      }, {}) 
+    : null;
+
+  const memberSinceDate = teacherData.createdAt;
   const profileImage = teacherData.photoUrl || 'https://placehold.co/150x150/E0E7FF/4338CA?text=Teacher';
 
   return (
@@ -218,21 +241,9 @@ const TeacherProfile = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Preferred Teaching Mode</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Teaching Mode</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
                       {teacherData.teachingMode || 'Not provided'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Preferred Schedule</label>
-                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
-                      {teacherData.preferredSchedule || 'Not provided'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Teaching Approach</label>
-                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[40px]">
-                      {teacherData.teachingApproach || 'Not provided'}
                     </p>
                   </div>
                   <div>
@@ -243,6 +254,57 @@ const TeacherProfile = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Availability Section */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-blue-700 flex items-center gap-2">
+                      <Clock className="w-6 h-6" /> Weekly Availability
+                    </h3>
+                    <Link
+                      to="/teacher/profile/edit-availability"
+                      className="flex items-center gap-2 text-sm bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit Availability
+                    </Link>
+                  </div>
+                  
+                  {teacherData.availability?.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(sortedAvailability).map(([day, slots]) => (
+                        <div key={day} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <h4 className="font-semibold text-lg mb-3 text-slate-800">{day}</h4>
+                          <div className="space-y-2">
+                            {slots.map((slot, index) => (
+                              <div key={index} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium text-slate-800">
+                                    {formatTimeSlot(slot)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                      <p className="text-slate-500 mb-4">No availability slots added yet</p>
+                      <Link
+                        to="/teacher/profile/edit-availability"
+                        className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Add Availability
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Account Status */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-8 mt-10">
                 <div className="bg-gradient-to-r from-green-50 to-green-100 p-5 rounded-xl shadow flex flex-col items-start">

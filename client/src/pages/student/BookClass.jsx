@@ -1,99 +1,80 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, CalendarDays, Clock, UserRound, BookOpen, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
-// Import your storage utility functions
-import { getFromLocalStorage, setToLocalStorage } from "../utils/storage";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { Loader2, CalendarDays, Clock, UserRound, BookOpen, AlertCircle, CheckCircle, DollarSign, ArrowLeft, Star } from 'lucide-react';
+import { getFromLocalStorage } from "../utils/storage";
 import { bookingAPI } from "../../services/bookingAPI";
+import { launchCashfreePayment } from '../../utils/cashfree';
 
 export default function BookClass() {
   const [teacher, setTeacher] = useState(null);
+  const [teacherSubjects, setTeacherSubjects] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [duration, setDuration] = useState(1);
-  const [subject, setSubject] = useState("Mathematics");
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [availableDays, setAvailableDays] = useState([]);
+  const [selectedSlots, setSelectedSlots] = useState([]);
+  const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState(null); // 'success', 'error', null
+  const [bookingStatus, setBookingStatus] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
-  const teacherId = new URLSearchParams(location.search).get("teacherId");
+  const { teacherId } = useParams();
 
-  // Get available dates (next 7 days)
-  const getAvailableDates = () => {
-    const dates = [];
+  const getToday = () => {
     const today = new Date();
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('en-IN', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric' 
-        })
-      });
-    }
-    return dates;
+    return today.toISOString().split('T')[0];
   };
 
-  // Load teacher availability when date changes
   useEffect(() => {
     const loadAvailability = async () => {
       if (!teacherId || !selectedDate) return;
-
+      const yyyy = selectedDate.getFullYear();
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
       try {
-        const response = await bookingAPI.getTeacherAvailability(teacherId, selectedDate);
-        setAvailableSlots(response.availableSlots || []);
+        const response = await bookingAPI.getTeacherAvailability(teacherId, formattedDate);
+        console.log('DEBUG: slots from backend:', response.slots);
+        setAvailableSlots(response.availableSlots || response.slots || []);
       } catch (error) {
         console.error('Error loading availability:', error);
         setAvailableSlots([]);
       }
     };
-
     loadAvailability();
   }, [teacherId, selectedDate]);
 
-  // Effect to load teacher data
   useEffect(() => {
     const fetchTeacherData = async () => {
       setIsLoading(true);
-      
       try {
-        // Get current user
         const currentUser = getFromLocalStorage('currentUser');
         if (!currentUser || currentUser.role !== 'student') {
           navigate('/login');
           return;
         }
-
         if (!teacherId) {
           setIsLoading(false);
           return;
         }
-
-        // Try to fetch from API first, then fallback to localStorage
         let teacherData = null;
-        
         try {
           const response = await fetch(`/api/teachers/${teacherId}`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
           });
-          
           if (response.ok) {
             teacherData = await response.json();
           }
         } catch (apiError) {
-          console.log('API not available, trying localStorage...');
+          // fallback to localStorage if needed
         }
-
-        // Fallback to localStorage
         if (!teacherData) {
           const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
           teacherData = allUsers.find(user => 
@@ -101,47 +82,57 @@ export default function BookClass() {
             user.role === 'teacher'
           );
         }
-
         if (teacherData) {
-          // Format teacher data consistently
+          let firstInitial = 'T';
+          if (typeof teacherData.firstName === 'string' && teacherData.firstName.length > 0) {
+            firstInitial = teacherData.firstName.charAt(0).toUpperCase();
+          } else if (typeof teacherData.name === 'string' && teacherData.name.length > 0) {
+            firstInitial = teacherData.name.charAt(0).toUpperCase();
+          }
+          const safeAvatar = teacherData.teacherProfile?.photoUrl ||
+            teacherData.teacherProfile?.profilePicture ||
+            teacherData.avatar ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(firstInitial)}&background=random`;
+          let subjectsArr = [];
+          if (Array.isArray(teacherData.teacherProfile?.subjects) && teacherData.teacherProfile.subjects.length > 0) {
+            subjectsArr = teacherData.teacherProfile.subjects.map(s => s.text || s);
+          } else if (Array.isArray(teacherData.teacherProfile?.subjectsTaught) && teacherData.teacherProfile.subjectsTaught.length > 0) {
+            subjectsArr = teacherData.teacherProfile.subjectsTaught.map(s => s.text || s);
+          }
+          setTeacherSubjects(subjectsArr);
+          setSubject(subjectsArr[0] || "");
+          if (teacherData.teacherProfile?.availability) {
+            setAvailableDays(teacherData.teacherProfile.availability.map(a => a.day));
+          } else {
+            setAvailableDays([]);
+          }
           const formattedTeacher = {
-            id: teacherData._id || teacherData.id,
-            name: teacherData.firstName && teacherData.lastName 
-              ? `${teacherData.firstName} ${teacherData.lastName}` 
+            id: teacherData._id || teacherData.id || '',
+            name: teacherData.firstName && teacherData.lastName
+              ? `${teacherData.firstName} ${teacherData.lastName}`
               : teacherData.name || 'Teacher',
-            subject: teacherData.teacherProfile?.subjectsTaught?.[0] || 
-                    teacherData.teacherProfile?.subjects?.[0] || 
-                    'Multiple Subjects',
-            bio: teacherData.teacherProfile?.bio || 
-                 teacherData.bio || 
+            subject: subjectsArr.length > 0 ? subjectsArr.join(', ') : 'Multiple Subjects',
+            bio: teacherData.teacherProfile?.bio ||
+                 teacherData.bio ||
                  'Experienced educator with expertise in various subjects.',
-            hourlyRate: teacherData.teacherProfile?.hourlyRate || 
-                       teacherData.hourlyRate || 800,
-            avatar: teacherData.teacherProfile?.profilePicture || 
-                   teacherData.avatar || 
-                   `https://via.placeholder.com/150/9CA3AF/FFFFFF?text=${(teacherData.firstName || teacherData.name || 'T').charAt(0)}`
+            hourlyRate: teacherData.teacherProfile?.hourlyRate ||
+                        teacherData.hourlyRate || 800,
+            avatar: safeAvatar
           };
-          
           setTeacher(formattedTeacher);
+          setSelectedDate(new Date());
         }
-
-        // Set default date to tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        setSelectedDate(tomorrow.toISOString().split('T')[0]);
-
       } catch (error) {
         console.error('Error loading teacher data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchTeacherData();
   }, [teacherId, navigate]);
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || !subject) {
+    if (!selectedDate || selectedSlots.length === 0 || !subject) {
       setErrorMessage("Please fill in all required fields");
       setBookingStatus('error');
       setTimeout(() => setBookingStatus(null), 3000);
@@ -149,230 +140,383 @@ export default function BookClass() {
     }
 
     setIsBooking(true);
-    
+    setErrorMessage("");
+    const user = getFromLocalStorage('currentUser');
+    console.log('[BookClass] User for payment:', user);
+    // Fallback for missing user id
+    let customerId = user && (user._id || user.id);
+    if (!customerId) {
+      // Generate a random alphanumeric id
+      customerId = 'user_' + Math.random().toString(36).substring(2, 12);
+    }
+    // Use phone from user profile or studentProfile
+    let customerPhone = user?.phone || user?.studentProfile?.phone;
+    if (!customerPhone) {
+      setErrorMessage('Phone number is missing in your profile. Please update your profile (add phone in profile or student profile) to proceed with payment.');
+      setIsBooking(false);
+      return;
+    }
     try {
+      // Call backend to create Cashfree order
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/payments/cashfree-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          amount: calculateAmount(),
+          customerId,
+          customerName: user ? (user.firstName + ' ' + user.lastName) : 'Unknown User',
+          customerEmail: user ? user.email : 'unknown@example.com',
+          customerPhone,
+          purpose: `Booking with ${teacher?.name}`
+        })
+      });
+      const data = await res.json();
+      if (!data.payment_session_id) {
+        setErrorMessage('Failed to initiate payment. Please try again.');
+        setIsBooking(false);
+        return;
+      }
+      // Prepare bookingData
       const bookingData = {
         teacherId,
         subject,
         date: selectedDate,
-        time: selectedTime,
-        duration: parseFloat(duration),
+        slots: selectedSlots,
         notes: notes.trim()
       };
-
-      await bookingAPI.createBooking(bookingData);
-      
-      setBookingStatus('success');
-      setTimeout(() => {
-        navigate('/student/dashboard');
-      }, 2000);
-
+      // Save bookingData to localStorage for payment success page
+      localStorage.setItem('pendingBookingData', JSON.stringify(bookingData));
+      // Redirect to PaymentPage with session id and orderId
+      navigate('/payment', { state: { paymentSessionId: data.payment_session_id, orderId: data.orderId, bookingData } });
+      setIsBooking(false);
     } catch (error) {
-      console.error('Error creating booking:', error);
-      setErrorMessage(error.message || 'Failed to create booking');
-      setBookingStatus('error');
-      setTimeout(() => setBookingStatus(null), 3000);
-    } finally {
+      setErrorMessage('Payment could not be initiated.');
       setIsBooking(false);
     }
   };
 
+  // Removed handlePayment, logic merged into handleBooking
+
   const calculateAmount = () => {
     const hourlyRate = teacher?.hourlyRate || 800;
-    return hourlyRate * duration;
+    return hourlyRate * selectedSlots.length;
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-100 text-slate-700">
-        <Loader2 className="w-12 h-12 animate-spin text-purple-600 mb-4" />
-        <p className="text-xl font-semibold">Loading teacher information...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin mx-auto"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-pink-400 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          </div>
+          <p className="text-xl font-semibold text-white mt-6">Loading teacher information...</p>
+          <p className="text-purple-300 text-sm mt-2">Please wait while we fetch the details</p>
+        </div>
       </div>
     );
   }
 
   if (!teacher) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-100 p-6">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-xl font-bold text-gray-800 text-center">Teacher not found. Please go back to the teacher list.</p>
-        <button
-          onClick={() => navigate("/student/dashboard")}
-          className="mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105"
-        >
-          Go to Dashboard
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 text-center max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-3">Teacher Not Found</h2>
+          <p className="text-gray-300 mb-6">We couldn't find the teacher you're looking for. Please go back to the teacher list and try again.</p>
+          <button
+            onClick={() => navigate("/student/dashboard")}
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl shadow-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105"
+          >
+            Back to Dashboard
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-100 p-8 flex justify-center items-center font-sans">
-      <div className="relative bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-white/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header with Back Button */}
+      <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
+      </div>
 
-        {/* Booking Status Messages */}
-        {bookingStatus === 'success' && (
-          <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-3/4 bg-emerald-500 text-white py-3 px-6 rounded-lg shadow-xl flex items-center justify-center space-x-3 z-20">
-            <CheckCircle className="w-6 h-6" />
-            <span className="font-semibold text-lg">Class booked successfully!</span>
-          </div>
-        )}
-        {bookingStatus === 'error' && (
-          <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-3/4 bg-red-500 text-white py-3 px-6 rounded-lg shadow-xl flex items-center justify-center space-x-3 z-20">
-            <AlertCircle className="w-6 h-6" />
-            <span className="font-semibold text-lg">{errorMessage || 'Booking failed. Please try again.'}</span>
-          </div>
-        )}
-
-        {/* Teacher Info */}
-        <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-8 mb-8 border-b pb-6 border-indigo-100">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-400 shadow-lg flex-shrink-0 mb-4 md:mb-0">
-            <img 
-              src={teacher.avatar || `https://via.placeholder.com/150/9CA3AF/FFFFFF?text=${teacher.name.charAt(0)}`} 
-              alt={teacher.name} 
-              className="w-full h-full object-cover" 
-            />
-          </div>
-          <div className="text-center md:text-left">
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
-              Book a Class with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">{teacher.name}</span>
-            </h2>
-            <p className="text-xl text-gray-600 mb-2 flex items-center justify-center md:justify-start gap-2">
-              <BookOpen className="w-5 h-5 text-purple-500" /> Subject: {teacher.subject}
-            </p>
-            <p className="text-lg text-emerald-600 mb-2 flex items-center justify-center md:justify-start gap-2">
-              <DollarSign className="w-5 h-5" /> ₹{teacher.hourlyRate}/hour
-            </p>
-            <p className="text-md text-gray-500 leading-relaxed max-w-prose">{teacher.bio}</p>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Teacher Profile Card */}
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-8">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-gradient-to-r from-purple-400 to-pink-400 shadow-2xl">
+                <img 
+                  src={teacher.avatar} 
+                  alt={teacher.name} 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full p-2">
+                <Star className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            
+            <div className="flex-1 text-center lg:text-left">
+              <h1 className="text-4xl font-bold text-white mb-3">
+                {teacher.name}
+              </h1>
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-4">
+                <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full">
+                  <BookOpen className="w-4 h-4 text-purple-400" />
+                  <span className="text-white text-sm">{teacher.subject}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full">
+                  <DollarSign className="w-4 h-4 text-white" />
+                  <span className="text-white text-sm font-semibold">₹{teacher.hourlyRate}/hour</span>
+                </div>
+              </div>
+              <p className="text-gray-300 leading-relaxed">{teacher.bio}</p>
+            </div>
           </div>
         </div>
 
         {/* Booking Form */}
-        <div className="space-y-6">
-          {/* Subject Selection */}
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-2">Subject</label>
-            <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full p-3 rounded-lg border-2 border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all duration-300"
-            >
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
-              <option value="Chemistry">Chemistry</option>
-              <option value="Biology">Biology</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="English">English</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* Date Selection */}
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-2">Select Date</label>
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full p-3 rounded-lg border-2 border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all duration-300"
-            >
-              <option value="">Choose a date</option>
-              {getAvailableDates().map(date => (
-                <option key={date.value} value={date.value}>{date.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Time Selection */}
-          {selectedDate && (
-            <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Available Times</label>
-              {availableSlots.length > 0 ? (
-                <div className="grid grid-cols-3 gap-3">
-                  {availableSlots.map(time => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`p-3 rounded-lg border-2 transition-all duration-300 ${
-                        selectedTime === time
-                          ? "border-purple-500 bg-purple-50 text-purple-800"
-                          : "border-gray-300 bg-white hover:bg-gray-50"
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
+        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6">Book Your Class</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Subject Selection */}
+              <div>
+                <label className="block text-lg font-semibold text-white mb-3">
+                  <BookOpen className="w-5 h-5 inline mr-2" />
+                  Subject
+                </label>
+                <div className="relative">
+                  <select
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full p-4 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 focus:outline-none transition-all duration-300 appearance-none cursor-pointer"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a855f7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '1rem'
+                    }}
+                  >
+                    {teacherSubjects.length === 0 && <option value="" className="bg-slate-900 text-white p-3 rounded-xl">No subjects found</option>}
+                    {teacherSubjects.map((subj, idx) => (
+                      <option key={idx} value={subj} className="bg-slate-900 text-white p-3 rounded-xl border border-white/10">{subj}</option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
-                <p className="text-gray-500 text-center p-4 bg-gray-50 rounded-lg">
-                  No available slots for this date
-                </p>
+              </div>
+
+              {/* Date Selection */}
+              <div>
+                <label className="block text-lg font-semibold text-white mb-3">
+                  <CalendarDays className="w-5 h-5 inline mr-2" />
+                  Select Date
+                </label>
+                <div className="relative">
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={date => setSelectedDate(date)}
+                    minDate={new Date()}
+                    filterDate={date => {
+                      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+                      return availableDays.includes(dayOfWeek);
+                    }}
+                    dateFormat="yyyy-MM-dd"
+                    className="w-full p-4 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 focus:outline-none transition-all duration-300"
+                    placeholderText="Select a date"
+                    calendarClassName="!bg-slate-900/95 !backdrop-blur-lg !border-white/20 !rounded-2xl !shadow-2xl"
+                    dayClassName={(date) => {
+                      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+                      const isAvailable = availableDays.includes(dayOfWeek) && date >= new Date().setHours(0,0,0,0);
+                      return isAvailable 
+                        ? "!text-white !bg-white/10 hover:!bg-purple-500/50 !rounded-xl !border !border-white/20" 
+                        : "!text-gray-600 !bg-black/30 !rounded-xl !cursor-not-allowed";
+                    }}
+                    wrapperClassName="w-full"
+                    popperClassName="react-datepicker-popper-custom z-50"
+                  />
+                </div>
+                <style jsx>{`
+                  :global(.react-datepicker__header) {
+                    background: rgba(15, 23, 42, 0.8) !important;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-radius: 1rem 1rem 0 0 !important;
+                  }
+                  :global(.react-datepicker__current-month) {
+                    color: white !important;
+                  }
+                  :global(.react-datepicker__day-name) {
+                    color: #a855f7 !important;
+                  }
+                  :global(.react-datepicker__navigation) {
+                    border: 0.45rem solid transparent !important;
+                  }
+                  :global(.react-datepicker__navigation--previous) {
+                    border-right-color: white !important;
+                  }
+                  :global(.react-datepicker__navigation--next) {
+                    border-left-color: white !important;
+                  }
+                `}</style>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-lg font-semibold text-white mb-3">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full p-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 focus:outline-none transition-all duration-300 resize-none h-32"
+                  placeholder="Any specific topics you'd like to focus on?"
+                />
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Time Slots */}
+              {selectedDate && (
+                <div>
+                  <label className="block text-lg font-semibold text-white mb-3">
+                    <Clock className="w-5 h-5 inline mr-2" />
+                    Available Slots
+                  </label>
+                  {availableSlots.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                      {availableSlots.map((slot, idx) => {
+                        const slotValue = typeof slot === "object" ? slot.text : slot;
+                        const isSelected = selectedSlots.includes(slotValue);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSlots(prev =>
+                                isSelected
+                                  ? prev.filter(s => s !== slotValue)
+                                  : [...prev, slotValue]
+                              );
+                            }}
+                            className={`p-3 rounded-xl border-2 transition-all duration-300 font-medium ${
+                              isSelected
+                                ? "border-purple-400 bg-purple-500/30 text-purple-200 shadow-lg"
+                                : "border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:border-white/30"
+                            }`}
+                          >
+                            {slotValue}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center p-8 bg-white/5 rounded-xl border border-white/10">
+                      <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-400">No available slots for this date</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Summary Card */}
+              {selectedSlots.length > 0 && (
+                <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-white mb-4">Booking Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Selected Slots:</span>
+                      <span className="text-white font-semibold">{selectedSlots.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Rate per hour:</span>
+                      <span className="text-white font-semibold">₹{teacher.hourlyRate}</span>
+                    </div>
+                    <div className="border-t border-white/20 pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold text-white">Total Amount:</span>
+                        <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                          ₹{calculateAmount()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          )}
-
-          {/* Duration Selection */}
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-2">Duration</label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full p-3 rounded-lg border-2 border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all duration-300"
-            >
-              <option value={1}>1 hour</option>
-              <option value={1.5}>1.5 hours</option>
-              <option value={2}>2 hours</option>
-            </select>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-2">Notes (Optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-3 rounded-lg border-2 border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all duration-300 resize-y min-h-[100px]"
-              placeholder="Any specific topics you'd like to focus on?"
-            />
-          </div>
-
-          {/* Total Amount */}
-          {duration && (
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-gray-800">Total Amount:</span>
-                <span className="text-2xl font-bold text-purple-600">₹{calculateAmount()}</span>
+          {/* Error Message */}
+          {bookingStatus === 'error' && errorMessage && (
+            <div className="mt-6 p-4 bg-red-500/20 border border-red-400 rounded-xl">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                <span className="text-red-200">{errorMessage}</span>
               </div>
-              <p className="text-sm text-gray-600 mt-1">
-                {duration} hour{duration > 1 ? 's' : ''} × ₹{teacher.hourlyRate}/hour
-              </p>
             </div>
           )}
 
-          {/* Book Button */}
-          <button
-            disabled={!selectedDate || !selectedTime || !subject || isBooking}
-            onClick={handleBooking}
-            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg ${
-              !selectedDate || !selectedTime || !subject || isBooking
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transform hover:scale-[1.01]"
-            }`}
-          >
-            {isBooking ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
-            ) : (
-              <CheckCircle className="w-6 h-6" />
-            )}
-            <span>{isBooking ? "Booking..." : "Confirm Booking"}</span>
-          </button>
+          {/* Success Message */}
+          {bookingStatus === 'success' && (
+            <div className="mt-6 p-4 bg-green-500/20 border border-green-400 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span className="text-green-200">Booking confirmed! Redirecting...</span>
+              </div>
+            </div>
+          )}
 
-          {/* Back Button */}
-          <button
-            onClick={() => navigate(-1)}
-            className="w-full py-3 text-purple-600 font-semibold rounded-xl border border-purple-300 hover:bg-purple-50 transition-colors duration-200"
-          >
-            Back to Dashboard
-          </button>
+
+
+          {/* Book Button */}
+          <div className="mt-8 space-y-4">
+            <button
+              disabled={!selectedDate || selectedSlots.length === 0 || !subject || isBooking}
+              onClick={handleBooking}
+              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 ${
+                !selectedDate || selectedSlots.length === 0 || !subject || isBooking
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              }`}
+            >
+              {isBooking ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-6 h-6" />
+                  <span>Confirm Booking</span>
+                </>
+              )}
+            </button>
+
+            {/* Back to Dashboard Button */}
+            <button
+              onClick={() => navigate('/student/dashboard')}
+              className="w-full py-3 text-purple-300 font-semibold rounded-xl border border-purple-400/30 bg-white/5 hover:bg-white/10 hover:border-purple-400/50 transition-all duration-300"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     </div>

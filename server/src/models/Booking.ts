@@ -3,13 +3,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IBooking extends Document {
   _id: string;
   student: {
-    id: string;
+    id: string; // Changed to string
     name: string;
     email: string;
-    phone: string;
+    phone?: string; // Made optional
   };
   teacher: {
-    id: string;
+    id: string; // Changed to string
     name: string;
     email: string;
   };
@@ -20,6 +20,7 @@ export interface IBooking extends Document {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled';
   amount: number;
   notes?: string;
+  slots?: string[];
   meetingLink?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -33,20 +34,19 @@ export interface IBooking extends Document {
 
 const BookingSchema: Schema = new Schema({
   student: {
-    id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    id: { type: String, required: true }, // Updated
     name: { type: String, required: true },
     email: { type: String, required: true },
-    phone: { type: String, required: true }
+    phone: { type: String } // Updated
   },
   teacher: {
-    id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    id: { type: String, required: true }, // Updated
     name: { type: String, required: true },
     email: { type: String, required: true }
   },
   subject: { 
     type: String, 
-    required: true,
-    enum: ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'Other']
+    required: true
   },
   date: { 
     type: Date, 
@@ -78,6 +78,10 @@ const BookingSchema: Schema = new Schema({
     type: String,
     maxlength: 500
   },
+  slots: {
+    type: [String],
+    required: false
+  },
   meetingLink: { 
     type: String,
     validate: {
@@ -104,29 +108,24 @@ const BookingSchema: Schema = new Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
 BookingSchema.index({ 'teacher.id': 1, date: 1 });
 BookingSchema.index({ 'student.id': 1, date: 1 });
 BookingSchema.index({ status: 1, date: 1 });
 BookingSchema.index({ createdAt: -1 });
 
-// Virtual for booking ID display
 BookingSchema.virtual('bookingId').get(function(this: IBooking) {
   return `BK${this._id.toString().slice(-6).toUpperCase()}`;
 });
 
-// Pre-save middleware to validate booking date
 BookingSchema.pre('save', function(this: IBooking, next) {
   if (this.isNew || this.isModified('date')) {
     const bookingDate = new Date(this.date);
     const now = new Date();
     
-    // Booking must be in the future
     if (bookingDate <= now) {
       return next(new Error('Booking date must be in the future'));
     }
     
-    // Booking can't be more than 90 days in advance
     const maxDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
     if (bookingDate > maxDate) {
       return next(new Error('Booking date cannot be more than 90 days in advance'));

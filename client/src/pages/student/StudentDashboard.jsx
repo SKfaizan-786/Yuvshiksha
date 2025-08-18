@@ -418,8 +418,12 @@ const StudentDashboard = () => {
       setLoading(true);
       
       // Try API first
-      const token = localStorage.getItem('token');
+      let token = localStorage.getItem('token');
       if (token) {
+        // Remove any extra quotes from token
+        if (typeof token === 'string') {
+          token = token.replace(/^"|"$/g, '');
+        }
         try {
           const response = await fetch('/api/teachers/list', {
             headers: {

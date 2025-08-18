@@ -1,5 +1,12 @@
 // -------------------- Favourites (Student/Teacher) --------------------
 
+import { Request, Response } from 'express';
+import User, { IUser, ITeacherProfile } from '../models/User';
+
+// Utility to extract error message
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Internal server error';
+
 // Get all favourite teachers for the logged-in user
 export const getFavourites = async (req: Request, res: Response) => {
   try {
@@ -63,15 +70,8 @@ export const removeFavourite = async (req: Request, res: Response) => {
     res.status(500).json({ message: getErrorMessage(error) });
   }
 };
-import { Request, Response } from 'express';
-import User, { IUser } from '../models/User';
-
-// Utility to extract error message
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : 'Internal server error';
 
 // -------------------- Teacher Profile --------------------
-
 export const updateTeacherProfile = async (req: Request, res: Response) => {
   try {
     console.log('Received data:', req.body);
@@ -79,32 +79,51 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
-    const updateData = {
+    // Build teacherProfile update object
+    const teacherProfileUpdate: Partial<ITeacherProfile> = {
+      phone: req.body.phone,
+      location: req.body.location,
+      qualifications: req.body.qualifications,
+      experienceYears: req.body.experienceYears,
+      currentOccupation: req.body.currentOccupation,
+      subjects: req.body.subjectsTaught || req.body.subjects,
+      boards: req.body.boardsTaught || req.body.boards,
+      classes: req.body.classesTaught || req.body.classes,
+      teachingMode: req.body.teachingMode,
+      preferredSchedule: req.body.preferredSchedule,
+      bio: req.body.bio,
+      teachingApproach: req.body.teachingApproach,
+      achievements: req.body.achievements,
+      hourlyRate: req.body.hourlyRate,
+      photoUrl: req.body.photoUrl,
+      availability: req.body.availability
+    };
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'isListed')) {
+      teacherProfileUpdate.isListed = req.body.isListed;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'listedAt')) {
+      teacherProfileUpdate.listedAt = req.body.listedAt;
+    }
+
+    // Prepare the update object to use $set for specific fields
+    const updateFields: any = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      teacherProfile: {
-        phone: req.body.phone,
-        location: req.body.location,
-        qualifications: req.body.qualifications,
-        experienceYears: req.body.experienceYears,
-        currentOccupation: req.body.currentOccupation,
-        subjects: req.body.subjectsTaught || req.body.subjects,
-        boards: req.body.boardsTaught || req.body.boards,
-        classes: req.body.classesTaught || req.body.classes,
-        teachingMode: req.body.teachingMode,
-        preferredSchedule: req.body.preferredSchedule,
-        bio: req.body.bio,
-        teachingApproach: req.body.teachingApproach,
-        achievements: req.body.achievements,
-        hourlyRate: req.body.hourlyRate,
-        photoUrl: req.body.photoUrl
-      },
-      profileComplete: true
+      profileComplete: true,
     };
+    
+    // Add teacherProfile fields to the update using dot notation
+    for (const key in teacherProfileUpdate) {
+      const typedKey = key as keyof ITeacherProfile;
+      if (teacherProfileUpdate[typedKey] !== undefined) {
+        updateFields[`teacherProfile.${key}`] = teacherProfileUpdate[typedKey];
+      }
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      updateData,
+      { $set: updateFields },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -162,7 +181,6 @@ export const getTeacherProfile = async (req: Request, res: Response) => {
 };
 
 // -------------------- Student Profile --------------------
-// -------------------- Student Profile --------------------
 export const updateStudentProfile = async (req: Request, res: Response) => {
   try {
     console.log('=== REQUEST BODY ===', req.body);
@@ -170,7 +188,6 @@ export const updateStudentProfile = async (req: Request, res: Response) => {
     if (!req.user?._id) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
-
 
     // Build update data with all possible fields from the form
     // Ensure learningGoals is always an array of strings

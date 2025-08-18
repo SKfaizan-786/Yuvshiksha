@@ -213,8 +213,8 @@ export default function EnhancedTeacherPlatform() {
   }, [teachers, searchTerm, filterBoard, filterSubject, sortBy, priceRange, experienceRange, showFavouritesOnly, favorites]);
 
   const handleBook = (teacher) => {
-    setSelectedTeacher(teacher);
-    setShowBookingModal(true);
+  // Redirect to BookClass.jsx with teacher id
+  navigate(`/student/book-class/${teacher.id}`);
   };
 
   const submitBooking = () => {
@@ -603,105 +603,6 @@ export default function EnhancedTeacherPlatform() {
           </>
         )}
       </div>
-
-      {/* Booking Modal */}
-      {showBookingModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800">Book Session</h3>
-                <button
-                  onClick={() => setShowBookingModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <p className="text-gray-600 mt-1">
-                with {selectedTeacher?.name} • {selectedTeacher?.subject}
-              </p>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Preferred Date
-                </label>
-                <input
-                  type="date"
-                  value={bookingForm.date}
-                  onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Preferred Time
-                </label>
-                <input
-                  type="time"
-                  value={bookingForm.time}
-                  onChange={(e) => setBookingForm({...bookingForm, time: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Duration (hours)
-                </label>
-                <select
-                  value={bookingForm.duration}
-                  onChange={(e) => setBookingForm({...bookingForm, duration: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="1">1 hour</option>
-                  <option value="1.5">1.5 hours</option>
-                  <option value="2">2 hours</option>
-                  <option value="3">3 hours</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Message (Optional)
-                </label>
-                <textarea
-                  value={bookingForm.message}
-                  onChange={(e) => setBookingForm({...bookingForm, message: e.target.value})}
-                  placeholder="Any specific requirements or topics you'd like to focus on..."
-                  rows={3}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                />
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Session Fee:</span>
-                  <span className="font-semibold">₹{selectedTeacher?.fee} × {bookingForm.duration}h</span>
-                </div>
-                <div className="flex items-center justify-between text-lg font-bold mt-2">
-                  <span>Total:</span>
-                  <span className="text-indigo-600">
-                    ₹{(selectedTeacher?.fee * parseFloat(bookingForm.duration)).toFixed(0)}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={submitBooking}
-                disabled={!bookingForm.date || !bookingForm.time}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:scale-100 flex items-center justify-center space-x-2"
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Confirm Booking</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+  </div>
   );
 }

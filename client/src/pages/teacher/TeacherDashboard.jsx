@@ -2,11 +2,15 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarDays, Users, DollarSign, LogOut, UserRound, ArrowRight, CheckCircle,
-  Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck
+  Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck,
+  User, BookOpen, Clock
 } from 'lucide-react';
 
 // Import your storage utility functions
 import { getFromLocalStorage, setToLocalStorage } from "../utils/storage";
+import { useRef } from "react";
+import { bookingAPI } from '../../services/bookingAPI';
+import { launchCashfreePayment } from '../../utils/cashfree';
 
 // --- Constants ---
 const LISTING_FEE = 100; // Define listing fee as a constant for easy updates.
@@ -129,12 +133,17 @@ export default function TeacherDashboard() {
   const [messageType, setMessageType] = useState(''); // 'success', 'error', 'info'
 
   // State for dynamic dashboard data
-  const [stats, setStats] = useState({
-    upcomingSessions: 0,
-    newInquiries: 0,
-    totalEarnings: 0,
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
+  // Persist last known stats in localStorage for instant display
+  const getInitialStats = () => {
+    const saved = localStorage.getItem('teacherDashboardStats');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return { upcomingSessions: 0, totalSessions: 0, totalEarnings: 0 }; }
+    }
+    return { upcomingSessions: 0, totalSessions: 0, totalEarnings: 0 };
+  };
+  const [stats, setStats] = useState(getInitialStats);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [recentBookings, setRecentBookings] = useState([]);
 
   // A single state for listing status
   const [isListed, setIsListed] = useState(false);
@@ -217,69 +226,102 @@ export default function TeacherDashboard() {
     };
   }, [fetchUserData]);
 
-  // TODO: Replace with actual API calls to backend
+  // Fetch real stats and recent bookings from backend
   useEffect(() => {
-    if (currentUser && (currentUser.id || currentUser._id)) {
-      // For now, show zero values until backend APIs are implemented
-      setStats({
-        upcomingSessions: 0,
-        newInquiries: 0,
-        totalEarnings: 0,
-      });
-      setStatsLoading(false);
-    }
+    const fetchStatsAndBookings = async () => {
+      if (!currentUser || !(currentUser.id || currentUser._id)) return;
+      setStatsLoading(true);
+      try {
+        const response = await bookingAPI.getTeacherBookings({ page: 1, limit: 10 });
+        // Calculate upcoming sessions (pending or confirmed, date >= today)
+        const now = new Date();
+        const upcomingSessions = (response.bookings || []).filter(b =>
+          (b.status === 'pending' || b.status === 'confirmed') && new Date(b.date) >= now
+        ).length;
+        const totalSessions = (response.bookings || []).length;
+        // Calculate total earnings (sum of amount for confirmed and completed bookings)
+        const totalEarnings = (response.bookings || [])
+          .filter(b => b.status === 'confirmed' || b.status === 'completed')
+          .reduce((sum, b) => sum + (b.amount || 0), 0);
+        const newStats = { upcomingSessions, totalSessions, totalEarnings };
+        setStats(newStats);
+        localStorage.setItem('teacherDashboardStats', JSON.stringify(newStats));
+        setRecentBookings(response.bookings || []);
+      } catch (err) {
+        setStats({ upcomingSessions: 0, totalSessions: 0, totalEarnings: 0 });
+        setRecentBookings([]);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchStatsAndBookings();
   }, [currentUser]);
 
   const teacherProfile = currentUser?.teacherProfileData || currentUser?.teacherProfile || {};
   const isProfileComplete = currentUser?.profileComplete || false;
 
+  // Prevent duplicate payment triggers
+  const paymentInProgress = useRef(false);
   const handleGetListed = async () => {
+    if (paymentInProgress.current) return;
+    paymentInProgress.current = true;
+    setIsProcessingListing(true);
+    const user = getFromLocalStorage('currentUser');
+    // Try to get phone from teacherProfileData, fallback to user.phone
+    const phone = user.teacherProfileData?.phone || user.phone || '';
+    const listingData = {
+      teacherId: user._id,
+      name: user.firstName + ' ' + user.lastName,
+      email: user.email,
+      phone,
+      fee: LISTING_FEE,
+      timestamp: Date.now(),
+    };
     try {
-      setIsProcessingListing(true);
-
+      // Call backend to create Cashfree order for listing
       const token = localStorage.getItem('token');
-      if (!token) {
-        showMessage('Authentication token not found. Please log in.', 'error');
-        navigate('/login');
-        return;
-      }
-
-      // Call the API to update listing status
-      const response = await fetch('http://localhost:5000/api/profile/teacher/listing', {
-        method: 'PATCH',
+      const res = await fetch('/api/payments/cashfree-order', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.replace(/^"(.*)"$/, '$1')}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ isListed: true })
+        body: JSON.stringify({
+          amount: LISTING_FEE,
+          customerId: user._id,
+          customerName: user.firstName + ' ' + user.lastName,
+          customerEmail: user.email,
+          customerPhone: phone,
+          purpose: 'Teacher Listing Fee'
+        })
       });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        // Update local state and localStorage
-        const updatedUser = {
-          ...currentUser,
-          teacherProfileData: {
-            ...teacherProfile,
-            isListed: true,
-            listedAt: data.listedAt
-          }
-        };
-        setCurrentUser(updatedUser);
-        setToLocalStorage('currentUser', updatedUser);
-        setIsListed(true); // Update the isListed state directly
-
-        showMessage('🎉 Congratulations! You are now listed as a teacher. Students can find and book classes with you.', 'success');
-      } else {
-        const errorData = await response.json();
-        showMessage(`Error: ${errorData.message || 'Failed to get listed.'}`, 'error');
+      const data = await res.json();
+      if (!data.paymentSessionId || !data.orderId) {
+        setMessage('Failed to initiate payment. Please try again.');
+        setMessageType('error');
+        setIsProcessingListing(false);
+        paymentInProgress.current = false;
+        return;
       }
-    } catch (error) {
-      console.error('Error getting listed:', error);
-      showMessage('Failed to get listed. Please try again.', 'error');
-    } finally {
+      localStorage.setItem('pendingListingData', JSON.stringify(listingData));
+      localStorage.setItem('pendingPaymentType', 'listing');
+      localStorage.setItem('pendingOrderId', data.orderId);
+      localStorage.setItem('pendingPaymentSessionId', data.paymentSessionId);
       setIsProcessingListing(false);
+      paymentInProgress.current = false;
+      navigate('/payment', {
+        state: {
+          orderId: data.orderId,
+          paymentSessionId: data.paymentSessionId,
+          listingData,
+          type: 'listing'
+        }
+      });
+    } catch (err) {
+      setMessage('Failed to initiate payment. Please try again.');
+      setMessageType('error');
+      setIsProcessingListing(false);
+      paymentInProgress.current = false;
     }
   };
 
@@ -326,7 +368,7 @@ export default function TeacherDashboard() {
       <header className="text-center mb-10">
         <div className="flex items-center justify-center gap-4 mb-4">
           {/* Teacher Profile Image */}
-          <div className="relative animate-float">
+          <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-purple-400 shadow-lg bg-gray-200 hover:border-purple-300 transition-all duration-300">
               {currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl ? (
                 <img
@@ -352,7 +394,7 @@ export default function TeacherDashboard() {
               <LayoutDashboard className="w-10 h-10 text-purple-400" /> Teacher Dashboard
             </h1>
             <p className="text-gray-400 mt-2 text-lg">
-              Welcome back, <span className="font-semibold text-purple-300">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}!</span>
+              Welcome back, <span className="font-semibold text-gray-800">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}!</span>
             </p>
             <p className="text-gray-500 text-sm">{currentUser?.email}</p>
           </div>
@@ -365,7 +407,7 @@ export default function TeacherDashboard() {
               localStorage.removeItem('token'); // Also remove the token
               navigate('/login');
             }}
-            className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40"
+            className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer"
           >
             <LogOut className="w-5 h-5" /> Logout
           </button>
@@ -435,13 +477,13 @@ export default function TeacherDashboard() {
           ) : (
             <div className="space-y-4">
               <StatRow label="Upcoming Sessions" value={stats.upcomingSessions} />
-              <StatRow label="New Inquiries" value={stats.newInquiries} />
+              <StatRow label="Total Sessions" value={stats.totalSessions} />
               <StatRow
                 label="Total Earnings"
                 value={stats.totalEarnings.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
               />
               {/* Info message when no data */}
-              {stats.upcomingSessions === 0 && stats.newInquiries === 0 && stats.totalEarnings === 0 && (
+              {stats.upcomingSessions === 0 && stats.totalSessions === 0 && stats.totalEarnings === 0 && (
                 <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
                     <Info className="w-4 h-4 text-blue-400" />
@@ -456,12 +498,10 @@ export default function TeacherDashboard() {
         {/* Quick Actions Card */}
         <DashboardCard icon={LayoutDashboard} title="Quick Actions">
           <ul className="space-y-3">
-            {[
+            {[ 
               { label: 'View Profile', icon: UserRound, path: '/teacher/profile' },
-              { label: 'Manage Schedule', icon: CalendarDays, path: '/teacher/schedule' },
               { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
-              { label: 'View Inquiries', icon: MessageSquare, path: '/teacher/inquiries' },
-              { label: 'My Achievements', icon: Award, path: '/teacher/achievements' }
+              { label: 'View schedule', icon: CalendarDays, path: '/teacher/schedule' }
             ].map(({ label, icon: Icon, path }) => (
               <li key={path}>
                 <button
@@ -477,18 +517,62 @@ export default function TeacherDashboard() {
         </DashboardCard>
 
         {/* Recent Bookings/Sessions Card */}
-        {/* TODO: Implement GET /api/teacher/bookings/recent endpoint */}
         <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
           <h3 className="text-xl font-semibold text-gray-200 mb-4">Latest Bookings</h3>
           <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar">
-            {/* TODO: Replace with actual booking data from backend */}
-            <div className="text-center py-8">
-              <MonitorCheck className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
-              <p className="text-gray-400 text-lg font-medium">No bookings yet</p>
-              <p className="text-gray-500 text-sm mt-2">
-                When students book sessions with you, they'll appear here.
-              </p>
-            </div>
+            {statsLoading ? (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                <p className="text-gray-400 text-lg font-medium">Loading bookings...</p>
+              </div>
+            ) : recentBookings && recentBookings.length > 0 ? (
+              recentBookings.slice(0, 5).map((booking) => (
+                <div key={booking.id || booking._id} className="p-4 bg-white rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between border border-gray-200">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-purple-400" />
+                      <span className="font-semibold text-slate-800">{booking.student?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-blue-400" />
+                      <span className="text-slate-700">{booking.subject}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-5 h-5 text-green-400" />
+                      <span className="text-slate-700">{new Date(booking.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-amber-400" />
+                      <span className="text-slate-700">{booking.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                      <span className="text-slate-700">₹{booking.amount}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 md:mt-0 flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      booking.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                      booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      booking.status === 'rescheduled' ? 'bg-purple-100 text-purple-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <MonitorCheck className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-400 text-lg font-medium">No bookings yet</p>
+                <p className="text-gray-500 text-sm mt-2">
+                  When students book sessions with you, they'll appear here.
+                </p>
+              </div>
+            )}
           </div>
         </DashboardCard>
       </main>

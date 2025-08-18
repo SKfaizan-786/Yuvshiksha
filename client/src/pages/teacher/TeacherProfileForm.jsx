@@ -10,7 +10,7 @@ import { setToLocalStorage, getFromLocalStorage } from '../utils/storage';
 
 const TeacherProfileForm = () => {
   const navigate = useNavigate();
-  // const fileInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // State to hold the form data
   const [formData, setFormData] = useState({
@@ -26,13 +26,22 @@ const TeacherProfileForm = () => {
     boardsTaught: [],   // Array for multiple boards
     classesTaught: [],  // Array for multiple classes/courses
     teachingMode: '',
-    preferredSchedule: '',
+    availability: [],   // Changed from preferredSchedule to availability array
     bio: '',
     teachingApproach: '',
     achievements: [], // Stores achievements as a list
     hourlyRate: '',
     photo: null, // Stores File object
   });
+
+  // State for new availability slot
+  const [newSlot, setNewSlot] = useState({
+    day: '',
+    startTime: '',
+    endTime: ''
+  });
+
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // State to manage UI specific aspects
   const [uiState, setUiState] = useState({
@@ -51,16 +60,64 @@ const TeacherProfileForm = () => {
     isSaving: false, // New state for auto-save visual feedback
   });
 
-  const fileInputRef = useRef(null);
-
   // --- Derived State & Constants ---
   const steps = useMemo(() => [
     { title: 'Personal & Professional', fields: ['location', 'qualifications'], icon: UserCircle2 }, // Phone, experience, occupation are optional
-    { title: 'Teaching Expertise', fields: ['subjectsTaught', 'boardsTaught', 'classesTaught', 'teachingMode'], icon: BookOpenCheck },
+    { title: 'Teaching Expertise', fields: ['subjectsTaught', 'boardsTaught', 'classesTaught', 'teachingMode', 'availability'], icon: BookOpenCheck }, // Updated to include availability
     { title: 'About My Teaching', fields: ['bio', 'teachingApproach'], icon: Edit3 } // Achievements, hourlyRate, photo are optional
   ], []); // Memoize steps array
 
   const currentStepFields = steps[uiState.currentStep]?.fields || [];
+
+  // --- Handler Functions ---
+  const handleSlotChange = (e) => {
+    const { name, value } = e.target;
+    setNewSlot(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addAvailabilitySlot = () => {
+    if (newSlot.day && newSlot.startTime && newSlot.endTime) {
+      if (newSlot.startTime >= newSlot.endTime) {
+        showMessage('End time must be after start time', 'error');
+        return;
+      }
+
+      const hasOverlap = formData.availability.some(slot => 
+        slot.day === newSlot.day && 
+        (
+          (newSlot.startTime >= slot.startTime && newSlot.startTime < slot.endTime) ||
+          (newSlot.endTime > slot.startTime && newSlot.endTime <= slot.endTime) ||
+          (newSlot.startTime <= slot.startTime && newSlot.endTime >= slot.endTime)
+        )
+      );
+
+      if (hasOverlap) {
+        showMessage('This time slot overlaps with an existing slot', 'error');
+        return;
+      }
+
+      const newSlotWithId = { ...newSlot, id: Date.now() }; // Add ID for consistency
+      setFormData(prev => ({
+        ...prev,
+        availability: [...prev.availability, newSlotWithId]
+      }));
+      setNewSlot({ day: '', startTime: '', endTime: '' });
+      validateField('availability', [...formData.availability, newSlotWithId]);
+    } else {
+      showMessage('Please fill all slot fields', 'error');
+    }
+  };
+
+  const removeAvailabilitySlot = (index) => {
+    const updatedAvailability = formData.availability.filter((_, i) => i !== index);
+    setFormData(prev => ({
+      ...prev,
+      availability: updatedAvailability
+    }));
+    if (currentStepFields.includes('availability')) {
+      validateField('availability', updatedAvailability);
+    }
+  };
 
   // Refined isStepComplete to truly check required fields for the current step
   const isStepComplete = useCallback(() => {
@@ -68,6 +125,10 @@ const TeacherProfileForm = () => {
       // These fields are arrays and must have at least one item if they are 'required' for the step
       if (['subjectsTaught', 'boardsTaught', 'classesTaught'].includes(field)) {
         return formData[field].length === 0;
+      }
+      // Availability is required and must have at least one slot
+      if (field === 'availability') {
+        return formData.availability.length === 0;
       }
       // These are generally optional fields that don't block step completion unless they have validation errors
       if (['phone', 'experienceYears', 'currentOccupation', 'bio', 'teachingApproach', 'hourlyRate', 'photo'].includes(field)) {
@@ -130,7 +191,7 @@ const TeacherProfileForm = () => {
                 boardsTaught: teacherProfileData.boards || teacherProfileData.boardsTaught || [],
                 classesTaught: teacherProfileData.classes || teacherProfileData.classesTaught || [],
                 teachingMode: teacherProfileData.teachingMode || '',
-                preferredSchedule: teacherProfileData.preferredSchedule || '',
+                availability: teacherProfileData.availability || [], // Updated from preferredSchedule
                 bio: teacherProfileData.bio || '',
                 teachingApproach: teacherProfileData.teachingApproach || '',
                 achievements: teacherProfileData.achievements || [],
@@ -176,7 +237,7 @@ const TeacherProfileForm = () => {
         boardsTaught: teacherProfileData.boardsTaught || teacherProfileData.boards || [],
         classesTaught: teacherProfileData.classesTaught || teacherProfileData.classes || [],
         teachingMode: teacherProfileData.teachingMode || '',
-        preferredSchedule: teacherProfileData.preferredSchedule || '',
+        availability: teacherProfileData.availability || [], // Updated from preferredSchedule
         bio: teacherProfileData.bio || '',
         teachingApproach: teacherProfileData.teachingApproach || '',
         achievements: teacherProfileData.achievements || [],
@@ -263,11 +324,16 @@ const TeacherProfileForm = () => {
           error = 'Please enter a valid hourly rate.';
         }
         break;
-      case 'subjects':
-      case 'boards':
-      case 'classes':
+      case 'subjectsTaught':
+      case 'boardsTaught':
+      case 'classesTaught':
         if (value.length === 0) {
           error = `Please add at least one ${name.replace(/([A-Z])/g, ' $1').toLowerCase().replace('taught', ' to teach')}.`;
+        }
+        break;
+      case 'availability':
+        if (value.length === 0) {
+          error = 'Please add at least one availability slot.';
         }
         break;
       default:
@@ -283,6 +349,26 @@ const TeacherProfileForm = () => {
 
     if (name === 'photo' && files && files[0]) {
       const file = files[0];
+      if (file.size > 1024 * 1024) { // 1 MB
+        setUiState(prev => ({
+          ...prev,
+          errors: {
+            ...prev.errors,
+            photo: 'Please upload a photo under 1 MB.'
+          }
+        }));
+        setFormData(prev => ({ ...prev, photo: null }));
+        setUiState(prev => ({ ...prev, photoPreviewUrl: null }));
+        return;
+      } else {
+        setUiState(prev => ({
+          ...prev,
+          errors: {
+            ...prev.errors,
+            photo: ''
+          }
+        }));
+      }
       setFormData(prev => ({ ...prev, photo: file }));
 
       const reader = new FileReader();
@@ -402,10 +488,15 @@ const TeacherProfileForm = () => {
         teacherProfile: result.user.teacherProfile || currentUser.teacherProfile
       };
 
+
       setToLocalStorage('currentUser', updatedUser);
 
+      // Force reload to ensure ProtectedRoute reads the latest localStorage
       showMessage('Profile saved successfully!', 'success');
-      setTimeout(() => navigate('/teacher/dashboard'), 500);
+      setUiState(prev => ({ ...prev, currentStep: 0, isSubmitting: false }));
+      setTimeout(() => {
+        window.location.href = '/teacher/dashboard';
+      }, 500);
 
     } catch (error) {
       console.error('Full error:', {
@@ -425,13 +516,13 @@ const TeacherProfileForm = () => {
   const handleNextStep = useCallback(() => {
     let currentStepHasErrors = false;
     currentStepFields.forEach(field => {
-      // Special handling for array fields (subjectsTaught, boardsTaught, classesTaught)
-      if (['subjectsTaught', 'boardsTaught', 'classesTaught'].includes(field)) {
+      // Special handling for array fields (subjectsTaught, boardsTaught, classesTaught, availability)
+      if (['subjectsTaught', 'boardsTaught', 'classesTaught', 'availability'].includes(field)) {
         if (formData[field].length === 0) {
           validateField(field, []); // Force validation for empty array
           currentStepHasErrors = true;
         }
-      } else if (!['phone', 'experienceYears', 'currentOccupation', 'bio', 'teachingApproach', 'achievements', 'hourlyRate', 'photo', 'preferredSchedule'].includes(field)) {
+      } else if (!['phone', 'experienceYears', 'currentOccupation', 'bio', 'teachingApproach', 'achievements', 'hourlyRate', 'photo'].includes(field)) {
         const hasError = !validateField(field, formData[field]);
         if (hasError) currentStepHasErrors = true;
       }
@@ -701,7 +792,80 @@ const TeacherProfileForm = () => {
                       'Select teaching mode',
                       true
                     )}
-                    {renderInputField('Preferred Schedule/Availability', 'preferredSchedule', 'text', <Clock className="w-4 h-4 text-violet-600" />, 'e.g., Weekends, Evenings', false)}
+                    
+                    {/* Weekly Availability Section */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-violet-600" /> Weekly Availability 
+                        <span className="text-red-500">*</span>
+                      </h4>
+                      
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <select
+                          name="day"
+                          value={newSlot.day}
+                          onChange={handleSlotChange}
+                          className="p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 shadow-sm"
+                        >
+                          <option value="">Select day</option>
+                          {daysOfWeek.map(day => (
+                            <option key={day} value={day}>{day}</option>
+                          ))}
+                        </select>
+                        
+                        <input
+                          type="time"
+                          name="startTime"
+                          value={newSlot.startTime}
+                          onChange={handleSlotChange}
+                          className="p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 shadow-sm"
+                          placeholder="Start time"
+                        />
+                        
+                        <input
+                          type="time"
+                          name="endTime"
+                          value={newSlot.endTime}
+                          onChange={handleSlotChange}
+                          className="p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 shadow-sm"
+                          placeholder="End time"
+                        />
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={addAvailabilitySlot}
+                        className="px-4 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-colors transform hover:scale-105 shadow-md"
+                      >
+                        Add Time Slot
+                      </button>
+                      
+                      {formData.availability.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <h5 className="text-sm font-medium text-gray-600">Your Availability:</h5>
+                          <div className="space-y-2 p-3 bg-violet-50 rounded-xl border border-violet-100">
+                            {formData.availability.map((slot, index) => (
+                              <div key={index} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm">
+                                <span className="font-medium text-gray-700">
+                                  {slot.day}: {slot.startTime} - {slot.endTime}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAvailabilitySlot(index)}
+                                  className="text-red-500 hover:text-red-700 transition-colors transform hover:scale-110"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {uiState.errors.availability && (
+                        <p className="text-red-500 text-sm animate-shake">{uiState.errors.availability}</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -743,6 +907,10 @@ const TeacherProfileForm = () => {
                           ref={fileInputRef}
                           className="flex-1 p-3 border border-gray-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 shadow-sm"
                         />
+                        <p className="text-xs text-gray-500 mt-2">Please upload a profile photo under <span className="font-semibold">1 MB</span>.</p>
+                        {uiState.errors.photo && (
+                          <p className="text-xs text-red-500 mt-1">{uiState.errors.photo}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -844,6 +1012,17 @@ const TeacherProfileForm = () => {
                 {formData.teachingMode && (
                   <p><span className="font-medium text-violet-600">Mode:</span> {formData.teachingMode}</p>
                 )}
+                {formData.availability.length > 0 && (
+                  <div>
+                    <p className="font-medium text-violet-600">Availability:</p>
+                    <ul className="list-disc list-inside text-xs pl-2 text-gray-700">
+                      {formData.availability.slice(0, 3).map((slot, index) => (
+                        <li key={index}>{slot.day}: {slot.startTime}-{slot.endTime}</li>
+                      ))}
+                      {formData.availability.length > 3 && <li>+{formData.availability.length - 3} more...</li>}
+                    </ul>
+                  </div>
+                )}
                 {formData.hourlyRate && (
                   <p><span className="font-medium text-violet-600">Rate:</span> INR {formData.hourlyRate}/hr</p>
                 )}
@@ -855,7 +1034,7 @@ const TeacherProfileForm = () => {
               <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">💡 Tips for a Great Profile</h3>
               <ul className="space-y-2 text-sm text-blue-700">
                 <li>**Highlight Your Expertise:** Clearly list all subjects, boards, and classes you teach.</li>
-                <li>**Showcase Experience:** Mention your years of experience and current occupation.</li>
+                <li>**Set Clear Availability:** Add specific time slots when you're available to teach.</li>
                 <li>**Professional Photo:** A clear, professional photo builds trust with potential students.</li>
                 <li>**Detailed Bio:** Describe your teaching philosophy and what makes your approach unique.</li>
                 <li>**List Achievements:** Share any success stories or notable achievements to stand out.</li>

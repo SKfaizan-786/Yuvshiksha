@@ -87,6 +87,7 @@ const StudentProfileForm = () => {
     const loadUserData = async () => {
       const storedUser = getFromLocalStorage('currentUser', null);
       if (storedUser && storedUser.role === 'student') {
+        let loaded = false;
         try {
           const token = localStorage.getItem('token');
           if (token) {
@@ -98,11 +99,9 @@ const StudentProfileForm = () => {
                 'Content-Type': 'application/json'
               }
             });
-
             if (response.ok) {
               const profileData = await response.json();
               const studentProfile = profileData.studentProfile || {};
-
               setFormData(prev => ({
                 ...prev,
                 firstName: profileData.firstName || storedUser.firstName || '',
@@ -117,22 +116,32 @@ const StudentProfileForm = () => {
                 bio: studentProfile.bio || '',
                 goals: (studentProfile.learningGoals ? studentProfile.learningGoals.map((g, i) => ({ id: i + 1, text: g })) : []),
               }));
-
               if (studentProfile.photoUrl) {
                 setUiState(prev => ({
                   ...prev,
                   photoPreviewUrl: studentProfile.photoUrl
                 }));
               }
-            } else {
-              loadFromLocalStorage(storedUser);
+              loaded = true;
+            } else if (response.status === 404) {
+              setFormData(prev => ({
+                ...prev,
+                firstName: storedUser.firstName || '',
+                lastName: storedUser.lastName || '',
+                email: storedUser.email || '',
+              }));
+              loaded = true;
             }
-          } else {
-            loadFromLocalStorage(storedUser);
           }
-        } catch (error) {
-          console.warn('Failed to fetch from backend, using localStorage:', error);
-          loadFromLocalStorage(storedUser);
+        } catch (error) {}
+        if (!loaded) {
+          // fallback: always allow form to load for new users
+          setFormData(prev => ({
+            ...prev,
+            firstName: storedUser.firstName || '',
+            lastName: storedUser.lastName || '',
+            email: storedUser.email || '',
+          }));
         }
       }
       setUiState(prev => ({ ...prev, userLoaded: true }));
@@ -329,13 +338,18 @@ const StudentProfileForm = () => {
   }, [uiState.currentStep, stepRequiredFields]);
 
 
+
   const handleChange = useCallback((e) => {
     const { name, value, files } = e.target;
 
     if (name === 'photo' && files && files[0]) {
       const file = files[0];
+      if (file.size > 1048576) { // 1MB = 1048576 bytes
+        showMessage('Profile photo must be under 1 MB.', 'error');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
       setFormData(prev => ({ ...prev, photo: file }));
-
       const reader = new FileReader();
       reader.onload = (e) => {
         setUiState(prev => ({ ...prev, photoPreviewUrl: e.target.result }));
@@ -345,10 +359,9 @@ const StudentProfileForm = () => {
       setUiState(prev => ({ ...prev, goalInput: value }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
-      // Validate on change for immediate feedback (debouncing can be added here if performance is an issue)
       validateField(name, value);
     }
-  }, [validateField]);
+  }, [validateField, showMessage]);
 
   const addGoal = useCallback(() => {
     if (uiState.goalInput.trim()) {
@@ -376,14 +389,18 @@ const StudentProfileForm = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    console.log('Submitting profile data...');
     setUiState(prev => ({ ...prev, isSubmitting: true }));
-
     try {
-      // Get token from localStorage correctly
-      const token = getFromLocalStorage('token');
-      if (!token) throw new Error('No authentication token found');
-
+      let token = getFromLocalStorage('token');
+      if (!token) {
+        showMessage('Session expired. Please login again.', 'error');
+        navigate('/login');
+        return;
+      }
+      // Remove any extra quotes from token
+      if (typeof token === 'string') {
+        token = token.replace(/^"|"$/g, '');
+      }
       // Prepare all fields for backend
       const profileData = {
         firstName: formData.firstName,
@@ -398,11 +415,7 @@ const StudentProfileForm = () => {
         mode: formData.mode,
         board: formData.board,
         subjects: formData.subjects || (formData.learningInterest ? [formData.learningInterest] : []),
-        // Do NOT send 'goals' field, only 'learningGoals'
       };
-
-      console.log('Sending profile data:', profileData);
-
       const response = await fetch('http://localhost:5000/api/profile/student', {
         method: 'PUT',
         headers: {
@@ -411,28 +424,22 @@ const StudentProfileForm = () => {
         },
         body: JSON.stringify(profileData)
       });
-
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.message || 'Failed to save profile');
       }
-
-      console.log('Profile update response:', result);
-
-      // Update local storage with complete user data
       const updatedUser = {
         ...result.user,
         profileComplete: true
       };
       setToLocalStorage('currentUser', updatedUser);
-
       showMessage('Profile saved successfully!', 'success');
       setTimeout(() => navigate('/student/dashboard'), 1500);
-
     } catch (error) {
-      console.error('Profile submission error:', error);
       showMessage(error.message || 'Failed to save profile', 'error');
+      if ((error.message || '').toLowerCase().includes('token')) {
+        navigate('/login');
+      }
     } finally {
       setUiState(prev => ({ ...prev, isSubmitting: false }));
     }
@@ -742,6 +749,7 @@ const StudentProfileForm = () => {
                           ref={fileInputRef}
                           className="flex-1 p-3 border border-gray-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 shadow-sm"
                         />
+                        <p className="text-xs text-gray-500 mt-2">Please upload a profile photo under <span className="font-semibold">1 MB</span>.</p>
                       </div>
                     </div>
                   </div>
