@@ -26,7 +26,8 @@ import {
   BookCheck,
   Star,
   GraduationCap,
-  AlertTriangle
+  AlertTriangle,
+  IndianRupee
 } from 'lucide-react';
 
 // --- Context for Current User ---
@@ -77,18 +78,7 @@ const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed
       >
         <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'} transition-colors duration-300 flex-shrink-0`} />
         {!isCollapsed && (
-          <>
-            <span className="transition-all duration-300 truncate">{text}</span>
-            {count > 0 && (
-              <span
-                className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 flex-shrink-0 ${
-                  isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
-                }`}
-              >
-                {count}
-              </span>
-            )}
-          </>
+          <span className="transition-all duration-300 truncate">{text}</span>
         )}
       </button>
       {isCollapsed && count > 0 && (
@@ -183,6 +173,43 @@ const MainHeader = ({ currentUser }) => {
   );
 };
 
+// SessionCard component for displaying each session in the dashboard
+const SessionCard = ({ session, onViewDetail }) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+  return (
+    <div className="bg-white/80 rounded-xl p-4 border border-slate-200 shadow hover:shadow-lg transition-all duration-200">
+      <div className="mb-2">
+        <div className="flex-1">
+          <h4 className="font-semibold text-slate-800 text-base">{session.teacherName}</h4>
+          <div className="flex items-center text-xs text-slate-500">
+            {formatDate(session.date)}
+            <span className="ml-3">{session.time} ({session.duration}h)</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center text-sm text-slate-700 mb-2">
+        <span className="font-medium">Subject:</span>&nbsp;{session.subject}
+      </div>
+      <div className="flex items-center text-sm text-slate-700 mb-2">
+        <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+      </div>
+      <button 
+        className="w-full mt-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+        onClick={() => onViewDetail(session)}
+      >
+        View Details
+      </button>
+    </div>
+  );
+};
+
 const StatCard = ({ title, value, icon: Icon, color, description }) => {
   // Theme-consistent colors for stat cards
   const colorClasses = {
@@ -212,58 +239,31 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
   );
 };
 
-const SessionCard = ({ session }) => {
+
+// Modal for session details
+const SessionDetailModal = ({ session, onClose }) => {
+  if (!session) return null;
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleString('en-US', { 
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
     });
   };
-
+  // Try to get teacher name from multiple possible properties
+  const teacherName = session.teacherName || (session.teacher && session.teacher.name) || session.teacher || 'N/A';
   return (
-    <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/40 hover:bg-white/80 transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <img 
-            src={session.teacherProfile} 
-            alt={session.teacherName}
-            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-          />
-          <div>
-            <h4 className="font-semibold text-slate-800 text-sm">{session.teacherName}</h4>
-            <p className="text-purple-600 text-xs font-medium">{session.subject}</p>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative animate-fade-in">
+        <button className="absolute top-3 right-3 text-slate-400 hover:text-red-500 text-xl" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold mb-4 text-purple-700">Session Details</h2>
+        <div className="space-y-2 text-slate-700">
+          <div><span className="font-semibold">Teacher:</span> {teacherName}</div>
+          <div><span className="font-semibold">Subject:</span> {session.subject}</div>
+          <div><span className="font-semibold">Date & Time:</span> {formatDate(session.date)} ({session.time})</div>
+          <div><span className="font-semibold">Duration:</span> {session.duration} hour(s)</div>
+          <div><span className="font-semibold">Amount Paid:</span> ₹{session.amount}</div>
+          {session.notes && <div><span className="font-semibold">Notes:</span> {session.notes}</div>}
         </div>
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-          session.type === 'online' 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-blue-100 text-blue-700'
-        }`}>
-          {session.type === 'online' ? <Video className="w-3 h-3 inline mr-1" /> : <MapPin className="w-3 h-3 inline mr-1" />}
-          {session.type}
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center text-slate-600 text-sm">
-          <Calendar className="w-4 h-4 mr-2 text-purple-500" />
-          {formatDate(session.date)}
-        </div>
-        <div className="flex items-center text-slate-600 text-sm">
-          <Clock className="w-4 h-4 mr-2 text-purple-500" />
-          {session.time} ({session.duration})
-        </div>
-      </div>
-      
-      <div className="flex space-x-2 mt-4">
-        <button className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-xs font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200">
-          Join Session
-        </button>
-        <button className="px-3 py-2 border border-purple-200 text-purple-600 rounded-lg text-xs font-medium hover:bg-purple-50 transition-all duration-200">
-          Reschedule
-        </button>
       </div>
     </div>
   );
@@ -318,7 +318,7 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
         
         <div className="flex items-center text-sm font-semibold text-slate-800">
           <DollarSign className="w-4 h-4 text-green-600 mr-1" />
-          â‚¹{teacher.hourlyRate}/hour
+          {teacher.hourlyRate}/hour
         </div>
       </div>
       
@@ -364,6 +364,7 @@ const NotificationItem = ({ notification }) => {
 
 // --- Main StudentDashboard Component ---
 const StudentDashboard = () => {
+  const [selectedSession, setSelectedSession] = useState(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard'); // State for active sidebar item
@@ -377,64 +378,58 @@ const StudentDashboard = () => {
   const { unreadCount } = useNotifications();
 
   // Load favorites from localStorage on component mount
+  // Fetch dashboard stats from backend
   useEffect(() => {
-    const loadFavorites = async () => {
+    const fetchDashboardStats = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem('token');
-        console.log('ðŸ” Loading favorites, token:', token ? `present (${token.length} chars)` : 'missing');
-        
-        if (token) {
-          // Try to load from API first (same as teacher list)
-          try {
-            const API_BASE_URL = API_CONFIG.BASE_URL;
-            const url = `${API_BASE_URL}/api/profile/favourites`;
-            console.log('ðŸ“¡ Calling API:', url);
-            
-            // Clean the token (remove quotes if present)
-            const cleanToken = token.replace(/^"(.*)"$/, '$1');
-            console.log('ðŸ”‘ Using token:', cleanToken.substring(0, 20) + '...');
-            
-            const response = await fetch(url, {
-              headers: {
-                'Authorization': `Bearer ${cleanToken}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            console.log('ðŸ“Š API Response status:', response.status);
-            console.log('ðŸ“‹ Response headers:', Object.fromEntries(response.headers.entries()));
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('âœ… API favorites data:', data);
-              
-              const apiFavorites = data.favourites || [];
-              console.log('ðŸ’¾ Setting favorites:', apiFavorites);
-              setFavorites(apiFavorites);
-              
-              // Also save to localStorage for backup
-              localStorage.setItem('favoriteTeachers', JSON.stringify(apiFavorites));
-              return;
-            } else {
-              const errorText = await response.text();
-              console.log('âŒ API response not ok:', response.status, errorText);
-            }
-          } catch (apiError) {
-            console.log('âš ï¸ API error:', apiError);
-          }
-        }
-        
-        // Fallback to localStorage
-        const savedFavorites = JSON.parse(localStorage.getItem('favoriteTeachers') || '[]');
-        console.log('ðŸ“¦ Using localStorage favorites:', savedFavorites);
-        setFavorites(savedFavorites);
-      } catch (error) {
-        console.error('âŒ Error loading favorites:', error);
-        setFavorites([]);
+        if (!token) return;
+        const API_BASE_URL = API_CONFIG.BASE_URL;
+        // Fetch bookings
+        const bookingsRes = await fetch(`${API_BASE_URL}/api/bookings/student?status=all&limit=1000`, {
+          headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
+        });
+        const bookingsData = await bookingsRes.json();
+        const bookings = bookingsData.bookings || [];
+        // Fetch favourites
+        const favRes = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
+          headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
+        });
+        const favData = await favRes.json();
+        const favs = favData.favourites || [];
+        // Calculate stats
+        const completedSessions = bookings.filter(b => b.status === 'completed').length;
+        const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
+        const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+        // For the section, filter upcoming sessions within the next month
+        const now = new Date();
+        const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const upcomingSessionsList = bookings.filter(b => {
+          if (b.status === 'completed' || b.status === 'cancelled' || b.status === 'rejected') return false;
+          const sessionDate = new Date(b.date);
+          return sessionDate >= now && sessionDate <= oneMonthLater;
+        });
+        setDashboardData(prev => ({
+          ...prev,
+          stats: {
+            ...prev?.stats,
+            completedSessions,
+            upcomingSessions,
+            favoriteTeachers: favs.length,
+            totalSpent
+          },
+          upcomingSessions: upcomingSessionsList,
+          allSessions: bookings // <-- add all sessions for My Sessions tab
+        }));
+        setFavorites(favs);
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    loadFavorites();
+    fetchDashboardStats();
   }, []);
 
   // Update teacher favorite status when favorites change
@@ -1065,7 +1060,7 @@ const StudentDashboard = () => {
                   value={dashboardData.stats.upcomingSessions}
                   icon={Calendar}
                   color="primary"
-                  description="Next 7 days"
+                  description="All time"
                 />
                 <StatCard
                   title="Completed Sessions"
@@ -1083,8 +1078,8 @@ const StudentDashboard = () => {
                 />
                 <StatCard
                   title="Total Spent"
-                  value={`â‚¹${dashboardData.stats.totalSpent.toLocaleString()}`}
-                  icon={DollarSign}
+                  value={`${dashboardData.stats.totalSpent.toLocaleString()}`}
+                  icon={IndianRupee}
                   color="success"
                   description="Learning investment"
                 />
@@ -1096,10 +1091,13 @@ const StudentDashboard = () => {
                   <Calendar className="w-7 h-7 text-purple-600" />
                   Upcoming Sessions
                 </h2>
+                <SessionDetailModal session={selectedSession} onClose={() => setSelectedSession(null)} />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {dashboardData.upcomingSessions.map(session => (
-                    <SessionCard key={session.id} session={session} />
-                  ))}
+                  {[...dashboardData.upcomingSessions]
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                    .map(session => (
+                      <SessionCard key={session.id} session={session} onViewDetail={setSelectedSession} />
+                    ))}
                 </div>
                 {dashboardData.upcomingSessions.length === 0 && (
                   <div className="text-center py-12">
@@ -1213,24 +1211,47 @@ const StudentDashboard = () => {
               <h2 className={sectionTitleClass}>
                 <Calendar className="w-7 h-7 text-purple-600" /> My Sessions
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {dashboardData.upcomingSessions.map(session => (
-                  <SessionCard key={session.id} session={session} />
-                ))}
+              <div className="space-y-6">
+                {dashboardData.allSessions && dashboardData.allSessions
+                  .filter(session => ['confirmed','pending','completed','complete','reject','rejected'].includes((session.status||'').toLowerCase()))
+                  .sort((a, b) => new Date(a.date) - new Date(b.date))
+                  .map(session => (
+                    <div key={session.id} className="overflow-x-auto">
+                      <div className="bg-white/80 rounded-xl p-4 border border-slate-200 shadow hover:shadow-lg transition-all duration-200 min-w-[320px] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <div className="font-semibold text-slate-800 text-base mb-1">{session.teacherName || (session.teacher && session.teacher.name) || session.teacher || 'N/A'}</div>
+                          <div className="flex items-center text-xs text-slate-500 mb-2">
+                            {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            <span className="ml-3">{session.time} ({session.duration}h)</span>
+                          </div>
+                          <div className="flex items-center text-sm text-slate-700 mb-1">
+                            <span className="font-medium">Subject:</span>&nbsp;{session.subject}
+                          </div>
+                          <div className="flex items-center text-sm text-slate-700 mb-1">
+                            <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs font-semibold px-2 py-1 rounded-full w-fit self-start md:self-auto"
+                          style={{backgroundColor: session.status === 'completed' || session.status === 'complete' ? '#d1fae5' : session.status === 'confirmed' ? '#e0e7ff' : session.status === 'pending' ? '#fef9c3' : '#fee2e2', color: session.status === 'completed' || session.status === 'complete' ? '#065f46' : session.status === 'confirmed' ? '#3730a3' : session.status === 'pending' ? '#92400e' : '#991b1b'}}>
+                          {session.status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {(!dashboardData.allSessions || dashboardData.allSessions.length === 0) && (
+                  <div className="text-center py-12">
+                    <Calendar className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-500 text-lg mb-4">No sessions scheduled</p>
+                    <Link 
+                      to="/student/find-teachers"
+                      className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+                    >
+                      <Search className="w-5 h-5 mr-2" />
+                      Book Your First Session
+                    </Link>
+                  </div>
+                )}
               </div>
-              {dashboardData.upcomingSessions.length === 0 && (
-                <div className="text-center py-12">
-                  <Calendar className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-500 text-lg mb-4">No sessions scheduled</p>
-                  <Link 
-                    to="/student/find-teachers"
-                    className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
-                  >
-                    <Search className="w-5 h-5 mr-2" />
-                    Book Your First Session
-                  </Link>
-                </div>
-              )}
             </section>
           )}
 

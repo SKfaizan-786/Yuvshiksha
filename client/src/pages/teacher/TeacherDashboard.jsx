@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarDays, Users, DollarSign, LogOut, UserRound, ArrowRight, CheckCircle,
   Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck,
-  User, BookOpen, Clock
+  User, BookOpen, Clock, GraduationCap
 } from 'lucide-react';
 
 // Import your storage utility functions
@@ -340,7 +340,7 @@ export default function TeacherDashboard() {
   const getListingButtonTooltip = () => {
     if (isProcessingListing) return "Processing payment...";
     if (!isProfileComplete) return "Please complete your profile first to get listed.";
-    return `Pay â‚¹${LISTING_FEE} to get listed and found by students.`;
+    return `Pay ${LISTING_FEE} to get listed and found by students.`;
   };
 
   return (
@@ -354,291 +354,340 @@ export default function TeacherDashboard() {
       
       {/* Content */}
       <div className="relative z-10">
-      {/* Global Message/Toast */}
-      {message && (
-        <div className={`fixed top-8 left-1/2 -translate-x-1/2 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-down ${
-          messageType === 'success' ? 'bg-emerald-600 text-white' :
-          messageType === 'error' ? 'bg-red-600 text-white' :
-          'bg-blue-600 text-white'
-        }`}>
-          {messageType === 'success' && <CheckCircle className="w-5 h-5" />}
-          {messageType === 'error' && <XCircle className="w-5 h-5" />}
-          {messageType === 'info' && <Info className="w-5 h-5" />}
-          <span className="font-semibold">{message}</span>
-        </div>
-      )}
-
-      <header className="text-center mb-10">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          {/* Teacher Profile Image */}
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-purple-400 shadow-lg bg-gray-200 hover:border-purple-300 transition-all duration-300">
-              {currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl ? (
-                <img
-                  src={currentUser.teacherProfileData?.photoUrl || currentUser.teacherProfile?.photoUrl}
-                  alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
-                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-violet-500 text-white text-2xl font-bold">
-                  {currentUser?.firstName ? currentUser.firstName.charAt(0).toUpperCase() : 'T'}
-                </div>
-              )}
-            </div>
-            {/* Online Status Indicator */}
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center animate-pulse-slow">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-            </div>
+        {/* Global Message/Toast */}
+        {message && (
+          <div className={`fixed top-8 left-1/2 -translate-x-1/2 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-down ${
+            messageType === 'success' ? 'bg-emerald-600 text-white' :
+            messageType === 'error' ? 'bg-red-600 text-white' :
+            'bg-blue-600 text-white'
+          }`}>
+            {messageType === 'success' && <CheckCircle className="w-5 h-5" />}
+            {messageType === 'error' && <XCircle className="w-5 h-5" />}
+            {messageType === 'info' && <Info className="w-5 h-5" />}
+            <span className="font-semibold">{message}</span>
           </div>
+        )}
 
-          {/* Header Text */}
-          <div className="text-left">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400 flex items-center gap-3">
-              <LayoutDashboard className="w-10 h-10 text-purple-400" /> Teacher Dashboard
-            </h1>
-            <p className="text-gray-400 mt-2 text-lg">
-              Welcome back, <span className="font-semibold text-gray-800">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}!</span>
-            </p>
-            <p className="text-gray-500 text-sm">{currentUser?.email}</p>
-          </div>
-        </div>
-
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={() => {
-              setToLocalStorage('currentUser', null); // Clear current user
-              localStorage.removeItem('token'); // Also remove the token
-              navigate('/login');
-            }}
-            className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer"
-          >
-            <LogOut className="w-5 h-5" /> Logout
-          </button>
-        </div>
-      </header>
-
-      {!isProfileComplete && (
-        <section className="bg-red-800/50 border-l-4 border-red-500 text-red-200 p-4 rounded-r-lg shadow-lg mb-8 flex flex-col sm:flex-row items-center justify-between animate-fade-in-down">
-          <div className="flex items-center gap-4 mb-4 sm:mb-0">
-            <Settings className="w-8 h-8 text-red-400" />
-            <div>
-              <h2 className="font-bold text-lg">Action Required: Complete Your Profile</h2>
-              <p className="text-sm">Your profile is incomplete. Finish setup to get listed and connect with students.</p>
+        {/* Navbar/Header */}
+        <nav className="w-full flex items-center justify-between px-4 py-4 md:px-10 md:py-4 bg-white/70 shadow-sm rounded-b-2xl border-b border-white/40">
+          {/* Left: Logo/Brand (match home page) */}
+          <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => navigate('/')} title="Go to Home">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-white" />
             </div>
+            <span className="text-2xl font-bold text-black leading-tight">Yuvshiksha</span>
           </div>
-          <button
-            onClick={() => navigate('/teacher/profile-setup')}
-            className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-300 flex items-center gap-2 shadow-sm font-semibold"
-          >
-            Complete Profile <ArrowRight className="w-4 h-4" />
-          </button>
-        </section>
-      )}
+          {/* Right: Profile Info and Logout */}
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end mr-2">
+              <span className="font-semibold text-slate-800 text-base">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher Name'}</span>
+              <span className="text-xs text-slate-500">{currentUser?.email || 'teacher@email.com'}</span>
+            </div>
+            <img
+              src={currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl || '/default-profile.png'}
+              alt="Profile"
+              className="w-10 h-10 rounded-full border-2 border-purple-300 object-cover bg-white shadow"
+            />
+            <button
+              onClick={() => {
+                setToLocalStorage('currentUser', null); // Clear current user
+                localStorage.removeItem('token'); // Also remove the token
+                navigate('/login');
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/80 text-purple-700 font-semibold shadow transition-all duration-200 hover:bg-red-100 hover:text-red-600 hover:border-red-300 border border-transparent"
+              style={{ cursor: 'pointer' }}
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" /> Logout
+            </button>
+          </div>
+        </nav>
+        {/* Below Navbar: Teacher Dashboard title and welcome */}
+        <div className="w-full flex flex-col items-center mt-2 mb-8">
+          <div className="flex items-center gap-3 mb-1">
+            <span className="p-2 bg-purple-100 rounded-lg">
+              <LayoutDashboard className="w-7 h-7 text-purple-600" />
+            </span>
+            <h1 className="text-3xl md:text-4xl font-bold text-purple-700 tracking-tight">Teacher Dashboard</h1>
+          </div>
+          <p className="text-lg text-slate-700 mt-1">Welcome back, <span className="font-semibold text-purple-700">{currentUser?.firstName ? currentUser.firstName : 'Teacher'}</span>!</p>
+        </div>
+        {/* Profile completion warning and rest of dashboard... */}
+        {!isProfileComplete && (
+          <section className="bg-red-800/50 border-l-4 border-red-500 text-red-200 p-4 rounded-r-lg shadow-lg mb-8 flex flex-col sm:flex-row items-center justify-between animate-fade-in-down">
+            <div className="flex items-center gap-4 mb-4 sm:mb-0">
+              <Settings className="w-8 h-8 text-red-400" />
+              <div>
+                <h2 className="font-bold text-lg">Action Required: Complete Your Profile</h2>
+                <p className="text-sm">Your profile is incomplete. Finish setup to get listed and connect with students.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/teacher/profile-setup')}
+              className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-300 flex items-center gap-2 shadow-sm font-semibold"
+            >
+              Complete Profile <ArrowRight className="w-4 h-4" />
+            </button>
+          </section>
+        )}
 
-      <main className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
+        <main className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
 
-        {/* Listing Status Card */}
-        <DashboardCard icon={ListChecks} title="Listing Status">
-          <div className="text-center flex flex-col items-center justify-center h-full space-y-4">
-            {isListed ? (
-              <>
-                <CheckCircle className="w-12 h-12 text-emerald-500 mb-3 animate-fade-in" />
-                <p className="text-emerald-600 font-bold text-lg">You are Listed!</p>
-                <p className="text-slate-600 text-sm mt-1">Students can now find and book you.</p>
-                {teacherProfile.listedAt && (
-                  <p className="text-slate-500 text-xs mt-2 bg-white/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">
-                    Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}
-                  </p>
+            {/* Listing Status Card */}
+            <DashboardCard icon={ListChecks} title="Listing Status">
+              <div className="text-center flex flex-col items-center justify-center h-full space-y-4">
+                {isListed ? (
+                  <>
+                    <CheckCircle className="w-12 h-12 text-emerald-500 mb-3 animate-fade-in" />
+                    <p className="text-emerald-600 font-bold text-lg">You are Listed!</p>
+                    <p className="text-slate-600 text-sm mt-1">Students can now find and book you.</p>
+                    {teacherProfile.listedAt && (
+                      <p className="text-slate-500 text-xs mt-2 bg-white/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">
+                        Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Info className="w-12 h-12 text-amber-500 mb-3 animate-fade-in" />
+                    <p className="text-amber-600 font-bold text-lg">Not Yet Listed</p>
+                    <p className="text-slate-600 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
+                    <button
+                      onClick={handleGetListed}
+                      disabled={isProcessingListing || !isProfileComplete}
+                      title={getListingButtonTooltip()}
+                      className={`mt-4 px-5 py-2.5 rounded-xl text-white font-medium flex items-center gap-2 transition-all duration-300 shadow-lg text-sm
+                        disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
+                        ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-600'}`}
+                    >
+                      {isProcessingListing ? (
+                        <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
+                      ) : (
+                        <> <Wallet className="w-4 h-4" /> Get Listed ({LISTING_FEE} Fee) </>
+                      )}
+                    </button>
+                  </>
                 )}
-              </>
-            ) : (
-              <>
-                <Info className="w-12 h-12 text-amber-500 mb-3 animate-fade-in" />
-                <p className="text-amber-600 font-bold text-lg">Not Yet Listed</p>
-                <p className="text-slate-600 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
-                <button
-                  onClick={handleGetListed}
-                  disabled={isProcessingListing || !isProfileComplete}
-                  title={getListingButtonTooltip()}
-                  className={`mt-4 px-5 py-2.5 rounded-xl text-white font-medium flex items-center gap-2 transition-all duration-300 shadow-lg text-sm
-                    disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
-                    ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-600'}`}
-                >
-                  {isProcessingListing ? (
-                    <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
-                  ) : (
-                    <> <Wallet className="w-4 h-4" /> Get Listed (â‚¹{LISTING_FEE} Fee) </>
-                  )}
-                </button>
-              </>
-            )}
-          </div>
-        </DashboardCard>
+              </div>
+            </DashboardCard>
 
-        {/* Your Summary Card */}
-        <DashboardCard icon={DollarSign} title="Your Summary">
-          {statsLoading ? (
-            <StatSkeleton />
-          ) : (
-            <div className="space-y-4">
-              <StatRow label="Upcoming Sessions" value={stats.upcomingSessions} />
-              <StatRow label="Total Sessions" value={stats.totalSessions} />
-              <StatRow
-                label="Total Earnings"
-                value={stats.totalEarnings.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
-              />
-              {/* Info message when no data */}
-              {stats.upcomingSessions === 0 && stats.totalSessions === 0 && stats.totalEarnings === 0 && (
-                <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
-                    <Info className="w-4 h-4 text-blue-400" />
-                    Data will update when you receive bookings and inquiries.
-                  </p>
+            {/* Your Summary Card */}
+            <DashboardCard icon={DollarSign} title="Your Summary">
+              {statsLoading ? (
+                <StatSkeleton />
+              ) : (
+                <div className="space-y-4">
+                  <StatRow label="Upcoming Sessions" value={stats.upcomingSessions} />
+                  <StatRow label="Total Sessions" value={stats.totalSessions} />
+                  <StatRow
+                    label="Total Earnings"
+                    value={stats.totalEarnings.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
+                  />
+                  {/* Info message when no data */}
+                  {stats.upcomingSessions === 0 && stats.totalSessions === 0 && stats.totalEarnings === 0 && (
+                    <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
+                        <Info className="w-4 h-4 text-blue-400" />
+                        Data will update when you receive bookings and inquiries.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </DashboardCard>
+            </DashboardCard>
 
-        {/* Quick Actions Card */}
-        <DashboardCard icon={LayoutDashboard} title="Quick Actions">
-          <ul className="space-y-3">
-            {[ 
-              { label: 'View Profile', icon: UserRound, path: '/teacher/profile' },
-              { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
-              { label: 'View schedule', icon: CalendarDays, path: '/teacher/schedule' }
-            ].map(({ label, icon: Icon, path }) => (
-              <li key={path}>
-                <button
-                  onClick={() => navigate(path)}
-                  className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+            {/* Quick Actions Card */}
+            <DashboardCard icon={LayoutDashboard} title="Quick Actions">
+              <ul className="space-y-3">
+                {[ 
+                  { label: 'View Profile', icon: UserRound, path: '/teacher/profile' },
+                  { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
+                  { label: 'View schedule', icon: CalendarDays, path: '/teacher/schedule' }
+                ].map(({ label, icon: Icon, path }) => (
+                  <li key={path}>
+                    <button
+                      onClick={() => navigate(path)}
+                      className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+                    >
+                      <Icon className="w-5 h-5 text-purple-500" />
+                      <span className="text-sm">{label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </DashboardCard>
+
+            {/* Recent Bookings/Sessions Card */}
+            <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-slate-800">Latest Bookings</h3>
+                <button 
+                  onClick={() => navigate('/teacher/bookings')}
+                  className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
                 >
-                  <Icon className="w-5 h-5 text-purple-500" />
-                  <span className="text-sm">{label}</span>
+                  View all <ArrowRight className="w-4 h-4" />
                 </button>
-              </li>
-            ))}
-          </ul>
-        </DashboardCard>
-
-        {/* Recent Bookings/Sessions Card */}
-        <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
-          <h3 className="text-xl font-semibold text-gray-200 mb-4">Latest Bookings</h3>
-          <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar">
-            {statsLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
-                <p className="text-gray-400 text-lg font-medium">Loading bookings...</p>
               </div>
-            ) : recentBookings && recentBookings.length > 0 ? (
-              recentBookings.slice(0, 5).map((booking) => (
-                <div key={booking.id || booking._id} className="p-4 bg-white rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between border border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-                    <div className="flex items-center gap-2">
-                      <User className="w-5 h-5 text-purple-400" />
-                      <span className="font-semibold text-slate-800">{booking.student?.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-blue-400" />
-                      <span className="text-slate-700">{booking.subject}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-5 h-5 text-green-400" />
-                      <span className="text-slate-700">{new Date(booking.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-amber-400" />
-                      <span className="text-slate-700">{booking.time}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-emerald-400" />
-                      <span className="text-slate-700">â‚¹{booking.amount}</span>
-                    </div>
+              
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                {statsLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-400 text-lg font-medium">Loading bookings...</p>
                   </div>
-                  <div className="mt-2 md:mt-0 flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      booking.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                      booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      booking.status === 'rescheduled' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                    </span>
+                ) : recentBookings && recentBookings.length > 0 ? (
+                  recentBookings.slice(0, 5).map((booking) => (
+                    <div 
+                      key={booking.id || booking._id} 
+                      className="p-5 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                        {/* Student */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <User className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Student</p>
+                            <p className="font-medium text-slate-800">{booking.student?.name || 'SK ABBASUDDIN'}</p>
+                          </div>
+                        </div>
+                        {/* Subject */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-50 rounded-lg">
+                            <BookOpen className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Subject</p>
+                            <p className="font-medium text-slate-800">{booking.subject || 'Mathematics'}</p>
+                          </div>
+                        </div>
+                        {/* Date */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-50 rounded-lg">
+                            <CalendarDays className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Date</p>
+                            <p className="font-medium text-slate-800">
+                              {booking.date ? new Date(booking.date).toLocaleDateString() : '9/26/2025'}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Time */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-50 rounded-lg">
+                            <Clock className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Time</p>
+                            <p className="font-medium text-slate-800">
+                              {booking.time || '19:00 - 20:00'}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Amount */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-50 rounded-lg">
+                            <DollarSign className="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Amount</p>
+                            <p className="font-medium text-slate-800">
+                              ₹{booking.amount || '800'}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Status */}
+                        <div className="flex items-center justify-end gap-4">
+                          <div>
+                            <p className="text-sm text-gray-500">Status</p>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              booking.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                              booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                              booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Confirmed'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <MonitorCheck className="w-16 h-16 text-gray-400 mx-auto mb-4 opacity-30" />
+                    <p className="text-gray-500 text-lg font-medium">No bookings yet</p>
+                    <p className="text-gray-400 text-sm mt-2">
+                      When students book sessions with you, they'll appear here.
+                    </p>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <MonitorCheck className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
-                <p className="text-gray-400 text-lg font-medium">No bookings yet</p>
-                <p className="text-gray-500 text-sm mt-2">
-                  When students book sessions with you, they'll appear here.
-                </p>
+                )}
               </div>
-            )}
+            </DashboardCard>
           </div>
-        </DashboardCard>
-        </div>
-      </main>
+        </main>
 
-      {/* Tailwind CSS Custom Scrollbar and Animation Definitions */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #333;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #8b5cf6;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #a78bfa;
-        }
-
-        @keyframes fadeInDown {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
+        {/* Tailwind CSS Custom Scrollbar and Animation Definitions */}
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
           }
-        }
-        .animate-fade-in-down {
-          animation: fadeInDown 0.5s ease-out forwards;
-        }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 10px;
+            transition: background 0.2s;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.7);
+          }
 
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .animate-fade-in-down {
+            animation: fadeInDown 0.5s ease-out forwards;
+          }
 
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        .animate-pulse-slow {
-          animation: pulse 2s ease-in-out infinite;
-        }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+          }
 
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-6px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-      `}</style>
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+          .animate-pulse-slow {
+            animation: pulse 2s ease-in-out infinite;
+          }
+
+          @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+          }
+          .animate-float {
+            animation: float 3s ease-in-out infinite;
+          }
+        `}</style>
       </div>
     </div>
   );

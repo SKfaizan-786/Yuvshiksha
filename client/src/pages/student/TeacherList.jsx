@@ -146,7 +146,7 @@ export default function EnhancedTeacherPlatform() {
             board: teacher.teacherProfile?.boards?.[0] || teacher.teacherProfile?.boardsTaught?.[0] || 'CBSE',
             experience: teacher.teacherProfile?.experienceYears || 1,
             fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
+            rating: teacher.rating || 0,
             totalStudents: teacher.totalStudents || 0,
             avatar: getTeacherAvatar(teacher),
             specializations: teacher.teacherProfile?.subjects || teacher.teacherProfile?.subjectsTaught || ['General'],
@@ -223,7 +223,7 @@ export default function EnhancedTeacherPlatform() {
             board: Array.isArray(boards) ? boards[0]?.text || boards[0] : boards,
             experience: teacher.teacherProfile?.experienceYears || 1,
             fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
+            rating: teacher.rating || 0,
             totalStudents: teacher.totalStudents || 0,
             avatar: getTeacherAvatar(teacher),
             specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s) : [subjects].filter(Boolean),
@@ -574,7 +574,7 @@ export default function EnhancedTeacherPlatform() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Price Range (â‚¹/hour)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Price Range (per hour)</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
@@ -791,7 +791,7 @@ export default function EnhancedTeacherPlatform() {
                             <span className="text-sm">{teacher.location}</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-800">â‚¹{teacher.fee}</div>
+                            <div className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-1">₹</span>{teacher.fee}</div>
                             <div className="text-xs text-gray-500">per hour</div>
                           </div>
                         </div>
@@ -805,13 +805,7 @@ export default function EnhancedTeacherPlatform() {
                             <span>Book Session</span>
                           </button>
                           
-                          <button
-                            onClick={() => handleMessage(teacher)}
-                            className="w-full bg-white/70 hover:bg-white/90 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group border border-white/30 backdrop-blur-sm"
-                          >
-                            <MessageCircle className="w-4 h-4 group-hover:animate-pulse" />
-                            <span>Message</span>
-                          </button>
+                          {/* Message button hidden until backend is ready */}
                         </div>
                       </div>
                     </div>
