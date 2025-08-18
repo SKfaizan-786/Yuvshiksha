@@ -1,4 +1,4 @@
-// API service for booking operations
+﻿// API service for booking operations
 const API_BASE_URL = 'http://localhost:5000/api';
 
 // Get auth token from localStorage and remove extra quotes if present

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   Search, 
@@ -16,6 +17,7 @@ import {
   MessageSquare,
   Award
 } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const Header = ({ 
   student = {
@@ -34,14 +36,16 @@ const Header = ({
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   
   const profileRef = useRef(null);
-  const notificationRef = useRef(null);
   const searchRef = useRef(null);
+  
+  // Use notification context and navigation
+  const { unreadCount } = useNotifications();
+  const navigate = useNavigate();
 
   // Handle scroll effect
   useEffect(() => {
@@ -57,9 +61,6 @@ const Header = ({
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
-      }
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setIsNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -188,65 +189,17 @@ const Header = ({
             </button>
 
             {/* Notifications */}
-            <div className="relative" ref={notificationRef}>
-              <button
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className="relative p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
-              >
-                <Bell className="h-6 w-6 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
-                {student.unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                    {student.unreadNotifications}
-                  </span>
-                )}
-              </button>
-
-              {/* Notifications Dropdown */}
-              {isNotificationOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 animate-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
-                          notification.unread ? 'bg-blue-50/50' : ''
-                        }`}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className={`p-1 rounded-full ${
-                            notification.unread ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {getNotificationIcon(notification.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {notification.title}
-                            </p>
-                            <p className="text-sm text-gray-600 truncate">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {notification.time}
-                            </p>
-                          </div>
-                          {notification.unread && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                      View all notifications
-                    </button>
-                  </div>
-                </div>
+            <button
+              onClick={() => navigate('/notifications')}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+            >
+              <Bell className="h-6 w-6 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
               )}
-            </div>
+            </button>
 
             {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>

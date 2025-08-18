@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
+﻿import mongoose, { Document, Schema, Types } from 'mongoose';
 
 // Define Payment interface
 export interface IPayment extends Document {

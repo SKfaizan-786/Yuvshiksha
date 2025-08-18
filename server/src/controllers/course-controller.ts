@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../utils/authHelpers';
 import Course from '../models/Course';
-import Booking from '../models/Booking';
+import { Booking } from '../models/Booking';
 import { getUserFromRequest } from '../utils/authHelpers';
 
 // Create a new course (Teachers only)

@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { Booking } from '../models/Booking';
 import User from '../models/User';
@@ -44,7 +44,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res) => {
     await newBooking.save();
     res.status(201).json(newBooking);
   } catch (error) {
-    console.error('❌ Error creating booking:', error);
+    console.error('âŒ Error creating booking:', error);
     res.status(500).json({ message: 'Failed to create booking' });
   }
 });

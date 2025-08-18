@@ -1,4 +1,4 @@
-// -------------------- Favourites (Student/Teacher) --------------------
+﻿// -------------------- Favourites (Student/Teacher) --------------------
 
 import { Request, Response } from 'express';
 import User, { IUser, ITeacherProfile } from '../models/User';
@@ -326,17 +326,17 @@ export const updateTeacherListingStatus = async (req: Request, res: Response) =>
 
 export const getListedTeachers = async (req: Request, res: Response) => {
   try {
-    console.log('🔍 Getting listed teachers...');
+    console.log('ðŸ” Getting listed teachers...');
     
     const allTeachers = await User.find({ role: 'teacher' });
-    console.log(`📊 Total teachers found: ${allTeachers.length}`);
+    console.log(`ðŸ“Š Total teachers found: ${allTeachers.length}`);
     
     allTeachers.forEach(teacher => {
-      console.log(`👨‍🏫 Teacher: ${teacher.firstName} ${teacher.lastName}`);
-      console.log(`📧 Email: ${teacher.email}`);
-      console.log(`✅ Has teacher profile: ${!!teacher.teacherProfile}`);
-      console.log(`📝 isListed: ${teacher.teacherProfile?.isListed}`);
-      console.log(`📅 listedAt: ${teacher.teacherProfile?.listedAt}`);
+      console.log(`ðŸ‘¨â€ðŸ« Teacher: ${teacher.firstName} ${teacher.lastName}`);
+      console.log(`ðŸ“§ Email: ${teacher.email}`);
+      console.log(`âœ… Has teacher profile: ${!!teacher.teacherProfile}`);
+      console.log(`ðŸ“ isListed: ${teacher.teacherProfile?.isListed}`);
+      console.log(`ðŸ“… listedAt: ${teacher.teacherProfile?.listedAt}`);
       console.log('---');
     });
     
@@ -345,7 +345,7 @@ export const getListedTeachers = async (req: Request, res: Response) => {
       'teacherProfile.isListed': true
     }).select('firstName lastName email teacherProfile');
     
-    console.log(`🎯 Listed teachers found: ${listedTeachers.length}`);
+    console.log(`ðŸŽ¯ Listed teachers found: ${listedTeachers.length}`);
     
     res.json({
       totalTeachers: allTeachers.length,

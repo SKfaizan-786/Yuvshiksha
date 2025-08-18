@@ -1,4 +1,4 @@
-// src/types/express/index.d.ts
+﻿// src/types/express/index.d.ts
 import { IUser } from '../../models/User'; // Fixed import path
 
 declare global {

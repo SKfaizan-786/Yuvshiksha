@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie'; 
 import {
@@ -1031,7 +1031,7 @@ const TeacherProfileForm = () => {
 
             {/* Tips Card */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-md">
-              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">💡 Tips for a Great Profile</h3>
+              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">ðŸ’¡ Tips for a Great Profile</h3>
               <ul className="space-y-2 text-sm text-blue-700">
                 <li>**Highlight Your Expertise:** Clearly list all subjects, boards, and classes you teach.</li>
                 <li>**Set Clear Availability:** Add specific time slots when you're available to teach.</li>

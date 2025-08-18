@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import User, { IUser } from '../models/User'; // Ensure this path is correct
 import mongoose from 'mongoose'; // Keep this import

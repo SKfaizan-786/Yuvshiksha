@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Utility functions for handling localStorage operations with JWT tokens and user data
  */
 

@@ -1,7 +1,9 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import { Booking, IBooking } from '../models/Booking';
 import UserModel, { IUser } from '../models/User';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { notificationService } from '../services/notificationService';
+import Payment from '../models/Payment';
 import mongoose from 'mongoose';
 
 export const bookingController = {
@@ -208,6 +210,9 @@ export const bookingController = {
       await booking.save();
       console.log('Booking created successfully:', booking._id);
 
+      // Send notification to teacher about new booking request
+      await notificationService.notifyBookingPending(booking);
+
       res.status(201).json({
         message: 'Booking created successfully',
         booking: {
@@ -292,6 +297,38 @@ export const bookingController = {
       }
 
       await booking.save();
+
+      // Send notifications based on status change
+      if (status === 'confirmed' && isTeacher) {
+        // Teacher approved the booking
+        const teacher = await UserModel.findById(userId);
+        const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Teacher';
+        await notificationService.notifyBookingApproved(booking, teacherName, meetingLink);
+      } else if (status === 'cancelled') {
+        // Handle cancellation notifications and refunds
+        if (isTeacher) {
+          // Teacher rejected the booking - initiate refund
+          const teacher = await UserModel.findById(userId);
+          const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Teacher';
+          
+          // Find and process refund
+          const payment = await Payment.findOne({ booking: booking._id });
+          if (payment && payment.status === 'completed') {
+            payment.refundStatus = 'completed';
+            payment.refundAmount = payment.amount;
+            payment.refundReason = cancelReason || 'Booking rejected by teacher';
+            payment.refundedAt = new Date();
+            await payment.save();
+
+            // Notify about refund
+            await notificationService.notifyRefundProcessed(payment, payment.refundReason || 'Booking rejected by teacher');
+          }
+
+          // Notify about booking rejection
+          await notificationService.notifyBookingRejected(booking, teacherName, payment?.amount);
+        }
+        // Note: Student cancellation notifications can be added here if needed
+      }
 
       res.json({
         message: 'Booking status updated successfully',

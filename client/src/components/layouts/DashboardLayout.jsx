@@ -1,4 +1,4 @@
-// client/src/components/layouts/DashboardLayout.jsx
+﻿// client/src/components/layouts/DashboardLayout.jsx
 import React from 'react';
 import { logoutUser } from '../../utils/auth';
 import { Link, useLocation } from 'react-router-dom';

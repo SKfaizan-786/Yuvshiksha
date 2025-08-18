@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@cashfreepayments/cashfree-js": "^1.0.5",
-    "date-fns": "^4.1.0",
-    "js-cookie": "^3.0.5",
-    "react-datepicker": "^8.5.0"
-  }
-}

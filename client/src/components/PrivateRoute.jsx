@@ -1,4 +1,4 @@
-// client/src/components/PrivateRoute.jsx
+﻿// client/src/components/PrivateRoute.jsx
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { logoutUser } from '../utils/auth';

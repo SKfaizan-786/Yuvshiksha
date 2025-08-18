@@ -1,4 +1,4 @@
-import { Request } from 'express';
+﻿import { Request } from 'express';
 import { IUser } from '../models/User';
 
 // Extend Express Request type with user property

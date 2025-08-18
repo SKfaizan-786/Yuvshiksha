@@ -1,4 +1,4 @@
-import { GoogleLogin } from "@react-oauth/google";
+﻿import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
@@ -17,6 +17,8 @@ import {
   Smartphone,
   Chrome,
   Globe,
+  ArrowLeft,
+  Home,
 } from "lucide-react";
 
 // --- IMPORT THE STORAGE UTILITIES ---
@@ -563,6 +565,18 @@ const Login = () => {
                 }`}
               />
             </div>
+          </div>
+
+          <div className="absolute bottom-4 right-4 z-20">
+            <Link
+              to="/"
+              className="flex items-center gap-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-all duration-300 transform hover:scale-105 group"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
+              <Home className="w-4 h-4" />
+              <span className="text-sm font-medium">Home</span>
+            </Link>
           </div>
 
           <div className="relative z-10">

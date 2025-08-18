@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarDays, Users, DollarSign, LogOut, UserRound, ArrowRight, CheckCircle,
@@ -86,12 +86,15 @@ const seedTeacherDashboardData = () => {
  * @param {{ icon: React.ElementType, title: string, children: React.ReactNode, className?: string }} props
  */
 const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
-  <div className={`relative bg-white/90 shadow-lg p-6 rounded-2xl border border-gray-200 overflow-hidden
-    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/40 ${className}`}>
-    <div className="relative z-10 flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-4">
-        {Icon && <Icon className="w-8 h-8 text-purple-600" />}
-        <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
+  <div className={`relative bg-white/60 backdrop-blur-sm shadow-xl p-6 rounded-2xl border border-white/40 overflow-hidden
+    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/30 hover:bg-white/70 ${className}`}>
+    {/* Background Pattern */}
+    <div className="absolute inset-0 bg-gradient-to-br from-purple-50/20 to-violet-50/20 opacity-50"></div>
+    
+    <div className="relative z-10 flex flex-col h-full min-h-[280px]">
+      <div className="flex items-center gap-3 mb-6">
+        {Icon && <Icon className="w-6 h-6 text-purple-600" />}
+        <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
       </div>
       <div className="flex-grow flex flex-col justify-center">
         {children}
@@ -105,9 +108,9 @@ const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
  * @param {{ label: string, value: string | number, valueClassName?: string }} props
  */
 const StatRow = ({ label, value, valueClassName = 'text-purple-700' }) => (
-  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-    <span className="text-slate-700 font-medium">{label}:</span>
-    <span className={`text-xl font-bold ${valueClassName}`}>{value}</span>
+  <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/50 transition-all duration-200">
+    <span className="text-slate-700 font-medium text-sm">{label}:</span>
+    <span className={`text-lg font-bold ${valueClassName}`}>{value}</span>
   </div>
 );
 
@@ -337,7 +340,7 @@ export default function TeacherDashboard() {
   const getListingButtonTooltip = () => {
     if (isProcessingListing) return "Processing payment...";
     if (!isProfileComplete) return "Please complete your profile first to get listed.";
-    return `Pay ₹${LISTING_FEE} to get listed and found by students.`;
+    return `Pay â‚¹${LISTING_FEE} to get listed and found by students.`;
   };
 
   return (
@@ -432,37 +435,40 @@ export default function TeacherDashboard() {
         </section>
       )}
 
-      <main className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+      <main className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
 
         {/* Listing Status Card */}
         <DashboardCard icon={ListChecks} title="Listing Status">
           <div className="text-center flex flex-col items-center justify-center h-full space-y-4">
             {isListed ? (
               <>
-                <CheckCircle className="w-16 h-16 text-emerald-500 mb-3 animate-fade-in" />
-                <p className="text-emerald-400 font-bold text-xl">You are Listed!</p>
-                <p className="text-gray-400 text-sm mt-1">Students can now find and book you.</p>
+                <CheckCircle className="w-12 h-12 text-emerald-500 mb-3 animate-fade-in" />
+                <p className="text-emerald-600 font-bold text-lg">You are Listed!</p>
+                <p className="text-slate-600 text-sm mt-1">Students can now find and book you.</p>
                 {teacherProfile.listedAt && (
-                  <p className="text-gray-500 text-xs mt-2">Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}</p>
+                  <p className="text-slate-500 text-xs mt-2 bg-white/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">
+                    Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}
+                  </p>
                 )}
               </>
             ) : (
               <>
-                <Info className="w-16 h-16 text-amber-500 mb-3 animate-fade-in" />
-                <p className="text-amber-400 font-bold text-xl">Not Yet Listed</p>
-                <p className="text-gray-400 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
+                <Info className="w-12 h-12 text-amber-500 mb-3 animate-fade-in" />
+                <p className="text-amber-600 font-bold text-lg">Not Yet Listed</p>
+                <p className="text-slate-600 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
                 <button
                   onClick={handleGetListed}
                   disabled={isProcessingListing || !isProfileComplete}
                   title={getListingButtonTooltip()}
-                  className={`mt-4 px-6 py-3 rounded-xl text-white font-semibold flex items-center gap-2.5 transition-all duration-300 shadow-lg
-                    disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
-                    ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-700'}`}
+                  className={`mt-4 px-5 py-2.5 rounded-xl text-white font-medium flex items-center gap-2 transition-all duration-300 shadow-lg text-sm
+                    disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
+                    ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-600'}`}
                 >
                   {isProcessingListing ? (
-                    <> <Loader2 className="w-5 h-5 animate-spin" /> Processing... </>
+                    <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
                   ) : (
-                    <> <Wallet className="w-5 h-5" /> Get Listed (₹{LISTING_FEE} Fee) </>
+                    <> <Wallet className="w-4 h-4" /> Get Listed (â‚¹{LISTING_FEE} Fee) </>
                   )}
                 </button>
               </>
@@ -506,10 +512,10 @@ export default function TeacherDashboard() {
               <li key={path}>
                 <button
                   onClick={() => navigate(path)}
-                  className="w-full flex items-center gap-4 p-4 bg-gray-100 text-slate-800 rounded-lg hover:bg-gray-200 hover:text-purple-700 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
                 >
-                  <Icon className="w-6 h-6 text-purple-400" />
-                  <span>{label}</span>
+                  <Icon className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm">{label}</span>
                 </button>
               </li>
             ))}
@@ -547,7 +553,7 @@ export default function TeacherDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-5 h-5 text-emerald-400" />
-                      <span className="text-slate-700">₹{booking.amount}</span>
+                      <span className="text-slate-700">â‚¹{booking.amount}</span>
                     </div>
                   </div>
                   <div className="mt-2 md:mt-0 flex items-center gap-2">
@@ -575,6 +581,7 @@ export default function TeacherDashboard() {
             )}
           </div>
         </DashboardCard>
+        </div>
       </main>
 
       {/* Tailwind CSS Custom Scrollbar and Animation Definitions */}

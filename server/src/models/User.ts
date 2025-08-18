@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
+﻿import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 // Define interfaces for nested objects
@@ -212,9 +212,9 @@ UserSchema.methods.matchPassword = async function (enteredPassword: string): Pro
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// ✅ Export UserDocument type for type-safe request.user
+// âœ… Export UserDocument type for type-safe request.user
 export type UserDocument = IUser & Document;
 
-// ✅ Export the model correctly
+// âœ… Export the model correctly
 const UserModel = mongoose.model<UserDocument>('User', UserSchema);
 export default UserModel;

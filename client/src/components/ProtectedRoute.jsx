@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react'; // Import for loading spinner
 
@@ -22,7 +22,8 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
         try {
           const user = localStorage.getItem('currentUser');
           if (user) {
-            setCurrentUser(JSON.parse(user));
+            const parsedUser = JSON.parse(user);
+            setCurrentUser(parsedUser);
           } else {
             setCurrentUser(null);
           }
@@ -68,13 +69,11 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
 
   // 1. If no current user is found, redirect to the login page.
   if (!currentUser) {
-    console.log("ProtectedRoute: No current user found. Redirecting to /login.");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 2. If the user's role is not among the allowed roles for this route, redirect to unauthorized.
   if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
-    console.warn(`ProtectedRoute: Access denied for role '${currentUser.role}'. Required roles: ${allowedRoles.join(', ')}. Redirecting to unauthorized.`);
     // Attempt to redirect to their respective dashboard if role is just mismatched but valid
     if (currentUser.role === USER_ROLES.STUDENT) return <Navigate to="/student/dashboard" replace />;
     if (currentUser.role === USER_ROLES.TEACHER) return <Navigate to="/teacher/dashboard" replace />;
@@ -88,7 +87,6 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
   if (profileCompleteRequired === true) {
     if (!currentProfileCompleteStatus) {
       // User has the allowed role, but their profile is NOT complete as required by the route.
-      console.log(`ProtectedRoute: Profile incomplete for ${currentUser.role}. Redirecting to profile setup.`);
       if (currentUser.role === USER_ROLES.STUDENT) {
         return <Navigate to="/student/profile-setup" replace />;
       }
@@ -103,7 +101,6 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
     if (currentProfileCompleteStatus) {
       // User has the allowed role, their profile IS complete, but they are trying to access a setup page.
       // Redirect them to their dashboard as their profile is already set up.
-      console.log(`ProtectedRoute: Profile already complete for ${currentUser.role}. Redirecting to dashboard.`);
       if (currentUser.role === USER_ROLES.STUDENT) {
         return <Navigate to="/student/dashboard" replace />;
       }

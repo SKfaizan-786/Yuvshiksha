@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+﻿import { Link, useNavigate } from "react-router-dom";
 import React, { useEffect, useState } from 'react';
 import { GraduationCap, User, LogOut, Menu, X } from 'lucide-react';
 
@@ -36,9 +36,6 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Find Teachers', path: '/student/find-teachers', roles: ['student'] },
-    { name: 'Courses', path: '/courses', roles: ['student', 'teacher'] },
-    { name: 'Pricing', path: '/pricing', roles: [] },
-    { name: 'Help', path: '/help', roles: [] },
   ];
 
   return (

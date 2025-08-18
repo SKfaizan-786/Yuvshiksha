@@ -1,4 +1,4 @@
-
+﻿
 import { Request, Response, NextFunction } from 'express';
 import { getAuthenticatedUser } from '../utils/authHelpers';
 import { IUser } from '../models/User';

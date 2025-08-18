@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Eye,
@@ -15,6 +15,8 @@ import {
   GraduationCap,
   Globe,
   AlertTriangle,
+  ArrowLeft,
+  Home,
 } from "lucide-react";
 
 import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
@@ -524,6 +526,18 @@ const Signup = () => {
                 }`}
               />
             </div>
+          </div>
+
+          <div className="absolute bottom-4 right-4 z-20">
+            <Link
+              to="/"
+              className="flex items-center gap-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-all duration-300 transform hover:scale-105 group"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
+              <Home className="w-4 h-4" />
+              <span className="text-sm font-medium">Home</span>
+            </Link>
           </div>
 
           <div className="relative z-10">

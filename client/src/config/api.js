@@ -1,4 +1,4 @@
-// Create this new file at this exact path:
+﻿// Create this new file at this exact path:
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {

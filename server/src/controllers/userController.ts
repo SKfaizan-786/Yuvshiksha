@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { sendEmail } from '../utils/sendEmail';
 
 export const registerUser = async (req: Request, res: Response) => {
