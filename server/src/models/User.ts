@@ -58,6 +58,7 @@ export interface ITeacherProfile {
   availability?: IAvailability[];
   isListed?: boolean; // Add this field
   listedAt?: Date; // Optional: track when teacher got listed
+  maritalStatus?: 'married' | 'unmarried';
 }
 
 export interface IUser extends Document {
@@ -129,6 +130,11 @@ const TeacherProfileSchema = new Schema({
   },
   listedAt: { 
     type: Date 
+  },
+  maritalStatus: {
+    type: String,
+    enum: ['married', 'unmarried'],
+    required: true
   }
 }, { timestamps: true });
 

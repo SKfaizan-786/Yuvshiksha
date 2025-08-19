@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
+// Use fetch for API calls
 
 const passwordStrengthLevels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
 const passwordStrengthColors = [
@@ -39,6 +40,7 @@ const initialForm = {
   acceptTerms: false,
   role: "",
   gender: "",
+  maritalStatus: "",
 };
 
 const Signup = () => {
@@ -54,6 +56,10 @@ const Signup = () => {
     isOnline: true,
     showCapsLockWarning: false,
     signupError: "",
+    otpStep: false,
+    otp: "",
+    otpError: "",
+    otpLoading: false,
   });
   const [validation, setValidation] = useState({
     firstName: { valid: false, message: "" },
@@ -63,6 +69,7 @@ const Signup = () => {
     confirmPassword: { valid: false, message: "" },
     role: { valid: false, message: "" },
     gender: { valid: true, message: "" },
+    maritalStatus: { valid: true, message: "" },
   });
 
   // Network status effect
@@ -139,171 +146,156 @@ const Signup = () => {
               : "";
           break;
         case "lastName":
-          isValid =
-            value === "" || (value.length >= 2 && nameRegex.test(value));
+          isValid = value === "" || (value.length >= 1 && nameRegex.test(value));
           message =
-            value && (!nameRegex.test(value) || value.length < 2)
-              ? "Last name must be at least 2 characters, letters only."
+            value && (!nameRegex.test(value) || value.length < 1)
+              ? "Last name must be letters only."
               : "";
           break;
         case "email":
           isValid = emailRegex.test(value);
-          message =
-            value && !emailRegex.test(value)
-              ? "Please enter a valid email address."
-              : "";
+          message = value && !isValid ? "Please enter a valid email address." : "";
           break;
         case "password":
           strength = calculatePasswordStrength(value);
           isValid = strength >= 3;
           message =
-            value && strength < 3
-              ? "Password needs to be stronger (min 8 chars, mixed case, numbers, symbols recommended)."
+            value && !isValid
+              ? "Password must be at least 8 characters with uppercase, lowercase, and numbers."
               : "";
+          setUi((u) => ({ ...u, passwordStrength: strength }));
           break;
         case "confirmPassword":
-          isValid = value === formData.password && value.length > 0;
-          message =
-            value && value !== formData.password
-              ? "Passwords do not match."
-              : "";
+          isValid = value === formData.password;
+          message = value && !isValid ? "Passwords do not match." : "";
           break;
         case "role":
-          isValid = value === "student" || value === "teacher";
-          message = !value ? "Please select a role." : "";
-          if (value === "student") {
-            setFormData((p) => ({ ...p, gender: "" }));
-            setValidation((v) => ({
-              ...v,
-              gender: { valid: true, message: "" },
-            }));
-          }
+          isValid = !!value;
+          message = !isValid ? "Please select your role." : "";
           break;
         case "gender":
-          isValid =
-            formData.role !== "teacher" ||
-            value === "male" ||
-            value === "female";
-          message =
-            formData.role === "teacher" && !value
-              ? "Please select your gender."
-              : "";
+          isValid = formData.role !== "teacher" || !!value;
+          message = !isValid ? "Please select your gender." : "";
+          break;
+        case "maritalStatus":
+          isValid = formData.role !== "teacher" || !!value;
+          message = !isValid ? "Please select your marital status." : "";
           break;
         default:
           break;
       }
 
-      setValidation((prev) => ({
-        ...prev,
-        [field]: {
-          valid: isValid,
-          message,
-          strength: field === "password" ? strength : prev[field]?.strength,
-        },
+      setValidation((v) => ({
+        ...v,
+        [field]: { valid: isValid, message, strength },
       }));
-      if (field === "password") {
-        setUi((u) => ({ ...u, passwordStrength: strength }));
-      }
     },
     [formData.password, formData.role]
   );
 
-  // Optimized validation effect
   useEffect(() => {
-    const fieldsToValidate = [
-      "firstName",
-      "lastName",
-      "email",
-      "password",
-      "confirmPassword",
-      "role",
-    ].filter(field => formData[field] !== initialForm[field]);
-
-    if (fieldsToValidate.length > 0) {
-      fieldsToValidate.forEach((field) => {
-        validateField(field, formData[field]);
-      });
-    }
-  }, [
-    formData.firstName,
-    formData.lastName,
-    formData.email,
-    formData.password,
-    formData.confirmPassword,
-    formData.role,
-    validateField
-  ]);
+    // Validate fields when they change
+    Object.entries(formData).forEach(([field, value]) => {
+      validateField(field, value);
+    });
+  }, [formData, validateField]);
 
   const isFormFullyValid = useCallback(() => {
     return (
       validation.firstName.valid &&
-      (formData.lastName === "" || validation.lastName.valid) &&
+      validation.lastName.valid &&
       validation.email.valid &&
       validation.password.valid &&
       validation.confirmPassword.valid &&
       validation.role.valid &&
-      (formData.role !== "teacher" || validation.gender.valid) &&
-      formData.acceptTerms &&
-      ui.isOnline
+      (formData.role !== "teacher" ||
+        (validation.gender.valid && validation.maritalStatus.valid)) &&
+      formData.acceptTerms
     );
-  }, [validation, formData, ui.isOnline]);
+  }, [validation, formData.role, formData.acceptTerms]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!isFormFullyValid()) {
-      setUi(prev => ({
-        ...prev,
-        signupError: "Please complete all required fields correctly."
-      }));
-      return;
-    }
+    if (!isFormFullyValid()) return;
 
-    setUi((prev) => ({ ...prev, isSubmitting: true }));
+    setUi((u) => ({ ...u, isSubmitting: true, signupError: "" }));
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
+      // Call backend to send OTP email
+      const res = await fetch("http://localhost:5000/api/email-otp/send-otp", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Registration failed");
-      }
-
-      const data = await response.json();
-
-      if (data.token) {
-        setToLocalStorage("token", data.token);
-      }
-      if (data.user) {
-        setToLocalStorage("currentUser", data.user);
-      }
-
-      // Ensure state updates complete before navigation
-      setTimeout(() => {
-        if (formData.role === "student") {
-          navigate("/student/profile-setup");
-        } else if (formData.role === "teacher") {
-          navigate("/teacher/profile-setup");
-        }
-      }, 100);
-
-    } catch (error) {
-      console.error("Signup submission error:", error);
-      setUi((prev) => ({
-        ...prev,
+      setUi((u) => ({
+        ...u,
         isSubmitting: false,
-        signupError: error.message || "Registration failed. Please try again.",
+        otpStep: true,
+        otp: "",
+        otpError: ""
+      }));
+    } catch (error) {
+      setUi((u) => ({
+        ...u,
+        isSubmitting: false,
+        signupError: error.message || "Signup failed. Please try again.",
       }));
     }
   };
 
-  const inputBase = "w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 bg-white border-slate-300 text-slate-900 placeholder-slate-400";
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    if (ui.otp.length !== 6) {
+      setUi((u) => ({ ...u, otpError: "Please enter a valid 6-digit OTP" }));
+      return;
+    }
+
+    setUi((u) => ({ ...u, otpLoading: true, otpError: "" }));
+
+    try {
+      // Call backend to verify OTP
+      const res = await fetch("http://localhost:5000/api/email-otp/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, otp: ui.otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "OTP verification failed");
+
+      // Register the user in the backend after OTP verification
+      const registerRes = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      const registerData = await registerRes.json();
+      if (!registerRes.ok) throw new Error(registerData.message || "Registration failed after OTP");
+
+      // Store user and token in localStorage
+      setToLocalStorage("user", registerData.user);
+      setToLocalStorage("currentUser", registerData.user);
+      localStorage.setItem("token", registerData.token);
+
+      alert("Your email verified");
+      if (registerData.user.role === "teacher") {
+        navigate("/teacher/profile-setup");
+      } else {
+        navigate("/student/profile-setup");
+      }
+    } catch (error) {
+      setUi((u) => ({
+        ...u,
+        otpLoading: false,
+        otpError: error.message || "Invalid OTP. Please try again.",
+      }));
+    }
+  };
+
+  const inputBase =
+    "w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 bg-white border-slate-300 text-slate-900 placeholder-slate-400";
 
   const renderInput = (
     label,
@@ -326,9 +318,7 @@ const Signup = () => {
 
     return (
       <div className="space-y-2 transform hover:scale-[1.02] transition-all duration-300">
-        <label
-          className="text-sm font-semibold text-slate-700 flex items-center gap-2 transition-colors duration-200 hover:text-violet-600"
-        >
+        <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 transition-colors duration-200 hover:text-violet-600">
           {icon && (
             <span className="text-violet-500 transition-transform duration-200 hover:scale-110">
               {icon}
@@ -357,9 +347,7 @@ const Signup = () => {
                   />
                   <div className="flex items-center space-x-2">
                     <GraduationCap className="w-5 h-5 text-violet-500 transition-transform duration-200 hover:scale-110" />
-                    <span
-                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
-                    >
+                    <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
                       Student
                     </span>
                   </div>
@@ -381,59 +369,101 @@ const Signup = () => {
                   />
                   <div className="flex items-center space-x-2">
                     <UserCheck className="w-5 h-5 text-violet-500 transition-transform duration-200 hover:scale-110" />
-                    <span
-                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
-                    >
+                    <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
                       Teacher
                     </span>
                   </div>
                 </label>
               </div>
               {formData.role === "teacher" && (
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <label
-                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
-                      formData.gender === "male"
-                        ? "border-violet-500 shadow-violet-100 bg-violet-50"
-                        : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="male"
-                      checked={formData.gender === "male"}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
-                    />
-                    <span
-                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
+                <>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <label
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                        formData.gender === "male"
+                          ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                          : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
+                      }`}
                     >
-                      Male
-                    </span>
-                  </label>
-                  <label
-                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
-                      formData.gender === "female"
-                        ? "border-violet-500 shadow-violet-100 bg-violet-50"
-                        : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="female"
-                      checked={formData.gender === "female"}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
-                    />
-                    <span
-                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="male"
+                        checked={formData.gender === "male"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+                      />
+                      <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
+                        Male
+                      </span>
+                    </label>
+                    <label
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                        formData.gender === "female"
+                          ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                          : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
+                      }`}
                     >
-                      Female
-                    </span>
-                  </label>
-                </div>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="female"
+                        checked={formData.gender === "female"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+                      />
+                      <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
+                        Female
+                      </span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <label
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                        formData.maritalStatus === "married"
+                          ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                          : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="maritalStatus"
+                        value="married"
+                        checked={formData.maritalStatus === "married"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+                      />
+                      <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
+                        Married
+                      </span>
+                    </label>
+                    <label
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                        formData.maritalStatus === "unmarried"
+                          ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                          : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="maritalStatus"
+                        value="unmarried"
+                        checked={formData.maritalStatus === "unmarried"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+                      />
+                      <span className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700">
+                        Unmarried
+                      </span>
+                    </label>
+                  </div>
+                  {formData.role === "teacher" && validation.maritalStatus.message && (
+                    <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                      <X className="w-4 h-4" />
+                      {validation.maritalStatus.message}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           ) : name !== "gender" ? (
@@ -547,193 +577,232 @@ const Signup = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold transform group-hover:scale-105 transition-transform duration-300">
-                  Create Account
+                  {ui.otpStep ? "Verify Your Email" : "Create Account"}
                 </h1>
                 <p className="text-violet-200 text-sm">
-                  Join our vibrant learning community
+                  {ui.otpStep 
+                    ? `Enter the 6-digit OTP sent to ${formData.email}`
+                    : "Join our vibrant learning community"}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {!ui.isOnline && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
-              <Globe className="w-5 h-5 text-red-500" />
-              <div>
+        {!ui.otpStep ? (
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            {!ui.isOnline && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+                <Globe className="w-5 h-5 text-red-500" />
+                <div>
+                  <p className="text-red-800 font-medium text-sm">
+                    No internet connection
+                  </p>
+                  <p className="text-red-600 text-xs">
+                    Please check your connection and try again
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {ui.signupError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-fade-in">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
                 <p className="text-red-800 font-medium text-sm">
-                  No internet connection
-                </p>
-                <p className="text-red-600 text-xs">
-                  Please check your connection and try again
+                  {ui.signupError}
                 </p>
               </div>
+            )}
+            {renderInput(
+              "Select Role",
+              "role",
+              "text",
+              <UserCheck className="w-4 h-4" />
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              {renderInput(
+                "First Name",
+                "firstName",
+                "text",
+                <User className="w-4 h-4" />
+              )}
+              {renderInput(
+                "Last Name",
+                "lastName",
+                "text",
+                <User className="w-4 h-4" />
+              )}
             </div>
-          )}
 
-          {ui.signupError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-fade-in">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              <p className="text-red-800 font-medium text-sm">
-                {ui.signupError}
+            {renderInput(
+              "Email Address",
+              "email",
+              "email",
+              <Mail className="w-4 h-4" />
+            )}
+            {renderInput(
+              "Password",
+              "password",
+              "password",
+              <Lock className="w-4 h-4" />,
+              true
+            )}
+
+            {formData.password && (
+              <div className="p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-slate-700">
+                    Password Strength
+                  </span>
+                  <span
+                    className={`text-sm font-semibold transition-colors duration-200 ${
+                      ui.passwordStrength >= 4
+                        ? "text-emerald-600"
+                        : ui.passwordStrength >= 3
+                        ? "text-blue-600"
+                        : ui.passwordStrength >= 2
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {passwordStrengthLevels[ui.passwordStrength]}
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      passwordStrengthColors[ui.passwordStrength]
+                    }`}
+                    style={{ width: `${(ui.passwordStrength / 4) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {renderInput(
+              "Confirm Password",
+              "confirmPassword",
+              "password",
+              <Lock className="w-4 h-4" />,
+              true
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="acceptTerms"
+                checked={formData.acceptTerms}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500 rounded"
+                required
+              />
+              <span className="text-sm text-slate-700">
+                I agree to the
+                <a
+                  href="#"
+                  className="text-violet-600 font-medium hover:underline ml-1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Terms & Conditions
+                </a>
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!isFormFullyValid() || ui.isSubmitting}
+              className={`w-full py-4 rounded-xl font-semibold flex justify-center items-center space-x-2 transition-all duration-300 transform ${
+                isFormFullyValid() && !ui.isSubmitting
+                  ? "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
+                  : "bg-slate-300 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              {ui.isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Creating Account...</span>
+                </>
+              ) : !ui.isOnline ? (
+                <>
+                  <Globe className="w-5 h-5" />
+                  <span>Offline</span>
+                </>
+              ) : (
+                <>
+                  <UserCheck className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+                  <span>Create Account</span>
+                </>
+              )}
+            </button>
+
+            <div className="text-center pt-4 border-t border-slate-200">
+              <p className="text-sm text-slate-600">
+                Already have an account?
+                <Link
+                  to="/login"
+                  className="text-violet-600 font-medium hover:text-violet-800 ml-1 transition-all duration-200 hover:underline decoration-2 underline-offset-2 transform hover:scale-105 inline-block"
+                >
+                  Log in here
+                </Link>
               </p>
             </div>
-          )}
-          {renderInput(
-            "Select Role",
-            "role",
-            "text",
-            <UserCheck className="w-4 h-4" />
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            {renderInput(
-              "First Name",
-              "firstName",
-              "text",
-              <User className="w-4 h-4" />
-            )}
-            {renderInput(
-              "Last Name",
-              "lastName",
-              "text",
-              <User className="w-4 h-4" />
-            )}
-          </div>
 
-          {renderInput(
-            "Email Address",
-            "email",
-            "email",
-            <Mail className="w-4 h-4" />
-          )}
-          {renderInput(
-            "Password",
-            "password",
-            "password",
-            <Lock className="w-4 h-4" />,
-            true
-          )}
-
-          {formData.password && (
-            <div className="p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-slate-700">
-                  Password Strength
-                </span>
-                <span
-                  className={`text-sm font-semibold transition-colors duration-200 ${
-                    ui.passwordStrength >= 4
-                      ? "text-emerald-600"
-                      : ui.passwordStrength >= 3
-                      ? "text-blue-600"
-                      : ui.passwordStrength >= 2
-                      ? "text-yellow-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {passwordStrengthLevels[ui.passwordStrength]}
-                </span>
-              </div>
-              <div className="w-full rounded-full h-2 overflow-hidden bg-slate-200">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    passwordStrengthColors[ui.passwordStrength]
-                  }`}
-                  style={{ width: `${(ui.passwordStrength / 5) * 100}%` }}
-                />
+            <div className="space-y-3 pt-4">
+              <div className="text-center text-xs text-slate-500 space-y-1">
+                <div className="flex justify-center items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    Secure Registration
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    SSL Protected
+                  </span>
+                </div>
               </div>
             </div>
-          )}
-
-          {renderInput(
-            "Confirm Password",
-            "confirmPassword",
-            "password",
-            <Shield className="w-4 h-4" />,
-            true
-          )}
-
-          <div className="flex items-start space-x-3 p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100">
+          </form>
+        ) : (
+          <form className="p-8 space-y-6" onSubmit={handleOtpVerify} autoComplete="off">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-2 text-violet-700">Verify Your Email</h2>
+              <p className="text-slate-600 mb-4">Enter the 6-digit OTP sent to <span className="font-semibold">{formData.email}</span></p>
+            </div>
             <input
-              type="checkbox"
-              name="acceptTerms"
-              checked={formData.acceptTerms}
-              onChange={handleInputChange}
-              className="mt-1 w-4 h-4 text-violet-600 border-slate-300 rounded focus:ring-violet-500 transition-all duration-200 hover:scale-110"
+              type="text"
+              name="otp"
+              value={ui.otp}
+              onChange={e => setUi(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+              className="w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 bg-white border-slate-300 text-slate-900 placeholder-slate-400 text-center text-2xl tracking-widest"
+              placeholder="Enter OTP"
+              maxLength={6}
+              autoFocus
+              required
             />
-            <label className="text-sm text-slate-700">
-              I agree to the{" "}
-              <a
-                href="#"
-                className="text-violet-600 font-medium hover:text-violet-800 transition-all duration-200 hover:underline decoration-2 underline-offset-2"
-              >
-                Terms & Conditions
-              </a>{" "}
-              and{" "}
-              <a
-                href="#"
-                className="text-violet-600 font-medium hover:text-violet-800 transition-all duration-200 hover:underline decoration-2 underline-offset-2"
-              >
-                Privacy Policy
-              </a>
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={!isFormFullyValid() || ui.isSubmitting}
-            className={`w-full py-4 rounded-xl font-semibold flex justify-center items-center space-x-2 transition-all duration-300 transform ${
-              isFormFullyValid() && !ui.isSubmitting
-                ? "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
-                : "bg-slate-300 text-slate-500 cursor-not-allowed"
-            }`}
-          >
-            {ui.isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Creating Account...</span>
-              </>
-            ) : !ui.isOnline ? (
-              <>
-                <Globe className="w-5 h-5" />
-                <span>Offline</span>
-              </>
-            ) : (
-              <>
-                <UserCheck className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
-                <span>Create Account</span>
-              </>
+            {ui.otpError && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <X className="w-4 h-4" />
+                {ui.otpError}
+              </p>
             )}
-          </button>
-
-          <div className="text-center pt-4 border-t border-slate-200">
-            <p className="text-sm text-slate-600">
-              Already have an account?
-              <Link
-                to="/login"
-                className="text-violet-600 font-medium hover:text-violet-800 ml-1 transition-all duration-200 hover:underline decoration-2 underline-offset-2 transform hover:scale-105 inline-block"
-              >
-                Log in here
-              </Link>
-            </p>
-          </div>
-
-          <div className="space-y-3 pt-4">
-            <div className="text-center text-xs text-slate-500 space-y-1">
-              <div className="flex justify-center items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <Shield className="w-3 h-3" />
-                  Secure Registration
-                </span>
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  SSL Protected
-                </span>
-              </div>
-            </div>
-          </div>
-        </form>
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-violet-700 hover:to-indigo-700 transition-all duration-200"
+              disabled={ui.otpLoading || ui.otp.length !== 6}
+            >
+              {ui.otpLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Verify OTP"}
+            </button>
+            <button
+              type="button"
+              className="w-full mt-2 text-violet-600 hover:underline"
+              disabled={ui.otpLoading}
+              onClick={handleSubmit}
+            >
+              Resend OTP
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

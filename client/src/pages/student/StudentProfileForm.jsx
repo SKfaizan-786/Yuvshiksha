@@ -853,7 +853,7 @@ const StudentProfileForm = () => {
 
             {/* Tips Card */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-md">
-              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">ðŸ’¡ Tips for a Great Profile</h3>
+              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">Tips for a Great Profile</h3>
               <ul className="space-y-2 text-sm text-blue-700">
                 <li>**Be Specific:** The more details you provide about your learning interests and goals, the better we can match you with the right tutors.</li>
                 <li>**Complete All Steps:** Ensure you fill out all required fields to unlock the full potential of personalized recommendations.</li>

@@ -19,17 +19,18 @@ const generateToken = (payload: object) => {
 // Register
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, role, firstName, lastName } = req.body;
+  const { email, password, role, firstName, lastName, gender, maritalStatus } = req.body;
 
-    if (!email || !password || !role || !firstName || !lastName) {
+    if (!email || !password || !role || !firstName || !lastName || (role === 'teacher' && !maritalStatus)) {
       return res.status(400).json({
-        message: 'Email, password, role, first name and last name are required',
+        message: 'Email, password, role, first name, last name, and marital status (for teachers) are required',
         missingFields: {
           email: !email,
           password: !password,
           role: !role,
           firstName: !firstName,
-          lastName: !lastName
+          lastName: !lastName,
+          maritalStatus: role === 'teacher' && !maritalStatus
         }
       });
     }
@@ -42,7 +43,11 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    const user = await User.create({ email, password, role, firstName, lastName });
+    let userData: any = { email, password, role, firstName, lastName };
+    if (role === 'teacher') {
+      userData.teacherProfile = { gender, maritalStatus };
+    }
+    const user = await User.create(userData);
 
     const token = generateToken({ _id: user._id });
 
@@ -125,15 +130,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     let user = await User.findOne({ email });
     if (!user) {
-      user = await User.create({
-        email,
-        firstName: given_name,
-        lastName: family_name,
-        avatar: picture,
-        googleId: sub,
-        role: 'student',
-        password: crypto.randomBytes(16).toString('hex'),
-      });
+      return res.status(401).json({ message: 'You are not registered. Please sign up first.' });
     }
 
     const token = generateToken({ _id: user._id });

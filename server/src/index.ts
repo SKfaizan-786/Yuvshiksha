@@ -14,6 +14,7 @@ import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
 import paymentRoutes from './routes/payments';
+import emailOtpRoutes from './routes/email-otp';
 
 import './passport-config';
 
@@ -97,6 +98,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/email-otp', emailOtpRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
