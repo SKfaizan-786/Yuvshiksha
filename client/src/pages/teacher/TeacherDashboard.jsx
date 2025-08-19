@@ -340,7 +340,7 @@ export default function TeacherDashboard() {
   const getListingButtonTooltip = () => {
     if (isProcessingListing) return "Processing payment...";
     if (!isProfileComplete) return "Please complete your profile first to get listed.";
-    return `Pay â‚¹${LISTING_FEE} to get listed and found by students.`;
+    return `Pay ₹${LISTING_FEE} to get listed and found by students.`;
   };
 
   return (
@@ -468,7 +468,7 @@ export default function TeacherDashboard() {
                   {isProcessingListing ? (
                     <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
                   ) : (
-                    <> <Wallet className="w-4 h-4" /> Get Listed (â‚¹{LISTING_FEE} Fee) </>
+                    <> <Wallet className="w-4 h-4" /> Get Listed (₹{LISTING_FEE} Fee) </>
                   )}
                 </button>
               </>
@@ -553,7 +553,7 @@ export default function TeacherDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-5 h-5 text-emerald-400" />
-                      <span className="text-slate-700">â‚¹{booking.amount}</span>
+                      <span className="text-slate-700">₹{booking.amount}</span>
                     </div>
                   </div>
                   <div className="mt-2 md:mt-0 flex items-center gap-2">

@@ -20,7 +20,7 @@ import {
   Heart,
   Video,
   MapPin,
-  DollarSign,
+
   TrendingUp,
   Bookmark,
   BookCheck,
@@ -306,32 +306,29 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
         </div>
         
         <div className="flex items-center justify-between text-xs text-slate-600">
-          <div className="flex items-center">
-            <Star className="w-3 h-3 text-yellow-500 fill-current mr-1" />
-            <span>{teacher.rating}</span>
-          </div>
-          <div className="flex items-center">
-            <Users className="w-3 h-3 mr-1" />
-            <span>{teacher.students} students</span>
-          </div>
+          {teacher.rating > 0 && (
+            <div className="flex items-center">
+              <Star className="w-3 h-3 text-yellow-500 fill-current mr-1" />
+              <span>{teacher.rating}</span>
+            </div>
+          )}
+          {teacher.students > 0 && (
+            <div className="flex items-center">
+              <Users className="w-3 h-3 mr-1" />
+              <span>{teacher.students} students</span>
+            </div>
+          )}
+          {teacher.rating === 0 && teacher.students === 0 && (
+            <div className="flex items-center text-slate-400">
+              <span>New teacher</span>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center text-sm font-semibold text-slate-800">
-          <DollarSign className="w-4 h-4 text-green-600 mr-1" />
-          â‚¹{teacher.hourlyRate}/hour
+          <span className="text-green-600 mr-1">₹</span>
+          {teacher.hourlyRate}/hour
         </div>
-      </div>
-      
-      <div className="flex space-x-2">
-        <Link 
-          to={`/student/book-class?teacher=${teacher.id}`}
-          className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-xs font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200 text-center"
-        >
-          Book Class
-        </Link>
-        <button className="px-3 py-2 border border-purple-200 text-purple-600 rounded-lg text-xs font-medium hover:bg-purple-50 transition-all duration-200">
-          View Profile
-        </button>
       </div>
     </div>
   );
@@ -532,10 +529,11 @@ const StudentDashboard = () => {
             
             setMockTeachers(teachers);
             const formattedTeachers = formatTeachersForDashboard(teachers);
-            // Update dashboard data with recommended teachers
+            // Get 3 random teachers for recommendations
+            const randomTeachers = getRandomTeachers(formattedTeachers, 3);
             setDashboardData(prevData => ({
               ...prevData,
-              recentTeachers: formattedTeachers.slice(0, 6) // Show max 6 recommended teachers
+              recentTeachers: randomTeachers
             }));
             return;
           }
@@ -560,10 +558,11 @@ const StudentDashboard = () => {
       setMockTeachers(listedTeachers);
       const formattedTeachers = formatTeachersForDashboard(listedTeachers);
       
-      // Update dashboard data with recommended teachers
+      // Get 3 random teachers for recommendations
+      const randomTeachers = getRandomTeachers(formattedTeachers, 3);
       setDashboardData(prevData => ({
         ...prevData,
-        recentTeachers: formattedTeachers.slice(0, 6) // Show max 6 recommended teachers
+        recentTeachers: randomTeachers
       }));
       
     } catch (error) {
@@ -571,6 +570,18 @@ const StudentDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to get random teachers for recommendations
+  const getRandomTeachers = (teachers, count = 3) => {
+    if (!teachers || teachers.length === 0) return [];
+    
+    // If we have fewer teachers than requested, return all
+    if (teachers.length <= count) return teachers;
+    
+    // Shuffle array using Fisher-Yates algorithm and take first 'count' items
+    const shuffled = [...teachers].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
   };
 
   // Helper function to format teachers for dashboard display
@@ -598,8 +609,8 @@ const StudentDashboard = () => {
         experience: `${teacher.teacherProfile?.experienceYears || 1} years experience`,
         image: teacher.teacherProfile?.photoUrl || teacher.profilePicture || `https://via.placeholder.com/150/9CA3AF/FFFFFF?text=${(teacher.firstName || 'T').charAt(0)}`,
         subjects: Array.isArray(subjects) ? subjects.map(s => s.text || s).slice(0, 3) : [subjects].filter(Boolean).slice(0, 3),
-        rating: teacher.rating || 4.5,
-        students: teacher.totalStudents || Math.floor(Math.random() * 100) + 10,
+        rating: teacher.rating || 0, // Don't show rating if not available
+        students: teacher.totalStudents || 0, // Don't show student count if not available
         hourlyRate: teacher.teacherProfile?.hourlyRate || 500,
         isFavorite: isFavorite, // Check if teacher is in current favorites
         bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
@@ -1083,8 +1094,8 @@ const StudentDashboard = () => {
                 />
                 <StatCard
                   title="Total Spent"
-                  value={`â‚¹${dashboardData.stats.totalSpent.toLocaleString()}`}
-                  icon={DollarSign}
+                  value={`₹${dashboardData.stats.totalSpent.toLocaleString()}`}
+                  icon={TrendingUp}
                   color="success"
                   description="Learning investment"
                 />
@@ -1129,7 +1140,7 @@ const StudentDashboard = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {dashboardData.recentTeachers.map(teacher => (
                         <TeacherCard key={teacher.id} teacher={teacher} onToggleFavorite={toggleFavorite} />
                       ))}
