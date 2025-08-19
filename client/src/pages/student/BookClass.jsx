@@ -281,7 +281,7 @@ export default function BookClass() {
                   <span className="text-white text-sm">{teacher.subject}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full">
-                  <DollarSign className="w-4 h-4 text-white" />
+                  <span className="text-white text-lg font-bold">₹</span>
                   <span className="text-white text-sm font-semibold">{teacher.hourlyRate}/hour</span>
                 </div>
               </div>

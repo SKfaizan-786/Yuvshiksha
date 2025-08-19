@@ -370,6 +370,7 @@ const StudentDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [loading, setLoading] = useState(false); // For loading state
   const [favorites, setFavorites] = useState([]); // For storing favorite teacher IDs
+  const [favoriteTeachersData, setFavoriteTeachersData] = useState([]); // For storing favorite teacher objects
   
   // Use notification context
   const { unreadCount } = useNotifications();
@@ -389,12 +390,27 @@ const StudentDashboard = () => {
         });
         const bookingsData = await bookingsRes.json();
         const bookings = bookingsData.bookings || [];
-        // Fetch favourites
+        // Fetch favourites (IDs)
         const favRes = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
           headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
         });
         const favData = await favRes.json();
         const favs = favData.favourites || [];
+        setFavorites(favs);
+        // Fetch favorite teacher objects
+        let favTeachersArr = [];
+        if (favs.length > 0) {
+          // You may have an endpoint to fetch multiple teachers by IDs, otherwise fetch one by one
+          favTeachersArr = await Promise.all(favs.map(async (id) => {
+            const res = await fetch(`${API_BASE_URL}/api/teachers/${id}`, {
+              headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
+            });
+            if (res.ok) return await res.json();
+            return null;
+          }));
+          favTeachersArr = favTeachersArr.filter(Boolean);
+        }
+        setFavoriteTeachersData(favTeachersArr);
         // Calculate stats
         const completedSessions = bookings.filter(b => b.status === 'completed').length;
         const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
@@ -419,7 +435,6 @@ const StudentDashboard = () => {
           upcomingSessions: upcomingSessionsList,
           allSessions: bookings // <-- add all sessions for My Sessions tab
         }));
-        setFavorites(favs);
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
       } finally {
@@ -1272,11 +1287,25 @@ const StudentDashboard = () => {
                 <Heart className="w-7 h-7 text-purple-600" /> Favorite Teachers
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).map(teacher => (
-                  <TeacherCard key={teacher.id} teacher={teacher} onToggleFavorite={toggleFavorite} />
-                ))}
+                {favoriteTeachersData.length > 0 ? favoriteTeachersData.map(teacher => {
+                  // Normalize teacher object for TeacherCard
+                  const normalized = {
+                    id: teacher._id || teacher.id || '',
+                    name: teacher.name || (teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.firstName || 'Teacher'),
+                    image: teacher.avatar || teacher.photoUrl || teacher.profilePicture || (teacher.teacherProfile && (teacher.teacherProfile.photoUrl || teacher.teacherProfile.profilePicture)) || 'https://via.placeholder.com/150/9CA3AF/FFFFFF?text=T',
+                    experience: teacher.experience || (teacher.teacherProfile && teacher.teacherProfile.experience) || '',
+                    subjects: (teacher.subjects && Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.teacherProfile && Array.isArray(teacher.teacherProfile.subjects) ? teacher.teacherProfile.subjects : [])),
+                    rating: teacher.rating || (teacher.teacherProfile && teacher.teacherProfile.rating) || 0,
+                    students: teacher.students || (teacher.teacherProfile && teacher.teacherProfile.students) || 0,
+                    hourlyRate: teacher.hourlyRate || (teacher.teacherProfile && teacher.teacherProfile.hourlyRate) || 0,
+                    isFavorite: true
+                  };
+                  // Ensure subjects is always an array of strings
+                  normalized.subjects = normalized.subjects.map(s => typeof s === 'string' ? s : (s.text || ''));
+                  return <TeacherCard key={normalized.id} teacher={normalized} onToggleFavorite={toggleFavorite} />;
+                }) : null}
               </div>
-              {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).length === 0 && (
+              {favoriteTeachersData.length === 0 && (
                 <div className="text-center py-12">
                   <Heart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                   <p className="text-slate-500 text-lg mb-4">No favorite teachers yet</p>
