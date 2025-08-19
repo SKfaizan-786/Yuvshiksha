@@ -283,6 +283,7 @@ export default function BookClass() {
                 <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full">
                   <DollarSign className="w-4 h-4 text-white" />
                   <span className="text-white text-sm font-semibold">₹{teacher.hourlyRate}/hour</span>
+                  <span className="text-white text-sm font-semibold">{teacher.hourlyRate}/hour</span>
                 </div>
               </div>
               <p className="text-gray-300 leading-relaxed">{teacher.bio}</p>
@@ -447,13 +448,13 @@ export default function BookClass() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300">Rate per hour:</span>
-                      <span className="text-white font-semibold">₹{teacher.hourlyRate}</span>
+                      <span className="text-white font-semibold">â‚¹{teacher.hourlyRate}</span>
                     </div>
                     <div className="border-t border-white/20 pt-3">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold text-white">Total Amount:</span>
                         <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                          ₹{calculateAmount()}
+                          â‚¹{calculateAmount()}
                         </span>
                       </div>
                     </div>

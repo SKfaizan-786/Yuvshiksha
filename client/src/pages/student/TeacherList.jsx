@@ -146,7 +146,7 @@ export default function EnhancedTeacherPlatform() {
             board: teacher.teacherProfile?.boards?.[0] || teacher.teacherProfile?.boardsTaught?.[0] || 'CBSE',
             experience: teacher.teacherProfile?.experienceYears || 1,
             fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
+            rating: teacher.rating || 0,
             totalStudents: teacher.totalStudents || 0,
             avatar: getTeacherAvatar(teacher),
             specializations: teacher.teacherProfile?.subjects || teacher.teacherProfile?.subjectsTaught || ['General'],
@@ -223,7 +223,7 @@ export default function EnhancedTeacherPlatform() {
             board: Array.isArray(boards) ? boards[0]?.text || boards[0] : boards,
             experience: teacher.teacherProfile?.experienceYears || 1,
             fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
+            rating: teacher.rating || 0,
             totalStudents: teacher.totalStudents || 0,
             avatar: getTeacherAvatar(teacher),
             specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s) : [subjects].filter(Boolean),
@@ -805,13 +805,7 @@ export default function EnhancedTeacherPlatform() {
                             <span>Book Session</span>
                           </button>
                           
-                          <button
-                            onClick={() => handleMessage(teacher)}
-                            className="w-full bg-white/70 hover:bg-white/90 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group border border-white/30 backdrop-blur-sm"
-                          >
-                            <MessageCircle className="w-4 h-4 group-hover:animate-pulse" />
-                            <span>Message</span>
-                          </button>
+                          {/* Message button hidden until backend is ready */}
                         </div>
                       </div>
                     </div>
