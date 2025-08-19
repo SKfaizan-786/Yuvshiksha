@@ -12,6 +12,7 @@ export interface IBooking extends Document {
     id: string; // Changed to string
     name: string;
     email: string;
+    phone?: string; // Made optional to match runtime data
   };
   subject: string;
   date: Date;
@@ -42,7 +43,8 @@ const BookingSchema: Schema = new Schema({
   teacher: {
     id: { type: String, required: true }, // Updated
     name: { type: String, required: true },
-    email: { type: String, required: true }
+    email: { type: String, required: true },
+    phone: { type: String } // Optional, to match interface and runtime
   },
   subject: { 
     type: String, 

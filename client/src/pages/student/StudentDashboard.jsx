@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { fetchTeacherById } from '../../services/teacherAPI';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -198,7 +199,7 @@ const SessionCard = ({ session, onViewDetail }) => {
         <span className="font-medium">Subject:</span>&nbsp;{session.subject}
       </div>
       <div className="flex items-center text-sm text-slate-700 mb-2">
-        <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+  <span className="font-medium">Amount:</span>&nbsp;₹{session.amount}
       </div>
       <button 
         className="w-full mt-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
@@ -242,6 +243,22 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
 
 // Modal for session details
 const SessionDetailModal = ({ session, onClose }) => {
+  const [teacherDetails, setTeacherDetails] = useState(null);
+  useEffect(() => {
+    if (!session) return;
+    let teacherId = null;
+    if (session.teacher && typeof session.teacher === 'object') {
+      teacherId = session.teacher.id;
+    } else if (session.teacherId) {
+      teacherId = session.teacherId;
+    }
+    if (teacherId) {
+      fetchTeacherById(teacherId)
+        .then(data => setTeacherDetails(data))
+        .catch(() => setTeacherDetails(null));
+    }
+  }, [session]);
+
   if (!session) return null;
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -249,8 +266,18 @@ const SessionDetailModal = ({ session, onClose }) => {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
     });
   };
-  // Try to get teacher name from multiple possible properties
-  const teacherName = session.teacherName || (session.teacher && session.teacher.name) || session.teacher || 'N/A';
+  let teacherName = 'N/A';
+  let teacherPhone = 'N/A';
+  if (teacherDetails) {
+    teacherName = `${teacherDetails.firstName || ''} ${teacherDetails.lastName || ''}`.trim() || teacherDetails.name || 'N/A';
+    teacherPhone = teacherDetails.teacherProfile?.phone || 'N/A';
+  } else if (session.teacher && typeof session.teacher === 'object') {
+    teacherName = session.teacher.name || 'N/A';
+    teacherPhone = session.teacher.phone || 'N/A';
+  } else {
+    teacherName = session.teacherName || session.teacher || 'N/A';
+    teacherPhone = session.teacherPhone || session.phone || 'N/A';
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative animate-fade-in">
@@ -258,10 +285,11 @@ const SessionDetailModal = ({ session, onClose }) => {
         <h2 className="text-2xl font-bold mb-4 text-purple-700">Session Details</h2>
         <div className="space-y-2 text-slate-700">
           <div><span className="font-semibold">Teacher:</span> {teacherName}</div>
+          <div><span className="font-semibold">Phone:</span> {teacherPhone}</div>
           <div><span className="font-semibold">Subject:</span> {session.subject}</div>
           <div><span className="font-semibold">Date & Time:</span> {formatDate(session.date)} ({session.time})</div>
           <div><span className="font-semibold">Duration:</span> {session.duration} hour(s)</div>
-          <div><span className="font-semibold">Amount Paid:</span> ₹{session.amount}</div>
+          <div><span className="font-semibold">Amount:</span> ₹{session.amount}</div>
           {session.notes && <div><span className="font-semibold">Notes:</span> {session.notes}</div>}
         </div>
       </div>
@@ -412,9 +440,10 @@ const StudentDashboard = () => {
         }
         setFavoriteTeachersData(favTeachersArr);
         // Calculate stats
-        const completedSessions = bookings.filter(b => b.status === 'completed').length;
-        const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
-        const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const completedSessions = bookings.filter(b => b.status === 'completed').length;
+  const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
+  // Only sum amount for confirmed or completed bookings
+  const totalSpent = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').reduce((sum, b) => sum + (b.amount || 0), 0);
         // For the section, filter upcoming sessions within the next month
         const now = new Date();
         const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -1254,7 +1283,7 @@ const StudentDashboard = () => {
                             <span className="font-medium">Subject:</span>&nbsp;{session.subject}
                           </div>
                           <div className="flex items-center text-sm text-slate-700 mb-1">
-                            <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+                            <span className="font-medium">Amount:</span>&nbsp;₹{session.amount}
                           </div>
                         </div>
                         <div className="mt-2 text-xs font-semibold px-2 py-1 rounded-full w-fit self-start md:self-auto"

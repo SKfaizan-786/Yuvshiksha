@@ -18,6 +18,8 @@ const StudentProfileForm = () => {
     phone: '',
     learningInterest: '',
     location: '',
+    pinCode: '',
+    medium: '',
     mode: '',
     board: '',
     subject: '',
@@ -45,15 +47,15 @@ const StudentProfileForm = () => {
 
   // --- Derived State & Constants ---
   const steps = useMemo(() => [
-    { title: 'Contact & Location', fields: ['phone', 'location'], icon: Phone },
-    { title: 'Learning Preferences', fields: ['learningInterest', 'mode', 'board', 'subject'], icon: BookOpenCheck },
+    { title: 'Contact & Location', fields: ['phone', 'location', 'pinCode'], icon: Phone },
+    { title: 'Learning Preferences', fields: ['learningInterest', 'mode', 'medium', 'board', 'subject'], icon: BookOpenCheck },
     { title: 'More About You', fields: ['bio', 'goals', 'photo'], icon: Edit3 }
   ], []); // Memoize steps array
 
   // Define required fields for each step
   const stepRequiredFields = useMemo(() => ({
-    0: ['location'], // Phone is now optional
-    1: ['learningInterest', 'mode', 'board', 'subject'],
+    0: ['location', 'pinCode'], // Phone is now optional, pinCode required
+    1: ['learningInterest', 'mode', 'medium', 'board', 'subject'], // medium required
     2: [] // Bio, goals, photo are optional
   }), []);
 
@@ -644,8 +646,9 @@ const StudentProfileForm = () => {
                 {uiState.currentStep === 0 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Contact & Location</h3>
-                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-violet-600" />, 'e.g., +91 98765 43210', false)} {/* Phone is now optional */}
-                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., Kolkata, West Bengal', true)}
+                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-violet-600" />, 'e.g., +91 98765 43210', false)}
+                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'Kolkata, West Bengal — please include your locality for better accuracy', true)}
+                    {renderInputField('Pin Code', 'pinCode', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., 700001', true)}
                   </div>
                 )}
 
@@ -659,14 +662,14 @@ const StudentProfileForm = () => {
                       'mode',
                       <UserCircle2 className="w-4 h-4 text-violet-600" />,
                       [
-                        { value: 'online-live', label: 'Online Live Classes' },
-                        { value: 'online-recorded', label: 'Online Recorded Classes' },
-                        { value: 'offline', label: 'Offline Classes' },
-                        { value: 'hybrid', label: 'Hybrid (Online + Offline)' }
+                        { value: "Teacher's place", label: "Teacher's place" },
+                        { value: "Student's place", label: "Student's place" },
+                        { value: 'Online', label: 'Online' }
                       ],
-                      'Select learning mode',
+                      'Select mode',
                       true
                     )}
+                    {renderInputField('Medium of Instruction', 'medium', 'text', <UserCircle2 className="w-4 h-4 text-violet-600" />, 'e.g., English, Hindi, Bengali', true)}
                     <div className="grid md:grid-cols-2 gap-6">
                       {renderInputField('Board/University', 'board', 'text', <School className="w-4 h-4 text-violet-600" />, 'e.g., CBSE, ICSE, State Board', true)}
                       {renderInputField('Class/Course', 'subject', 'text', <GraduationCap className="w-4 h-4 text-violet-600" />, 'e.g., Class 12, B.Tech CSE', true)}
@@ -836,6 +839,9 @@ const StudentProfileForm = () => {
                 )}
                 {formData.location && (
                   <p><span className="font-medium text-violet-600">Location:</span> {formData.location}</p>
+                )}
+                {formData.pinCode && (
+                  <p><span className="font-medium text-violet-600">Pin Code:</span> {formData.pinCode}</p>
                 )}
                 {formData.mode && (
                   <p><span className="font-medium text-violet-600">Mode:</span> {formData.mode}</p>

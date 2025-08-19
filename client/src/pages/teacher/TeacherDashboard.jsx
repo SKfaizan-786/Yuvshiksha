@@ -242,7 +242,7 @@ export default function TeacherDashboard() {
           (b.status === 'pending' || b.status === 'confirmed') && new Date(b.date) >= now
         ).length;
         const totalSessions = (response.bookings || []).length;
-        // Calculate total earnings (sum of amount for confirmed and completed bookings)
+        // Calculate total earnings (sum of amount for confirmed and completed bookings only)
         const totalEarnings = (response.bookings || [])
           .filter(b => b.status === 'confirmed' || b.status === 'completed')
           .reduce((sum, b) => sum + (b.amount || 0), 0);

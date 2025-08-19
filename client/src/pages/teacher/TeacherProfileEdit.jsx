@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+﻿import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   User,
   GraduationCap,
@@ -9,98 +9,117 @@ import {
   Loader2,
   Clock,
   Plus,
-  Trash2
-} from 'lucide-react';
-import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
+  Trash2,
+} from "lucide-react";
+import { getFromLocalStorage, setToLocalStorage } from "../utils/storage";
 
 const TeacherProfileEdit = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    location: '',
-    bio: '',
-    qualifications: '',
-    experienceYears: '',
-    currentOccupation: '',
+    firstName: "",
+    lastName: "",
+    phone: "",
+    location: "",
+    pinCode: "",
+    medium: "",
+    bio: "",
+    qualifications: "",
+    experienceYears: "",
+    currentOccupation: "",
     subjects: [],
     boards: [],
     classes: [],
-    teachingMode: '',
-    preferredSchedule: '',
-    teachingApproach: '',
-    hourlyRate: '',
-    photoUrl: '',
-    availability: []
+    teachingMode: "",
+    preferredSchedule: "",
+    teachingApproach: "",
+    hourlyRate: "",
+    photoUrl: "",
+    availability: [],
   });
-  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoPreview, setPhotoPreview] = useState("");
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   // State for new availability slot
   const [newSlot, setNewSlot] = useState({
-    day: '',
-    startTime: '',
-    endTime: ''
+    day: "",
+    startTime: "",
+    endTime: "",
   });
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const daysOfWeek = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
 
   // Main useEffect to initialize user and form data
   useEffect(() => {
-    const user = getFromLocalStorage('currentUser');
-    if (!user || user.role !== 'teacher') {
-      navigate('/login');
+    const user = getFromLocalStorage("currentUser");
+    if (!user || user.role !== "teacher") {
+      navigate("/login");
       return;
     }
     setCurrentUser(user);
 
     const teacherData = user.teacherProfileData || user.teacherProfile || {};
     setFormData({
-      firstName: teacherData.firstName || user.firstName || '',
-      lastName: teacherData.lastName || user.lastName || '',
-      phone: teacherData.phone || '',
-      location: teacherData.location || '',
-      bio: teacherData.bio || '',
-      qualifications: teacherData.qualifications || '',
-      experienceYears: teacherData.experienceYears || teacherData.experience || '',
-      currentOccupation: teacherData.currentOccupation || '',
-      subjects: Array.isArray(teacherData.subjects) ? teacherData.subjects.map(s => s.text || s).join(', ') : '',
-      boards: Array.isArray(teacherData.boards) ? teacherData.boards.map(b => b.text || b).join(', ') : '',
-      classes: Array.isArray(teacherData.classes) ? teacherData.classes.map(c => c.text || c).join(', ') : '',
-      teachingMode: teacherData.teachingMode || '',
-      preferredSchedule: teacherData.preferredSchedule || '',
-      teachingApproach: teacherData.teachingApproach || '',
-      hourlyRate: teacherData.hourlyRate || '',
-      photoUrl: teacherData.photoUrl || '',
-      availability: teacherData.availability || []
+      firstName: teacherData.firstName || user.firstName || "",
+      lastName: teacherData.lastName || user.lastName || "",
+      phone: teacherData.phone || "",
+      location: teacherData.location || "",
+      pinCode: teacherData.pinCode || "",
+      medium: teacherData.medium || "",
+      bio: teacherData.bio || "",
+      qualifications: teacherData.qualifications || "",
+      experienceYears:
+        teacherData.experienceYears || teacherData.experience || "",
+      currentOccupation: teacherData.currentOccupation || "",
+      subjects: Array.isArray(teacherData.subjects)
+        ? teacherData.subjects.map((s) => s.text || s).join(", ")
+        : "",
+      boards: Array.isArray(teacherData.boards)
+        ? teacherData.boards.map((b) => b.text || b).join(", ")
+        : "",
+      classes: Array.isArray(teacherData.classes)
+        ? teacherData.classes.map((c) => c.text || c).join(", ")
+        : "",
+      teachingMode: teacherData.teachingMode || "",
+      preferredSchedule: teacherData.preferredSchedule || "",
+      teachingApproach: teacherData.teachingApproach || "",
+      hourlyRate: teacherData.hourlyRate || "",
+      photoUrl: teacherData.photoUrl || "",
+      availability: teacherData.availability || [],
     });
-    setPhotoPreview(teacherData.photoUrl || '');
+    setPhotoPreview(teacherData.photoUrl || "");
     setLoading(false);
   }, [navigate]);
 
   // Additional useEffect to properly initialize availability
   useEffect(() => {
-    const user = getFromLocalStorage('currentUser');
+    const user = getFromLocalStorage("currentUser");
     if (user?.teacherProfile?.availability) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        availability: user.teacherProfile.availability
+        availability: user.teacherProfile.availability,
       }));
     }
   }, []);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === 'photo' && files && files[0]) {
+    if (name === "photo" && files && files[0]) {
       const file = files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, photoUrl: reader.result }));
+        setFormData((prev) => ({ ...prev, photoUrl: reader.result }));
         setPhotoPreview(reader.result);
       };
       reader.readAsDataURL(file);
@@ -111,46 +130,54 @@ const TeacherProfileEdit = () => {
 
   const handleSlotChange = (e) => {
     const { name, value } = e.target;
-    setNewSlot(prev => ({ ...prev, [name]: value }));
+    setNewSlot((prev) => ({ ...prev, [name]: value }));
   };
 
   const addAvailabilitySlot = () => {
     if (newSlot.day && newSlot.startTime && newSlot.endTime) {
       if (newSlot.startTime >= newSlot.endTime) {
-        setMessage({ text: 'End time must be after start time', type: 'error' });
+        setMessage({
+          text: "End time must be after start time",
+          type: "error",
+        });
         return;
       }
 
       // Check for overlapping slots
-      const hasOverlap = formData.availability.some(slot => 
-        slot.day === newSlot.day && 
-        (
-          (newSlot.startTime >= slot.startTime && newSlot.startTime < slot.endTime) ||
-          (newSlot.endTime > slot.startTime && newSlot.endTime <= slot.endTime) ||
-          (newSlot.startTime <= slot.startTime && newSlot.endTime >= slot.endTime)
-        )
+      const hasOverlap = formData.availability.some(
+        (slot) =>
+          slot.day === newSlot.day &&
+          ((newSlot.startTime >= slot.startTime &&
+            newSlot.startTime < slot.endTime) ||
+            (newSlot.endTime > slot.startTime &&
+              newSlot.endTime <= slot.endTime) ||
+            (newSlot.startTime <= slot.startTime &&
+              newSlot.endTime >= slot.endTime))
       );
 
       if (hasOverlap) {
-        setMessage({ text: 'This time slot overlaps with an existing slot', type: 'error' });
+        setMessage({
+          text: "This time slot overlaps with an existing slot",
+          type: "error",
+        });
         return;
       }
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        availability: [...prev.availability, newSlot]
+        availability: [...prev.availability, newSlot],
       }));
-      setNewSlot({ day: '', startTime: '', endTime: '' });
-      setMessage({ text: '', type: '' }); // Clear any previous error messages
+      setNewSlot({ day: "", startTime: "", endTime: "" });
+      setMessage({ text: "", type: "" }); // Clear any previous error messages
     } else {
-      setMessage({ text: 'Please fill all slot fields', type: 'error' });
+      setMessage({ text: "Please fill all slot fields", type: "error" });
     }
   };
 
   const removeAvailabilitySlot = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      availability: prev.availability.filter((_, i) => i !== index)
+      availability: prev.availability.filter((_, i) => i !== index),
     }));
   };
 
@@ -158,14 +185,18 @@ const TeacherProfileEdit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setMessage({ text: '', type: '' });
+    setMessage({ text: "", type: "" });
 
     try {
       // Prepare the data for the API
-      const mapToObjArray = (str) => str.split(',').map((s, idx) => {
-        const text = s.trim();
-        return text ? { id: idx + 1, text } : null;
-      }).filter(Boolean);
+      const mapToObjArray = (str) =>
+        str
+          .split(",")
+          .map((s, idx) => {
+            const text = s.trim();
+            return text ? { id: idx + 1, text } : null;
+          })
+          .filter(Boolean);
 
       const profileData = {
         ...formData,
@@ -173,33 +204,38 @@ const TeacherProfileEdit = () => {
         boards: mapToObjArray(formData.boards),
         classes: mapToObjArray(formData.classes),
         experience: formData.experienceYears,
-        photoUrl: formData.photoUrl || '',
-        availability: formData.availability
+        photoUrl: formData.photoUrl || "",
+        availability: formData.availability,
       };
 
       // Get token
-      let token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      let token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       if (!token && currentUser && currentUser.token) token = currentUser.token;
-      if (!token) throw new Error('No authentication token found. Please log in again.');
-      token = token.replace(/^"|"$/g, '');
+      if (!token)
+        throw new Error("No authentication token found. Please log in again.");
+      token = token.replace(/^"|"$/g, "");
 
       // Send PUT request to backend
-      const response = await fetch('http://localhost:5000/api/profile/teacher', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(profileData)
-      });
+      const response = await fetch(
+        "http://localhost:5000/api/profile/teacher",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(profileData),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
+        throw new Error(errorData.message || "Failed to update profile");
       }
 
       const result = await response.json();
-      
+
       // Update local storage with the new data
       const updatedUser = {
         ...currentUser,
@@ -207,22 +243,25 @@ const TeacherProfileEdit = () => {
         teacherProfile: {
           ...currentUser.teacherProfile,
           ...result.user.teacherProfile,
-          availability: result.user.teacherProfile.availability || []
+          availability: result.user.teacherProfile.availability || [],
         },
         teacherProfileData: {
           ...currentUser.teacherProfileData,
           ...result.user.teacherProfile,
-          availability: result.user.teacherProfile.availability || []
-        }
+          availability: result.user.teacherProfile.availability || [],
+        },
       };
-      
-      setToLocalStorage('currentUser', updatedUser);
+
+      setToLocalStorage("currentUser", updatedUser);
       setCurrentUser(updatedUser);
 
-      setMessage({ text: 'Profile updated successfully!', type: 'success' });
-      setTimeout(() => navigate('/teacher/profile'), 1500);
+      setMessage({ text: "Profile updated successfully!", type: "success" });
+      setTimeout(() => navigate("/teacher/profile"), 1500);
     } catch (error) {
-      setMessage({ text: error.message || 'Failed to save profile. Please try again.', type: 'error' });
+      setMessage({
+        text: error.message || "Failed to save profile. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -258,12 +297,12 @@ const TeacherProfileEdit = () => {
             <ArrowLeft className="w-5 h-5 transition-colors duration-200 group-hover:text-blue-600" />
             <span className="font-medium">Back to Profile</span>
           </Link>
-
           <div className="text-center">
             <h1 className="text-3xl font-bold text-slate-900">Edit Profile</h1>
-            <p className="text-slate-600">Update your personal and teaching details</p>
+            <p className="text-slate-600">
+              Update your personal and teaching details
+            </p>
           </div>
-
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
@@ -277,10 +316,15 @@ const TeacherProfileEdit = () => {
                   <h3 className="text-xl font-bold text-blue-700 flex items-center gap-2">
                     <User className="w-6 h-6" /> Personal Information
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-1">First Name</label>
+                      <label
+                        htmlFor="firstName"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        First Name
+                      </label>
                       <input
                         type="text"
                         name="firstName"
@@ -292,7 +336,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="lastName" className="block text-sm font-semibold text-slate-700 mb-1">Last Name</label>
+                      <label
+                        htmlFor="lastName"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Last Name
+                      </label>
                       <input
                         type="text"
                         name="lastName"
@@ -303,7 +352,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                      <label
+                        htmlFor="phone"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Phone Number
+                      </label>
                       <input
                         type="tel"
                         name="phone"
@@ -314,18 +368,89 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="location" className="block text-sm font-semibold text-slate-700 mb-1">Location</label>
+                      <label
+                        htmlFor="location"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Location
+                      </label>
                       <input
                         type="text"
                         name="location"
                         id="location"
                         value={formData.location}
                         onChange={handleChange}
+                        placeholder="Kolkata, West Bengal — please include your locality for better accuracy"
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
-                      <label htmlFor="bio" className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
+                      <label
+                        htmlFor="pinCode"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Pin Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="pinCode"
+                        id="pinCode"
+                        value={formData.pinCode}
+                        onChange={handleChange}
+                        placeholder="e.g., 700001"
+                        required
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="teachingMode"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Preferred Teaching Mode
+                      </label>
+                      <select
+                        name="teachingMode"
+                        id="teachingMode"
+                        value={formData.teachingMode}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="" disabled hidden>
+                          Select mode
+                        </option>
+                        <option value="Teacher's place">Teacher's place</option>
+                        <option value="Student's place">Student's place</option>
+                        <option value="Online">Online</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="medium"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Medium of Instruction{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="medium"
+                        id="medium"
+                        value={formData.medium}
+                        onChange={handleChange}
+                        placeholder="e.g., English, Hindi, Bengali"
+                        required
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="bio"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Bio
+                      </label>
                       <textarea
                         name="bio"
                         id="bio"
@@ -335,13 +460,19 @@ const TeacherProfileEdit = () => {
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       ></textarea>
                     </div>
-                    
+
                     {/* Profile Image Upload */}
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">Profile Image</label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Profile Image
+                      </label>
                       <div className="flex items-center gap-4">
                         {photoPreview ? (
-                          <img src={photoPreview} alt="Profile Preview" className="w-20 h-20 rounded-full object-cover border-2 border-blue-300 shadow-sm" />
+                          <img
+                            src={photoPreview}
+                            alt="Profile Preview"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-blue-300 shadow-sm"
+                          />
                         ) : (
                           <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
                             <User className="w-8 h-8" />
@@ -356,7 +487,9 @@ const TeacherProfileEdit = () => {
                             ref={fileInputRef}
                             className="block text-sm text-slate-500 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           />
-                          <p className="text-xs text-slate-500 mt-1">JPG, PNG or GIF (Max. 5MB)</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            JPG, PNG or GIF (Max. 5MB)
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -368,10 +501,15 @@ const TeacherProfileEdit = () => {
                   <h3 className="text-xl font-bold text-purple-700 flex items-center gap-2">
                     <GraduationCap className="w-6 h-6" /> Teaching Information
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="qualifications" className="block text-sm font-semibold text-slate-700 mb-1">Qualifications</label>
+                      <label
+                        htmlFor="qualifications"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Qualifications
+                      </label>
                       <input
                         type="text"
                         name="qualifications"
@@ -382,7 +520,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="experienceYears" className="block text-sm font-semibold text-slate-700 mb-1">Experience (years)</label>
+                      <label
+                        htmlFor="experienceYears"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Experience (years)
+                      </label>
                       <input
                         type="number"
                         name="experienceYears"
@@ -393,7 +536,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="currentOccupation" className="block text-sm font-semibold text-slate-700 mb-1">Current Occupation</label>
+                      <label
+                        htmlFor="currentOccupation"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Current Occupation
+                      </label>
                       <input
                         type="text"
                         name="currentOccupation"
@@ -404,7 +552,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="subjects" className="block text-sm font-semibold text-slate-700 mb-1">Subjects (comma-separated)</label>
+                      <label
+                        htmlFor="subjects"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Subjects (comma-separated)
+                      </label>
                       <input
                         type="text"
                         name="subjects"
@@ -415,7 +568,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="boards" className="block text-sm font-semibold text-slate-700 mb-1">Boards (comma-separated)</label>
+                      <label
+                        htmlFor="boards"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Boards (comma-separated)
+                      </label>
                       <input
                         type="text"
                         name="boards"
@@ -426,7 +584,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="classes" className="block text-sm font-semibold text-slate-700 mb-1">Classes/Courses Taught (comma-separated)</label>
+                      <label
+                        htmlFor="classes"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Classes/Courses Taught (comma-separated)
+                      </label>
                       <input
                         type="text"
                         name="classes"
@@ -437,22 +600,12 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="teachingMode" className="block text-sm font-semibold text-slate-700 mb-1">Preferred Teaching Mode</label>
-                      <select
-                        name="teachingMode"
-                        id="teachingMode"
-                        value={formData.teachingMode}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      <label
+                        htmlFor="hourlyRate"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
                       >
-                        <option value="">Select mode</option>
-                        <option value="Online">Online</option>
-                        <option value="Offline">Offline</option>
-                        <option value="Hybrid">Hybrid</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="hourlyRate" className="block text-sm font-semibold text-slate-700 mb-1">Hourly Rate (INR)</label>
+                        Hourly Rate (INR)
+                      </label>
                       <input
                         type="number"
                         name="hourlyRate"
@@ -468,7 +621,7 @@ const TeacherProfileEdit = () => {
                       <h4 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
                         <Clock className="w-5 h-5" /> Weekly Availability
                       </h4>
-                      
+
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <select
@@ -478,11 +631,13 @@ const TeacherProfileEdit = () => {
                             className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                           >
                             <option value="">Select day</option>
-                            {daysOfWeek.map(day => (
-                              <option key={day} value={day}>{day}</option>
+                            {daysOfWeek.map((day) => (
+                              <option key={day} value={day}>
+                                {day}
+                              </option>
                             ))}
                           </select>
-                          
+
                           <input
                             type="time"
                             name="startTime"
@@ -490,7 +645,7 @@ const TeacherProfileEdit = () => {
                             onChange={handleSlotChange}
                             className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
-                          
+
                           <input
                             type="time"
                             name="endTime"
@@ -499,7 +654,7 @@ const TeacherProfileEdit = () => {
                             className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
-                        
+
                         <button
                           type="button"
                           onClick={addAvailabilitySlot}
@@ -508,19 +663,27 @@ const TeacherProfileEdit = () => {
                           <Plus className="w-4 h-4" />
                           Add Time Slot
                         </button>
-                        
+
                         {formData.availability.length > 0 && (
                           <div className="mt-4 space-y-2">
-                            <h5 className="text-sm font-medium text-slate-700">Current Availability:</h5>
+                            <h5 className="text-sm font-medium text-slate-700">
+                              Current Availability:
+                            </h5>
                             <div className="space-y-2">
                               {formData.availability.map((slot, index) => (
-                                <div key={index} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200"
+                                >
                                   <span className="font-medium">
-                                    {slot.day}: {slot.startTime} - {slot.endTime}
+                                    {slot.day}: {slot.startTime} -{" "}
+                                    {slot.endTime}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => removeAvailabilitySlot(index)}
+                                    onClick={() =>
+                                      removeAvailabilitySlot(index)
+                                    }
                                     className="text-red-500 hover:text-red-700 p-1"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -537,9 +700,13 @@ const TeacherProfileEdit = () => {
               </div>
 
               {message.text && (
-                <div className={`mt-6 p-4 rounded-lg text-center font-medium ${
-                  message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
+                <div
+                  className={`mt-6 p-4 rounded-lg text-center font-medium ${
+                    message.type === "success"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
                   {message.text}
                 </div>
               )}

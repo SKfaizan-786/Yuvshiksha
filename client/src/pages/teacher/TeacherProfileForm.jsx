@@ -451,6 +451,8 @@ const TeacherProfileForm = () => {
 
       const profileData = {
         ...formData,
+        pinCode: formData.pinCode,
+        medium: formData.medium,
         photoUrl: uiState.photoPreviewUrl
       };
 
@@ -764,7 +766,8 @@ const TeacherProfileForm = () => {
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Your Contact & Professional Info</h3>
                     {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-violet-600" />, 'e.g., +91 98765 43210', false)}
-                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., Kolkata, West Bengal', true)}
+                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., Kolkata, West Bengal — please include your locality for better accuracy', true)}
+                    {renderInputField('Pin Code', 'pinCode', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., 700001', true)}
                     {renderInputField('Highest Qualification', 'qualifications', 'text', <GraduationCap className="w-4 h-4 text-violet-600" />, 'e.g., M.Sc. Physics, B.Tech CSE', true)}
                     <div className="grid md:grid-cols-2 gap-6">
                       {renderInputField('Years of Experience', 'experienceYears', 'number', <Briefcase className="w-4 h-4 text-violet-600" />, 'e.g., 5', false)}
@@ -785,13 +788,14 @@ const TeacherProfileForm = () => {
                       'teachingMode',
                       <UserCircle2 className="w-4 h-4 text-violet-600" />,
                       [
-                        { value: 'online-live', label: 'Online Live Classes' },
-                        { value: 'offline', label: 'Offline Classes' },
-                        { value: 'hybrid', label: 'Hybrid (Online + Offline)' }
+                        { value: "Teacher's place", label: "Teacher's place" },
+                        { value: "Student's place", label: "Student's place" },
+                        { value: 'Online', label: 'Online' }
                       ],
                       'Select teaching mode',
                       true
                     )}
+                    {renderInputField('Medium of Instruction', 'medium', 'text', <BookOpenCheck className="w-4 h-4 text-violet-600" />, 'e.g., English, Hindi, Bengali', true)}
                     
                     {/* Weekly Availability Section */}
                     <div className="space-y-4">

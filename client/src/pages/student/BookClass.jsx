@@ -5,7 +5,6 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Loader2, CalendarDays, Clock, UserRound, BookOpen, AlertCircle, CheckCircle, DollarSign, ArrowLeft, Star } from 'lucide-react';
 import { getFromLocalStorage } from "../utils/storage";
 import { bookingAPI } from "../../services/bookingAPI";
-import { launchCashfreePayment } from '../../utils/cashfree';
 
 export default function BookClass() {
   const [teacher, setTeacher] = useState(null);
@@ -138,63 +137,27 @@ export default function BookClass() {
       setTimeout(() => setBookingStatus(null), 3000);
       return;
     }
-
     setIsBooking(true);
     setErrorMessage("");
-    const user = getFromLocalStorage('currentUser');
-    console.log('[BookClass] User for payment:', user);
-    // Fallback for missing user id
-    let customerId = user && (user._id || user.id);
-    if (!customerId) {
-      // Generate a random alphanumeric id
-      customerId = 'user_' + Math.random().toString(36).substring(2, 12);
-    }
-    // Use phone from user profile or studentProfile
-    let customerPhone = user?.phone || user?.studentProfile?.phone;
-    if (!customerPhone) {
-      setErrorMessage('Phone number is missing in your profile. Please update your profile (add phone in profile or student profile) to proceed with payment.');
-      setIsBooking(false);
-      return;
-    }
     try {
-      // Call backend to create Cashfree order
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/payments/cashfree-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          amount: calculateAmount(),
-          customerId,
-          customerName: user ? (user.firstName + ' ' + user.lastName) : 'Unknown User',
-          customerEmail: user ? user.email : 'unknown@example.com',
-          customerPhone,
-          purpose: `Booking with ${teacher?.name}`
-        })
-      });
-      const data = await res.json();
-      if (!data.payment_session_id) {
-        setErrorMessage('Failed to initiate payment. Please try again.');
-        setIsBooking(false);
-        return;
-      }
-      // Prepare bookingData
+      // Prepare booking data
       const bookingData = {
         teacherId,
         subject,
         date: selectedDate,
         slots: selectedSlots,
-        notes: notes.trim()
+        notes: notes.trim(),
+        status: 'pending' // always pending until teacher confirms
       };
-      // Save bookingData to localStorage for payment success page
-      localStorage.setItem('pendingBookingData', JSON.stringify(bookingData));
-      // Redirect to PaymentPage with session id and orderId
-      navigate('/payment', { state: { paymentSessionId: data.payment_session_id, orderId: data.orderId, bookingData } });
+      await bookingAPI.createBooking(bookingData);
+      setBookingStatus('success');
       setIsBooking(false);
+      setTimeout(() => {
+        navigate('/student/dashboard');
+      }, 1200);
     } catch (error) {
-      setErrorMessage('Payment could not be initiated.');
+      setErrorMessage('Booking could not be created. Please try again.');
+      setBookingStatus('error');
       setIsBooking(false);
     }
   };
@@ -478,7 +441,7 @@ export default function BookClass() {
             <div className="mt-6 p-4 bg-green-500/20 border border-green-400 rounded-xl">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-400" />
-                <span className="text-green-200">Booking confirmed! Redirecting...</span>
+                <span className="text-green-200">Booking confirmed! Redirecting to dashboard...</span>
               </div>
             </div>
           )}
@@ -504,11 +467,13 @@ export default function BookClass() {
               ) : (
                 <>
                   <CheckCircle className="w-6 h-6" />
-                  <span>Confirm Booking</span>
+                  <span>Book Slot</span>
                 </>
               )}
             </button>
-
+            <div className="text-center text-purple-200 text-sm mt-2">
+              After booking, please contact your teacher directly for payment and confirmation.
+            </div>
             {/* Back to Dashboard Button */}
             <button
               onClick={() => navigate('/student/dashboard')}
