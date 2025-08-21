@@ -396,6 +396,16 @@ export default function EnhancedTeacherPlatform() {
   navigate(`/student/book-class/${teacher.id}`);
   };
 
+  const handleMessage = (teacher) => {
+    // Navigate to messages page with teacher ID
+    navigate('/student/messages', { 
+      state: { 
+        selectedTeacherId: teacher._id || teacher.id,
+        teacherName: teacher.name || `${teacher.firstName} ${teacher.lastName}`
+      } 
+    });
+  };
+
   const submitBooking = () => {
     if (!bookingForm.date || !bookingForm.time) {
       setNotification("Please select a date and time.");
@@ -805,7 +815,13 @@ export default function EnhancedTeacherPlatform() {
                             <span>Book Session</span>
                           </button>
                           
-                          {/* Message button hidden until backend is ready */}
+                          <button
+                            onClick={() => handleMessage(teacher)}
+                            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2.5 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group"
+                          >
+                            <MessageCircle className="w-4 h-4 group-hover:animate-pulse" />
+                            <span>Message Teacher</span>
+                          </button>
                         </div>
                       </div>
                     </div>

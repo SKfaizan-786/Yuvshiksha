@@ -4,6 +4,11 @@ import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
+// Debug route to test if notification routes are loaded
+router.get('/test', (req, res) => {
+  res.json({ message: 'Notification routes are working!', timestamp: new Date() });
+});
+
 // All notification routes require authentication
 router.use(authMiddleware);
 

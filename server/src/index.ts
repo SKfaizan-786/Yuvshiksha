@@ -14,6 +14,8 @@ import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
 import paymentRoutes from './routes/payments';
+import messageRoutes from './routes/messages';
+import notificationRoutes from './routes/notifications';
 
 import './passport-config';
 
@@ -97,6 +99,8 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
@@ -137,6 +141,12 @@ io.on('connection', (socket) => {
     connectedUsers.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`User ${userId} authenticated with socket ${socket.id}`);
+  });
+
+  // Handle test ping
+  socket.on('test_ping', (data) => {
+    console.log('📡 Received test ping from client:', data);
+    socket.emit('test_pong', { message: 'Hello from server', timestamp: new Date() });
   });
 
   // Handle joining chat rooms

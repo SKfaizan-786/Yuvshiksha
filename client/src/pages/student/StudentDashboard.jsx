@@ -38,6 +38,7 @@ const UserContext = createContext(null);
 // Importing directly from the utility file
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useMessageNotifications } from '../../hooks/useMessageNotifications';
 import API_CONFIG from '../../config/api';
 // --- End Helper Functions ---
 
@@ -373,6 +374,9 @@ const StudentDashboard = () => {
   
   // Use notification context
   const { unreadCount } = useNotifications();
+  
+  // Use message notifications
+  const { unreadMessageCount } = useMessageNotifications();
 
   // Load favorites from localStorage on component mount
   // Fetch dashboard stats from backend
@@ -1026,6 +1030,31 @@ const StudentDashboard = () => {
                 count={dashboardData?.recentTeachers?.filter(t => t.isFavorite).length || 0}
                 isCollapsed={isSidebarCollapsed}
               />
+              
+              {/* Messages Navigation */}
+              <div className="relative">
+                <Link
+                  to="/student/messages"
+                  className={`flex items-center w-full rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg overflow-hidden ${
+                    isSidebarCollapsed ? 'p-3 justify-center' : 'p-3'
+                  } text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm`}
+                  title={isSidebarCollapsed ? 'Messages' : ''}
+                >
+                  <MessageSquare className={`w-5 h-5 ${isSidebarCollapsed ? '' : 'mr-3'} text-slate-600 hover:text-blue-600 transition-colors duration-300 flex-shrink-0`} />
+                  {!isSidebarCollapsed && (
+                    <span className="transition-all duration-300 truncate">Messages</span>
+                  )}
+                </Link>
+                {unreadMessageCount > 0 && (
+                  <span className={`absolute bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-white shadow-sm ${
+                    isSidebarCollapsed 
+                      ? 'w-4 h-4 -top-1 -right-1' 
+                      : 'w-5 h-5 top-2 right-2'
+                  }`}>
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </div>
               
               {/* Navigation Links */}
               <div className="border-t border-white/20 pt-4 mt-4">
