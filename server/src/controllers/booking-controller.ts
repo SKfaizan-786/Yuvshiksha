@@ -50,10 +50,18 @@ export const bookingController = {
         }
       }
 
-      const bookings = await Booking.find(query)
+      let bookings = await Booking.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit));
+
+      // Ensure teacher.phone is always present in the response
+      bookings = bookings.map(b => {
+        if (!b.teacher.phone) {
+          b.teacher.phone = 'N/A';
+        }
+        return b;
+      });
 
       const total = await Booking.countDocuments(query);
 
@@ -95,10 +103,18 @@ export const bookingController = {
         query.status = status;
       }
 
-      const bookings = await Booking.find(query)
+      let bookings = await Booking.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit));
+
+      // Ensure teacher.phone is always present in the response
+      bookings = bookings.map(b => {
+        if (!b.teacher.phone) {
+          b.teacher.phone = 'N/A';
+        }
+        return b;
+      });
 
       const total = await Booking.countDocuments(query);
 
@@ -195,7 +211,8 @@ export const bookingController = {
         teacher: {
           id: teacherId,
           name: `${teacher.firstName} ${teacher.lastName}`,
-          email: teacher.email
+          email: teacher.email,
+          phone: teacher.teacherProfile?.phone || 'N/A'
         },
         subject,
         date: new Date(date),
@@ -226,7 +243,9 @@ export const bookingController = {
           duration: booking.duration,
           slots: booking.slots,
           amount: booking.amount,
-          notes: booking.notes
+          notes: booking.notes,
+          // Ensure teacher phone is always included in the response
+          teacherPhone: booking.teacher.phone || 'N/A'
         }
       });
     } catch (error) {

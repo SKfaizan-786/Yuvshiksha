@@ -178,6 +178,12 @@ const TeacherProfile = () => {
                       {teacherData.location || 'Not provided'}
                     </p>
                   </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Pin Code</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
+                      {teacherData.pinCode || 'Not provided'}
+                    </p>
+                  </div>
                   <div className="col-span-1">
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[60px]">
@@ -244,6 +250,12 @@ const TeacherProfile = () => {
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Teaching Mode</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
                       {teacherData.teachingMode || 'Not provided'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Medium of Instruction</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
+                      {teacherData.medium || 'Not provided'}
                     </p>
                   </div>
                   <div>

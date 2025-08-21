@@ -13,6 +13,23 @@ import {
 } from 'lucide-react';
 
 const StudentProfile = () => {
+  // Handle input changes for editing profile fields
+  const handleInputChange = (field, value) => {
+    setEditedProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+  // Cancel editing and reset editedProfile to currentUser data
+  const handleCancel = () => {
+    setEditedProfile({
+      ...currentUser,
+      ...currentUser.studentProfile,
+      subjects: currentUser.studentProfile?.subjects || [],
+      learningGoals: currentUser.studentProfile?.learningGoals || [],
+    });
+    setIsEditing(false);
+  };
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,7 +40,12 @@ const StudentProfile = () => {
   const getFromLocalStorage = (key) => {
     try {
       const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : null;
+      if (!value) return null;
+      // If value looks like JSON, parse it, else return as-is (for tokens)
+      if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
+        return JSON.parse(value);
+      }
+      return value;
     } catch (error) {
       console.error("Failed to get from localStorage:", error);
       return null;
@@ -57,6 +79,10 @@ const StudentProfile = () => {
   }, [navigate]);
 
   const handleSave = async () => {
+    if (!editedProfile.mode || !["Teacher's place", "Student's place", "Online"].includes(editedProfile.mode)) {
+      alert('Please select a valid Preferred Learning Mode.');
+      return;
+    }
     const token = getFromLocalStorage('token');
     if (!token) {
       alert('No authentication token found');
@@ -71,19 +97,20 @@ const StudentProfile = () => {
       subjects: Array.isArray(editedProfile.subjects) ? editedProfile.subjects : [],
       learningGoals: Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals : [],
     };
-    
-    // The API might expect fields from the root user object as well, so merge them too
     const finalProfileData = {
-        firstName: updatedData.firstName,
-        lastName: updatedData.lastName,
-        phone: updatedData.phone,
-        location: updatedData.location,
-        bio: updatedData.bio,
-        photoUrl: updatedData.photoUrl || '',
-        grade: updatedData.grade,
-        board: updatedData.board,
-        subjects: updatedData.subjects,
-        learningGoals: updatedData.learningGoals,
+      firstName: updatedData.firstName,
+      lastName: updatedData.lastName,
+      phone: updatedData.phone,
+      location: updatedData.location,
+      pinCode: updatedData.pinCode,
+      medium: updatedData.medium,
+      bio: updatedData.bio,
+      photoUrl: updatedData.photoUrl || '',
+      grade: updatedData.grade,
+      board: updatedData.board,
+      subjects: updatedData.subjects,
+      learningGoals: updatedData.learningGoals,
+      mode: updatedData.mode,
     };
 
     try {
@@ -111,32 +138,6 @@ const StudentProfile = () => {
       alert('Failed to update profile due to a network error.');
     }
   };
-
-  const handleCancel = () => {
-    setEditedProfile({
-      ...currentUser,
-      ...currentUser.studentProfile,
-    });
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (field, value) => {
-    setEditedProfile((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!currentUser) return null;
 
@@ -294,6 +295,34 @@ const StudentProfile = () => {
                     )}
                   </div>
                   <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Location</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.location || ''}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                        placeholder="Kolkata, West Bengal — please include your locality for better accuracy"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('location')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Pin Code</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.pinCode || ''}
+                        onChange={(e) => handleInputChange('pinCode', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                        placeholder="e.g., 700001"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('pinCode')}</p>
+                    )}
+                  </div>
+                  <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
                     {isEditing ? (
                       <textarea
@@ -337,6 +366,39 @@ const StudentProfile = () => {
                       />
                     ) : (
                       <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('subjects') && Array.isArray(getProfileField('subjects')) ? getProfileField('subjects').join(', ') : getProfileField('subjects')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Preferred Learning Mode</label>
+                    {isEditing ? (
+                      <select
+                        value={editedProfile.mode || ''}
+                        onChange={(e) => handleInputChange('mode', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        required
+                      >
+                        <option value="" disabled>Select mode</option>
+                        <option value="Teacher's place">Teacher's place</option>
+                        <option value="Student's place">Student's place</option>
+                        <option value="Online">Online</option>
+                      </select>
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('mode')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Medium of Instruction</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.medium || ''}
+                        onChange={(e) => handleInputChange('medium', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        placeholder="e.g., English, Hindi, Bengali"
+                        required
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('medium')}</p>
                     )}
                   </div>
                   <div>

@@ -16,6 +16,7 @@ import teacherRoutes from './routes/teachers';
 import paymentRoutes from './routes/payments';
 import messageRoutes from './routes/messages';
 import notificationRoutes from './routes/notifications';
+import emailOtpRoutes from './routes/email-otp';
 
 import './passport-config';
 
@@ -101,6 +102,7 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/email-otp', emailOtpRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {

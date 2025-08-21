@@ -83,6 +83,8 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
     const teacherProfileUpdate: Partial<ITeacherProfile> = {
       phone: req.body.phone,
       location: req.body.location,
+      pinCode: req.body.pinCode,
+      medium: req.body.medium,
       qualifications: req.body.qualifications,
       experienceYears: req.body.experienceYears,
       currentOccupation: req.body.currentOccupation,
@@ -207,6 +209,8 @@ export const updateStudentProfile = async (req: Request, res: Response) => {
       studentProfile: {
         phone: req.body.phone,
         location: req.body.location,
+        pinCode: req.body.pinCode || '',
+        medium: req.body.medium || '',
         grade: req.body.subject || req.body.grade || '',
         subjects: req.body.subjects && Array.isArray(req.body.subjects) && req.body.subjects.length > 0
           ? req.body.subjects

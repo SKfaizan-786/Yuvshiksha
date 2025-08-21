@@ -781,7 +781,7 @@ export default function EnhancedTeacherPlatform() {
 
                         <div className="mb-4">
                           <div className="text-xs text-gray-500 mb-1">Available</div>
-                          <div className="flex space-x-1">
+                          <div className="flex space-x-1 mb-2">
                             {teacher.availability.map((day, i) => (
                               <span
                                 key={i}
@@ -790,6 +790,14 @@ export default function EnhancedTeacherPlatform() {
                                 {day}
                               </span>
                             ))}
+                          </div>
+                          <div className="flex items-center space-x-2 text-gray-600 mt-2">
+                            <span className="text-xs font-semibold">Phone:</span>
+                            <span className="text-xs">{teacher.phone || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-gray-600 mt-1">
+                            <span className="text-xs font-semibold">Email:</span>
+                            <span className="text-xs">{teacher.email || 'N/A'}</span>
                           </div>
                         </div>
                       </div>

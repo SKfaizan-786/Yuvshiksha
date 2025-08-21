@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { fetchTeacherById } from '../../services/teacherAPI';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -199,7 +200,7 @@ const SessionCard = ({ session, onViewDetail }) => {
         <span className="font-medium">Subject:</span>&nbsp;{session.subject}
       </div>
       <div className="flex items-center text-sm text-slate-700 mb-2">
-        <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+  <span className="font-medium">Amount:</span>&nbsp;₹{session.amount}
       </div>
       <button 
         className="w-full mt-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
@@ -243,6 +244,22 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
 
 // Modal for session details
 const SessionDetailModal = ({ session, onClose }) => {
+  const [teacherDetails, setTeacherDetails] = useState(null);
+  useEffect(() => {
+    if (!session) return;
+    let teacherId = null;
+    if (session.teacher && typeof session.teacher === 'object') {
+      teacherId = session.teacher.id;
+    } else if (session.teacherId) {
+      teacherId = session.teacherId;
+    }
+    if (teacherId) {
+      fetchTeacherById(teacherId)
+        .then(data => setTeacherDetails(data))
+        .catch(() => setTeacherDetails(null));
+    }
+  }, [session]);
+
   if (!session) return null;
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -250,8 +267,18 @@ const SessionDetailModal = ({ session, onClose }) => {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
     });
   };
-  // Try to get teacher name from multiple possible properties
-  const teacherName = session.teacherName || (session.teacher && session.teacher.name) || session.teacher || 'N/A';
+  let teacherName = 'N/A';
+  let teacherPhone = 'N/A';
+  if (teacherDetails) {
+    teacherName = `${teacherDetails.firstName || ''} ${teacherDetails.lastName || ''}`.trim() || teacherDetails.name || 'N/A';
+    teacherPhone = teacherDetails.teacherProfile?.phone || 'N/A';
+  } else if (session.teacher && typeof session.teacher === 'object') {
+    teacherName = session.teacher.name || 'N/A';
+    teacherPhone = session.teacher.phone || 'N/A';
+  } else {
+    teacherName = session.teacherName || session.teacher || 'N/A';
+    teacherPhone = session.teacherPhone || session.phone || 'N/A';
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative animate-fade-in">
@@ -259,10 +286,11 @@ const SessionDetailModal = ({ session, onClose }) => {
         <h2 className="text-2xl font-bold mb-4 text-purple-700">Session Details</h2>
         <div className="space-y-2 text-slate-700">
           <div><span className="font-semibold">Teacher:</span> {teacherName}</div>
+          <div><span className="font-semibold">Phone:</span> {teacherPhone}</div>
           <div><span className="font-semibold">Subject:</span> {session.subject}</div>
           <div><span className="font-semibold">Date & Time:</span> {formatDate(session.date)} ({session.time})</div>
           <div><span className="font-semibold">Duration:</span> {session.duration} hour(s)</div>
-          <div><span className="font-semibold">Amount Paid:</span> ₹{session.amount}</div>
+          <div><span className="font-semibold">Amount:</span> ₹{session.amount}</div>
           {session.notes && <div><span className="font-semibold">Notes:</span> {session.notes}</div>}
         </div>
       </div>
@@ -371,6 +399,7 @@ const StudentDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [loading, setLoading] = useState(false); // For loading state
   const [favorites, setFavorites] = useState([]); // For storing favorite teacher IDs
+  const [favoriteTeachersData, setFavoriteTeachersData] = useState([]); // For storing favorite teacher objects
   
   // Use notification context
   const { unreadCount } = useNotifications();
@@ -393,16 +422,32 @@ const StudentDashboard = () => {
         });
         const bookingsData = await bookingsRes.json();
         const bookings = bookingsData.bookings || [];
-        // Fetch favourites
+        // Fetch favourites (IDs)
         const favRes = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
           headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
         });
         const favData = await favRes.json();
         const favs = favData.favourites || [];
+        setFavorites(favs);
+        // Fetch favorite teacher objects
+        let favTeachersArr = [];
+        if (favs.length > 0) {
+          // You may have an endpoint to fetch multiple teachers by IDs, otherwise fetch one by one
+          favTeachersArr = await Promise.all(favs.map(async (id) => {
+            const res = await fetch(`${API_BASE_URL}/api/teachers/${id}`, {
+              headers: { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` }
+            });
+            if (res.ok) return await res.json();
+            return null;
+          }));
+          favTeachersArr = favTeachersArr.filter(Boolean);
+        }
+        setFavoriteTeachersData(favTeachersArr);
         // Calculate stats
-        const completedSessions = bookings.filter(b => b.status === 'completed').length;
-        const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
-        const totalSpent = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const completedSessions = bookings.filter(b => b.status === 'completed').length;
+  const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
+  // Only sum amount for confirmed or completed bookings
+  const totalSpent = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').reduce((sum, b) => sum + (b.amount || 0), 0);
         // For the section, filter upcoming sessions within the next month
         const now = new Date();
         const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -423,7 +468,6 @@ const StudentDashboard = () => {
           upcomingSessions: upcomingSessionsList,
           allSessions: bookings // <-- add all sessions for My Sessions tab
         }));
-        setFavorites(favs);
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
       } finally {
@@ -1268,7 +1312,7 @@ const StudentDashboard = () => {
                             <span className="font-medium">Subject:</span>&nbsp;{session.subject}
                           </div>
                           <div className="flex items-center text-sm text-slate-700 mb-1">
-                            <span className="font-medium">Amount Paid:</span>&nbsp;₹{session.amount}
+                            <span className="font-medium">Amount:</span>&nbsp;₹{session.amount}
                           </div>
                         </div>
                         <div className="mt-2 text-xs font-semibold px-2 py-1 rounded-full w-fit self-start md:self-auto"
@@ -1301,11 +1345,25 @@ const StudentDashboard = () => {
                 <Heart className="w-7 h-7 text-purple-600" /> Favorite Teachers
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).map(teacher => (
-                  <TeacherCard key={teacher.id} teacher={teacher} onToggleFavorite={toggleFavorite} />
-                ))}
+                {favoriteTeachersData.length > 0 ? favoriteTeachersData.map(teacher => {
+                  // Normalize teacher object for TeacherCard
+                  const normalized = {
+                    id: teacher._id || teacher.id || '',
+                    name: teacher.name || (teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.firstName || 'Teacher'),
+                    image: teacher.avatar || teacher.photoUrl || teacher.profilePicture || (teacher.teacherProfile && (teacher.teacherProfile.photoUrl || teacher.teacherProfile.profilePicture)) || 'https://via.placeholder.com/150/9CA3AF/FFFFFF?text=T',
+                    experience: teacher.experience || (teacher.teacherProfile && teacher.teacherProfile.experience) || '',
+                    subjects: (teacher.subjects && Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.teacherProfile && Array.isArray(teacher.teacherProfile.subjects) ? teacher.teacherProfile.subjects : [])),
+                    rating: teacher.rating || (teacher.teacherProfile && teacher.teacherProfile.rating) || 0,
+                    students: teacher.students || (teacher.teacherProfile && teacher.teacherProfile.students) || 0,
+                    hourlyRate: teacher.hourlyRate || (teacher.teacherProfile && teacher.teacherProfile.hourlyRate) || 0,
+                    isFavorite: true
+                  };
+                  // Ensure subjects is always an array of strings
+                  normalized.subjects = normalized.subjects.map(s => typeof s === 'string' ? s : (s.text || ''));
+                  return <TeacherCard key={normalized.id} teacher={normalized} onToggleFavorite={toggleFavorite} />;
+                }) : null}
               </div>
-              {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).length === 0 && (
+              {favoriteTeachersData.length === 0 && (
                 <div className="text-center py-12">
                   <Heart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                   <p className="text-slate-500 text-lg mb-4">No favorite teachers yet</p>

@@ -32,23 +32,28 @@ export interface IAvailability {
 export interface IStudentProfile {
   phone?: string;
   location?: string;
+  pinCode?: string;
+  medium?: string;
   grade?: string;
   subjects?: string[];
   learningGoals?: string[];
   bio?: string;
   photoUrl?: string;
+  mode?: 'Teacher\'s place' | 'Student\'s place' | 'Online';
 }
 
 export interface ITeacherProfile {
   phone?: string;
   location?: string;
+  pinCode?: string;
+  medium?: string;
   qualifications?: string;
   experienceYears?: number;
   currentOccupation?: string;
   subjects?: ITeachingSubject[];
   boards?: ITeachingBoard[];
   classes?: ITeachingClass[];
-  teachingMode?: string;
+  teachingMode?: 'Teacher\'s place' | 'Student\'s place' | 'Online';
   preferredSchedule?: string;
   bio?: string;
   teachingApproach?: string;
@@ -58,6 +63,7 @@ export interface ITeacherProfile {
   availability?: IAvailability[];
   isListed?: boolean; // Add this field
   listedAt?: Date; // Optional: track when teacher got listed
+  maritalStatus?: 'married' | 'unmarried';
 }
 
 export interface IUser extends Document {
@@ -109,13 +115,19 @@ const AvailabilitySchema = new Schema({
 const TeacherProfileSchema = new Schema({
   phone: String,
   location: String,
+  pinCode: String,
+  medium: String,
   qualifications: String,
   experienceYears: Number,
   currentOccupation: String,
   subjects: [TeachingSubjectSchema],
   boards: [TeachingBoardSchema],
   classes: [TeachingClassSchema],
-  teachingMode: String,
+  teachingMode: {
+    type: String,
+    enum: ["Teacher's place", "Student's place", "Online"],
+    default: "Online"
+  },
   preferredSchedule: String,
   bio: String,
   teachingApproach: String,
@@ -129,6 +141,11 @@ const TeacherProfileSchema = new Schema({
   },
   listedAt: { 
     type: Date 
+  },
+  maritalStatus: {
+    type: String,
+    enum: ['married', 'unmarried'],
+    required: true
   }
 }, { timestamps: true });
 
@@ -181,12 +198,18 @@ const UserSchema = new Schema<IUser>(
     studentProfile: {
       phone: String,
       location: String,
+      pinCode: String,
+      medium: String,
       grade: String,
       subjects: [String],
       learningGoals: [String],
       bio: String,
       photoUrl: String,
-      mode: String,
+      mode: {
+        type: String,
+        enum: ["Teacher's place", "Student's place", "Online"],
+        default: "Online"
+      },
       board: String,
     },
     teacherProfile: TeacherProfileSchema,
