@@ -13,11 +13,23 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import API_CONFIG from '../../config/api';
+// Debug components removed - socket is working
 
 const Messages = () => {
   const { socket, isConnected } = useSocket();
   const location = useLocation();
   const isOnline = useOnlineStatus();
+
+  // Debug socket status
+  useEffect(() => {
+    console.log('🔍 Socket Debug in Messages:', {
+      socket: !!socket,
+      isConnected,
+      socketId: socket?.id,
+      socketConnected: socket?.connected,
+      socketUrl: socket?.io?.uri
+    });
+  }, [socket, isConnected]);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -30,12 +42,38 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Get current user info
+  // Get current user info with proper ID
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       const user = JSON.parse(localStorage.getItem('currentUser'));
-      setCurrentUser(user);
+      // Get the actual user ID from various possible sources
+      const getUserIdFromToken = () => {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const decoded = JSON.parse(jsonPayload);
+          return decoded._id || decoded.id || decoded.userId || decoded.sub;
+        } catch (error) {
+          console.error('Error decoding JWT:', error);
+          return null;
+        }
+      };
+      
+      const actualUserId = user._id || user.id || user.userId || getUserIdFromToken();
+      const userWithId = { ...user, _id: actualUserId, id: actualUserId };
+      
+      console.log('🔍 Messages - Current user with ID:', { 
+        originalUser: user, 
+        actualUserId, 
+        userWithId 
+      });
+      
+      setCurrentUser(userWithId);
     }
   }, []);
 
@@ -100,24 +138,48 @@ const Messages = () => {
 
   // Handle incoming conversation from TeacherList
   useEffect(() => {
-    if (location.state?.startConversation && location.state?.teacherId) {
-      const { teacherId, teacherName, teacherAvatar } = location.state;
+    // Handle both old format and new format
+    const shouldStartConversation = (location.state?.startConversation && location.state?.teacherId) || 
+                                   (location.state?.selectedTeacherId);
+    
+    if (shouldStartConversation) {
+      const teacherId = location.state?.teacherId || location.state?.selectedTeacherId;
+      const teacherName = location.state?.teacherName || location.state?.teacherName;
+      const teacherAvatar = location.state?.teacherAvatar;
+      
+      // If conversations are loaded, check for existing conversation
+      if (conversations.length > 0) {
+        const existingConversation = conversations.find(
+          conv => conv.participant._id === teacherId
+        );
+        
+        if (existingConversation) {
+          // Select existing conversation
+          setSelectedConversation(existingConversation);
+          fetchMessages(existingConversation.participant._id);
+          return;
+        }
+      }
+      
       // Create a mock conversation object for the selected teacher
       const mockConversation = {
         participant: {
           _id: teacherId,
-          firstName: teacherName.split(' ')[0],
-          lastName: teacherName.split(' ')[1] || '',
+          firstName: teacherName ? teacherName.split(' ')[0] : 'Teacher',
+          lastName: teacherName ? (teacherName.split(' ')[1] || '') : '',
           avatar: teacherAvatar
         },
         lastMessage: { content: 'Start a conversation', createdAt: new Date() },
         unreadCount: 0
       };
       setSelectedConversation(mockConversation);
-      // Send a welcome message
-      setNewMessage(`Hi ${teacherName}, I'm interested in your classes. Can we discuss the details?`);
+      
+      // Pre-fill message for new conversations from teacher list
+      if (location.state?.selectedTeacherId) {
+        setNewMessage(`Hi ${teacherName || 'there'}, I'm interested in your classes. Can we discuss the details?`);
+      }
     }
-  }, [location.state]);
+  }, [location.state, conversations]);
 
   // Fetch conversations
   useEffect(() => {
@@ -230,7 +292,7 @@ const Messages = () => {
     });
 
     const messageData = {
-      sender: currentUser._id,
+      sender: currentUser._id || currentUser.id,
       recipient: selectedConversation.participant._id,
       content: newMessage.trim(),
       messageType: 'text'
@@ -241,7 +303,12 @@ const Messages = () => {
     // First, add message to local state immediately for better UX
     const localMessage = {
       _id: 'temp_' + Date.now(),
-      sender: { _id: currentUser._id },
+      sender: { 
+        _id: currentUser._id || currentUser.id,
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName 
+      },
+      recipient: { _id: selectedConversation.participant._id },
       content: messageData.content,
       createdAt: new Date(),
       isRead: false,
@@ -527,13 +594,16 @@ const Messages = () => {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message, index) => {
-                  const isOwnMessage = message.sender._id === currentUser?._id;
+                  // More robust message identification
+                  const currentUserId = currentUser?._id || currentUser?.id;
+                  const messageSenderId = message.sender?._id || message.sender?.id;
+                  const isOwnMessage = messageSenderId === currentUserId;
                   
                   // Debug logging
                   console.log('ðŸ” Message comparison:', {
                     messageId: message._id,
-                    messageSenderId: message.sender._id,
-                    currentUserId: currentUser?._id,
+                    messageSenderId: messageSenderId,
+                    currentUserId: currentUserId,
                     isOwnMessage: isOwnMessage,
                     messageContent: message.content.substring(0, 30)
                   });

@@ -1,5 +1,6 @@
 ﻿import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { getUserId } from "./utils/getUserId";
 
 // Payment Pages
 import PaymentPage from "./pages/PaymentPage";
@@ -50,19 +51,39 @@ const USER_ROLES = {
 function App() {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
+  const [userId, setUserId] = useState(null);
   
-  // Get current user for socket connection
+  // Get current user and user ID for socket connection
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('currentUser');
-    if (token && user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        setCurrentUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing user from localStorage:', error);
+    const loadUserData = async () => {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('currentUser');
+      console.log('🔍 App.jsx - Loading user for socket:', { token: !!token, user: !!user });
+      
+      if (token && user) {
+        try {
+          const parsedUser = JSON.parse(user);
+          console.log('🔍 App.jsx - Parsed user:', { 
+            id: parsedUser._id, 
+            name: parsedUser.firstName, 
+            role: parsedUser.role 
+          });
+          setCurrentUser(parsedUser);
+          
+          // Try to get user ID from various sources
+          const foundUserId = await getUserId();
+          console.log('🔍 App.jsx - Found userId:', foundUserId);
+          setUserId(foundUserId);
+          
+        } catch (error) {
+          console.error('Error parsing user from localStorage:', error);
+        }
+      } else {
+        console.log('🔍 App.jsx - No token or user found in localStorage');
       }
-    }
+    };
+    
+    loadUserData();
   }, []);
 
   // Define routes where navbar should NOT be shown
@@ -89,8 +110,11 @@ function App() {
   // Check if current route should show navbar
   const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
 
+  // Debug the userId being passed to SocketProvider
+  console.log('🔍 App.jsx - Rendering with userId:', userId, 'from user:', currentUser);
+
   return (
-    <SocketProvider userId={currentUser?._id}>
+    <SocketProvider userId={userId}>
       <NotificationProvider>
         {shouldShowNavbar && <Navbar />}
         <Routes>

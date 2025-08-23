@@ -8,7 +8,7 @@ export const notificationController = {
   // Get notifications for authenticated user
   getNotifications: async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?._id || req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
@@ -50,7 +50,7 @@ export const notificationController = {
   // Get unread notifications count
   getUnreadCount: async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?._id || req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }

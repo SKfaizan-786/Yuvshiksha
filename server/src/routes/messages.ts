@@ -1,9 +1,15 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import Message from '../models/Message';
 import User from '../models/User';
 
 const router = express.Router();
+
+// Debug route to test if messages routes are loaded
+router.get('/test', (req, res) => {
+  res.json({ message: 'Messages routes are working!', timestamp: new Date() });
+});
 
 // Middleware to verify JWT token
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -31,7 +37,6 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
     console.log('🆔 User ID type:', typeof userId, userId.constructor.name);
     
     // Convert userId to ObjectId for aggregation
-    const mongoose = require('mongoose');
     const userObjectId = new mongoose.Types.ObjectId(userId);
     console.log('🔄 Converted to ObjectId:', userObjectId);
     
@@ -167,6 +172,25 @@ router.get('/conversation/:participantId', authenticateToken, async (req: any, r
   } catch (error) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ message: 'Failed to fetch messages' });
+  }
+});
+
+// Get total unread message count for a user
+router.get('/unread-count', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user._id;
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const unreadCount = await Message.countDocuments({
+      recipient: userObjectId,
+      isRead: false,
+      isDeleted: false
+    });
+
+    res.json({ unreadCount });
+  } catch (error) {
+    console.error('❌ Error fetching unread message count:', error);
+    res.status(500).json({ message: 'Failed to fetch unread message count' });
   }
 });
 

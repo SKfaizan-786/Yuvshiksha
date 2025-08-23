@@ -396,6 +396,16 @@ export default function EnhancedTeacherPlatform() {
   navigate(`/student/book-class/${teacher.id}`);
   };
 
+  const handleMessage = (teacher) => {
+    // Navigate to messages page with teacher ID
+    navigate('/student/messages', { 
+      state: { 
+        selectedTeacherId: teacher._id || teacher.id,
+        teacherName: teacher.name || `${teacher.firstName} ${teacher.lastName}`
+      } 
+    });
+  };
+
   const submitBooking = () => {
     if (!bookingForm.date || !bookingForm.time) {
       setNotification("Please select a date and time.");
@@ -574,7 +584,7 @@ export default function EnhancedTeacherPlatform() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Price Range (per hour)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Price Range (₹/hour)</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
@@ -799,7 +809,7 @@ export default function EnhancedTeacherPlatform() {
                             <span className="text-sm">{teacher.location}</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-1">₹</span>{teacher.fee}</div>
+                            <div className="text-2xl font-bold text-gray-800">₹{teacher.fee}</div>
                             <div className="text-xs text-gray-500">per hour</div>
                           </div>
                         </div>
@@ -813,7 +823,13 @@ export default function EnhancedTeacherPlatform() {
                             <span>Book Session</span>
                           </button>
                           
-                          {/* Message button hidden until backend is ready */}
+                          <button
+                            onClick={() => handleMessage(teacher)}
+                            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2.5 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group"
+                          >
+                            <MessageCircle className="w-4 h-4 group-hover:animate-pulse" />
+                            <span>Message Teacher</span>
+                          </button>
                         </div>
                       </div>
                     </div>
