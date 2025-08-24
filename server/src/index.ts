@@ -14,6 +14,8 @@ import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
 import paymentRoutes from './routes/payments';
+import messageRoutes from './routes/messages';
+import notificationRoutes from './routes/notifications';
 import emailOtpRoutes from './routes/email-otp';
 
 import './passport-config';
@@ -29,6 +31,35 @@ const io = new SocketIOServer(server, {
     credentials: true
   }
 });
+
+
+// --- Online Users Tracking ---
+// Map userId (string) to socket.id
+export const connectedUsers = new Map<string, string>();
+
+io.on('connection', (socket) => {
+  // Handle user authentication
+  socket.on('authenticate', (userId: string) => {
+    connectedUsers.set(userId, socket.id);
+    socket.join(`user_${userId}`);
+    io.emit('user_online', userId);
+  });
+
+  socket.on('disconnect', () => {
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        io.emit('user_offline', userId);
+        break;
+      }
+    }
+  });
+});
+
+// Helper to check if a user is online
+export function isUserOnline(userId: string): boolean {
+  return connectedUsers.has(userId);
+}
 
 const PORT = process.env.PORT || 5000;
 
@@ -98,6 +129,8 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/email-otp', emailOtpRoutes);
 
 // Root Route
@@ -128,8 +161,7 @@ app.get('/test-db-connection', async (_req, res) => {
   }
 });
 
-// Socket.io connection handling
-const connectedUsers = new Map<string, string>(); // userId -> socketId
+
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -139,6 +171,12 @@ io.on('connection', (socket) => {
     connectedUsers.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`User ${userId} authenticated with socket ${socket.id}`);
+  });
+
+  // Handle test ping
+  socket.on('test_ping', (data) => {
+    console.log('📡 Received test ping from client:', data);
+    socket.emit('test_pong', { message: 'Hello from server', timestamp: new Date() });
   });
 
   // Handle joining chat rooms

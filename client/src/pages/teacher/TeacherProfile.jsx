@@ -261,7 +261,7 @@ const TeacherProfile = () => {
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Hourly Rate (INR)</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
-                      {teacherData.hourlyRate ? `${teacherData.hourlyRate} per hour` : 'Not provided'}
+                      {teacherData.hourlyRate ? `₹${teacherData.hourlyRate}/hour` : 'Not provided'}
                     </p>
                   </div>
                 </div>

@@ -13,11 +13,23 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import API_CONFIG from '../../config/api';
+// Debug components removed - socket is working
 
 const Messages = () => {
   const { socket, isConnected } = useSocket();
   const location = useLocation();
   const isOnline = useOnlineStatus();
+
+  // Debug socket status
+  useEffect(() => {
+    console.log('🔍 Socket Debug in Messages:', {
+      socket: !!socket,
+      isConnected,
+      socketId: socket?.id,
+      socketConnected: socket?.connected,
+      socketUrl: socket?.io?.uri
+    });
+  }, [socket, isConnected]);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -30,12 +42,38 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Get current user info
+  // Get current user info with proper ID
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       const user = JSON.parse(localStorage.getItem('currentUser'));
-      setCurrentUser(user);
+      // Get the actual user ID from various possible sources
+      const getUserIdFromToken = () => {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const decoded = JSON.parse(jsonPayload);
+          return decoded._id || decoded.id || decoded.userId || decoded.sub;
+        } catch (error) {
+          console.error('Error decoding JWT:', error);
+          return null;
+        }
+      };
+      
+      const actualUserId = user._id || user.id || user.userId || getUserIdFromToken();
+      const userWithId = { ...user, _id: actualUserId, id: actualUserId };
+      
+      console.log('🔍 Messages - Current user with ID:', { 
+        originalUser: user, 
+        actualUserId, 
+        userWithId 
+      });
+      
+      setCurrentUser(userWithId);
     }
   }, []);
 
@@ -100,24 +138,48 @@ const Messages = () => {
 
   // Handle incoming conversation from TeacherList
   useEffect(() => {
-    if (location.state?.startConversation && location.state?.teacherId) {
-      const { teacherId, teacherName, teacherAvatar } = location.state;
+    // Handle both old format and new format
+    const shouldStartConversation = (location.state?.startConversation && location.state?.teacherId) || 
+                                   (location.state?.selectedTeacherId);
+    
+    if (shouldStartConversation) {
+      const teacherId = location.state?.teacherId || location.state?.selectedTeacherId;
+      const teacherName = location.state?.teacherName || location.state?.teacherName;
+      const teacherAvatar = location.state?.teacherAvatar;
+      
+      // If conversations are loaded, check for existing conversation
+      if (conversations.length > 0) {
+        const existingConversation = conversations.find(
+          conv => conv.participant._id === teacherId
+        );
+        
+        if (existingConversation) {
+          // Select existing conversation
+          setSelectedConversation(existingConversation);
+          fetchMessages(existingConversation.participant._id);
+          return;
+        }
+      }
+      
       // Create a mock conversation object for the selected teacher
       const mockConversation = {
         participant: {
           _id: teacherId,
-          firstName: teacherName.split(' ')[0],
-          lastName: teacherName.split(' ')[1] || '',
+          firstName: teacherName ? teacherName.split(' ')[0] : 'Teacher',
+          lastName: teacherName ? (teacherName.split(' ')[1] || '') : '',
           avatar: teacherAvatar
         },
         lastMessage: { content: 'Start a conversation', createdAt: new Date() },
         unreadCount: 0
       };
       setSelectedConversation(mockConversation);
-      // Send a welcome message
-      setNewMessage(`Hi ${teacherName}, I'm interested in your classes. Can we discuss the details?`);
+      
+      // Pre-fill message for new conversations from teacher list
+      if (location.state?.selectedTeacherId) {
+        setNewMessage(`Hi ${teacherName || 'there'}, I'm interested in your classes. Can we discuss the details?`);
+      }
     }
-  }, [location.state]);
+  }, [location.state, conversations]);
 
   // Fetch conversations
   useEffect(() => {
@@ -180,23 +242,23 @@ const Messages = () => {
 
   const fetchConversations = async () => {
     try {
-      console.log('ðŸ”„ Fetching conversations...');
+      console.log('Fetching conversations...');
       const token = localStorage.getItem('token');
-      console.log('ðŸ”‘ Token for conversations:', token ? 'Present' : 'Missing');
+      console.log('Token for conversations:', token ? 'Present' : 'Missing');
       
       const response = await axios.get(`${API_CONFIG.BASE_URL}/api/messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('ðŸ“ž Conversations API response:', response.status, response.data);
-      console.log('ðŸ“Š Number of conversations:', response.data.length);
+      console.log('Conversations API response:', response.status, response.data);
+      console.log('Number of conversations:', response.data.length);
       
       setConversations(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('âŒ Error fetching conversations:', error);
-      console.error('ðŸ“„ Error details:', error.response?.data);
-      console.error('ðŸ“Š Error status:', error.response?.status);
+      console.error('Error fetching conversations:', error);
+      console.error('Error details:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       setLoading(false);
     }
   };
@@ -230,7 +292,7 @@ const Messages = () => {
     });
 
     const messageData = {
-      sender: currentUser._id,
+      sender: currentUser._id || currentUser.id,
       recipient: selectedConversation.participant._id,
       content: newMessage.trim(),
       messageType: 'text'
@@ -241,7 +303,12 @@ const Messages = () => {
     // First, add message to local state immediately for better UX
     const localMessage = {
       _id: 'temp_' + Date.now(),
-      sender: { _id: currentUser._id },
+      sender: { 
+        _id: currentUser._id || currentUser.id,
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName 
+      },
+      recipient: { _id: selectedConversation.participant._id },
       content: messageData.content,
       createdAt: new Date(),
       isRead: false,
@@ -276,17 +343,13 @@ const Messages = () => {
         ));
         
         // Refresh conversations list to show new conversation
-        console.log('ðŸ”„ Refreshing conversations after sending message...');
+        console.log('Refreshing conversations after sending message...');
         await fetchConversations();
       }
       
-      // Also send via socket for real-time delivery (if available)
-      if (socket && isConnected && isOnline) {
-        console.log('Also sending via socket for real-time delivery...');
-        socket.emit('send_message', messageData);
-      } else {
-        console.log('Socket not available, but message saved to database');
-      }
+  // No direct socket.emit here. Backend will emit socket event after saving message.
+  // This prevents duplicate messages.
+  // If socket is not available, message is still saved via API and will sync on reconnect.
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -331,9 +394,28 @@ const Messages = () => {
   };
 
   const handleSelectConversation = (conversation) => {
+    // Instantly update unreadCount in UI
+    setConversations(prevConversations =>
+      prevConversations.map(conv =>
+        conv.participant._id === conversation.participant._id
+          ? { ...conv, unreadCount: 0 }
+          : conv
+      )
+    );
     setSelectedConversation(conversation);
     fetchMessages(conversation.participant._id);
   };
+
+  // Ensure selectedConversation is always the latest from conversations list
+  React.useEffect(() => {
+    if (!selectedConversation || !selectedConversation.participant?._id) return;
+    const realConv = conversations.find(
+      conv => conv.participant._id === selectedConversation.participant._id
+    );
+    if (realConv && realConv !== selectedConversation) {
+      setSelectedConversation(realConv);
+    }
+  }, [conversations]);
 
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString([], { 
@@ -519,7 +601,7 @@ const Messages = () => {
                     <h3 className="font-semibold text-gray-900">
                       {selectedConversation.participant.firstName} {selectedConversation.participant.lastName}
                     </h3>
-                    <p className="text-sm text-green-600">Online</p>
+                    <p className={`text-sm ${selectedConversation.participant.isOnline ? 'text-green-600' : 'text-red-600'}`}>{selectedConversation.participant.isOnline ? 'Online' : 'Offline'}</p>
                   </div>
                 </div>
               </div>
@@ -527,13 +609,16 @@ const Messages = () => {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message, index) => {
-                  const isOwnMessage = message.sender._id === currentUser?._id;
+                  // More robust message identification
+                  const currentUserId = currentUser?._id || currentUser?.id;
+                  const messageSenderId = message.sender?._id || message.sender?.id;
+                  const isOwnMessage = messageSenderId === currentUserId;
                   
                   // Debug logging
                   console.log('ðŸ” Message comparison:', {
                     messageId: message._id,
-                    messageSenderId: message.sender._id,
-                    currentUserId: currentUser?._id,
+                    messageSenderId: messageSenderId,
+                    currentUserId: currentUserId,
                     isOwnMessage: isOwnMessage,
                     messageContent: message.content.substring(0, 30)
                   });

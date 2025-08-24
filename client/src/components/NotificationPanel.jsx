@@ -6,7 +6,6 @@ import {
   CheckCheck,
   Trash2,
   Calendar,
-  CreditCard,
   MessageSquare,
   AlertTriangle,
   Gift,
@@ -18,13 +17,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface NotificationPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-}
-
-const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
+const NotificationPanel = ({ 
   isOpen, 
   onClose, 
   position = 'top-right' 
@@ -40,11 +33,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   } = useNotifications();
   
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'unread' | 'booking' | 'payment' | 'message'>('all');
+  const [filter, setFilter] = useState('all');
   const [showActions, setShowActions] = useState<string | null>(null);
 
   // Get icon for notification type
-  const getNotificationIcon = (type: string, priority: string) => {
+  const getNotificationIcon = (type, priority) => {
     const iconProps = {
       className: `w-5 h-5 ${
         priority === 'urgent' ? 'text-red-500' :
@@ -58,9 +51,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
       case 'booking_approved':
       case 'booking_rejected':
         return <Calendar {...iconProps} />;
-      case 'payment_received':
-      case 'payment_refunded':
-        return <CreditCard {...iconProps} />;
       case 'message':
         return <MessageSquare {...iconProps} />;
       case 'class_reminder':
@@ -71,7 +61,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   // Get notification color based on type and read status
-  const getNotificationColor = (notification: any) => {
+  const getNotificationColor = (notification) => {
     if (!notification.isRead) {
       switch (notification.priority) {
         case 'urgent':
@@ -95,7 +85,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   });
 
   // Handle notification click
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification) => {
     // Mark as read if unread
     if (!notification.isRead) {
       await markAsRead([notification._id]);
@@ -109,14 +99,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   // Handle mark as read
-  const handleMarkAsRead = async (e: React.MouseEvent, notificationId: string) => {
+  const handleMarkAsRead = async (e, notificationId) => {
     e.stopPropagation();
     await markAsRead([notificationId]);
     showToast('Notification marked as read', 'success');
   };
 
   // Handle delete
-  const handleDelete = async (e: React.MouseEvent, notificationId: string) => {
+  const handleDelete = async (e, notificationId) => {
     e.stopPropagation();
     await deleteNotification(notificationId);
     showToast('Notification deleted', 'success');
@@ -129,7 +119,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   // Format time ago
-  const formatTimeAgo = (timestamp: string) => {
+  const formatTimeAgo = (timestamp) => {
     const now = new Date();
     const time = new Date(timestamp);
     const diffMs = now.getTime() - time.getTime();
@@ -198,12 +188,12 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
               { key: 'all', label: 'All' },
               { key: 'unread', label: 'Unread' },
               { key: 'booking', label: 'Bookings' },
-              { key: 'payment', label: 'Payments' },
-              { key: 'message', label: 'Messages' }
+              { key: 'message', label: 'Messages' },
+              { key: 'reminder', label: 'Reminders' }
             ].map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setFilter(tab.key as any)}
+                onClick={() => setFilter(tab.key)}
                 className={`
                   px-3 py-1 text-xs rounded-full transition-colors
                   ${filter === tab.key 
@@ -308,7 +298,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(notification.actionUrl!);
+                                    navigate(notification.actionUrl);
                                     onClose();
                                   }}
                                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"

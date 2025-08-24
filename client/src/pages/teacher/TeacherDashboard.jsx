@@ -129,6 +129,11 @@ const StatSkeleton = () => (
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  // Initialize unreadBookingCount from local storage
+  const [unreadBookingCount, setUnreadBookingCount] = useState(() => {
+    return parseInt(localStorage.getItem('unreadBookingCount') || '0', 10);
+  });
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isProcessingListing, setIsProcessingListing] = useState(false);
@@ -160,6 +165,17 @@ export default function TeacherDashboard() {
       setMessageType('');
     }, duration);
   }, []);
+
+  // Handler to clear a badge and navigate
+  const handleNavigation = (path, type) => {
+    if (type === 'messages') {
+      setUnreadMessageCount(0);
+    } else if (type === 'bookings') {
+      setUnreadBookingCount(0);
+      localStorage.setItem('unreadBookingCount', '0'); // Persist clearing
+    }
+    navigate(path);
+  };
 
   // Consolidated function to fetch user data and listing status
   const fetchUserData = useCallback(async () => {
@@ -230,35 +246,69 @@ export default function TeacherDashboard() {
   }, [fetchUserData]);
 
   // Fetch real stats and recent bookings from backend
+  const fetchStatsAndBookings = useCallback(async () => {
+    if (!currentUser || !(currentUser.id || currentUser._id)) return;
+    setStatsLoading(true);
+    try {
+      const response = await bookingAPI.getTeacherBookings({ page: 1, limit: 10 });
+      const bookings = response.bookings || [];
+      const now = new Date();
+      
+      // Get previous count from local storage to check for new ones
+      const previousBookingCount = parseInt(localStorage.getItem('lastTotalBookings') || '0', 10);
+      const currentTotalBookings = bookings.length;
+      
+      if (currentTotalBookings > previousBookingCount) {
+        const newBookingsCount = currentTotalBookings - previousBookingCount;
+        setUnreadBookingCount(prevCount => prevCount + newBookingsCount);
+        localStorage.setItem('unreadBookingCount', unreadBookingCount + newBookingsCount);
+      }
+      
+      // Always update the total count for the next fetch
+      localStorage.setItem('lastTotalBookings', currentTotalBookings);
+      
+      // Calculate upcoming sessions (pending or confirmed, date >= today)
+      const upcomingSessions = bookings.filter(b =>
+        (b.status === 'pending' || b.status === 'confirmed') && new Date(b.date) >= now
+      ).length;
+      const totalSessions = bookings.length;
+      // Calculate total earnings (sum of amount for confirmed and completed bookings only)
+      const totalEarnings = bookings
+        .filter(b => b.status === 'confirmed' || b.status === 'completed')
+        .reduce((sum, b) => sum + (b.amount || 0), 0);
+      const newStats = { upcomingSessions, totalSessions, totalEarnings };
+      setStats(newStats);
+      localStorage.setItem('teacherDashboardStats', JSON.stringify(newStats));
+      setRecentBookings(bookings);
+    } catch (err) {
+      console.error("Failed to fetch stats and bookings:", err);
+      setStats({ upcomingSessions: 0, totalSessions: 0, totalEarnings: 0 });
+      setRecentBookings([]);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
-    const fetchStatsAndBookings = async () => {
-      if (!currentUser || !(currentUser.id || currentUser._id)) return;
-      setStatsLoading(true);
+    fetchStatsAndBookings();
+  }, [fetchStatsAndBookings]);
+
+  // Fetch unread message count on mount
+  useEffect(() => {
+    const fetchUnreadMessages = async () => {
       try {
-        const response = await bookingAPI.getTeacherBookings({ page: 1, limit: 10 });
-        // Calculate upcoming sessions (pending or confirmed, date >= today)
-        const now = new Date();
-        const upcomingSessions = (response.bookings || []).filter(b =>
-          (b.status === 'pending' || b.status === 'confirmed') && new Date(b.date) >= now
-        ).length;
-        const totalSessions = (response.bookings || []).length;
-        // Calculate total earnings (sum of amount for confirmed and completed bookings only)
-        const totalEarnings = (response.bookings || [])
-          .filter(b => b.status === 'confirmed' || b.status === 'completed')
-          .reduce((sum, b) => sum + (b.amount || 0), 0);
-        const newStats = { upcomingSessions, totalSessions, totalEarnings };
-        setStats(newStats);
-        localStorage.setItem('teacherDashboardStats', JSON.stringify(newStats));
-        setRecentBookings(response.bookings || []);
-      } catch (err) {
-        setStats({ upcomingSessions: 0, totalSessions: 0, totalEarnings: 0 });
-        setRecentBookings([]);
-      } finally {
-        setStatsLoading(false);
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/messages/unread-count', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setUnreadMessageCount(data.unreadCount || 0);
+      } catch (e) {
+        setUnreadMessageCount(0);
       }
     };
-    fetchStatsAndBookings();
-  }, [currentUser]);
+    fetchUnreadMessages();
+  }, []);
 
   const teacherProfile = currentUser?.teacherProfileData || currentUser?.teacherProfile || {};
   const isProfileComplete = currentUser?.profileComplete || false;
@@ -340,7 +390,7 @@ export default function TeacherDashboard() {
   const getListingButtonTooltip = () => {
     if (isProcessingListing) return "Processing payment...";
     if (!isProfileComplete) return "Please complete your profile first to get listed.";
-    return `Pay ${LISTING_FEE} to get listed and found by students.`;
+    return `Pay ₹${LISTING_FEE} to get listed and found by students.`;
   };
 
   return (
@@ -464,7 +514,7 @@ export default function TeacherDashboard() {
                       {isProcessingListing ? (
                         <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
                       ) : (
-                        <> <Wallet className="w-4 h-4" /> Get Listed ({LISTING_FEE} Fee) </>
+                        <> <Wallet className="w-4 h-4" /> Get Listed (₹{LISTING_FEE} Fee) </>
                       )}
                     </button>
                   </>
@@ -500,18 +550,24 @@ export default function TeacherDashboard() {
             {/* Quick Actions Card */}
             <DashboardCard icon={LayoutDashboard} title="Quick Actions">
               <ul className="space-y-3">
-                {[ 
+                {[
                   { label: 'View Profile', icon: UserRound, path: '/teacher/profile' },
-                  { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
-                  { label: 'View schedule', icon: CalendarDays, path: '/teacher/schedule' }
-                ].map(({ label, icon: Icon, path }) => (
+                  { label: 'View Bookings', icon: Users, path: '/teacher/bookings', badge: unreadBookingCount },
+                  { label: 'View Schedule', icon: CalendarDays, path: '/teacher/schedule' },
+                  { label: 'Messages', icon: MessageSquare, path: '/teacher/messages', badge: unreadMessageCount }
+                ].map(({ label, icon: Icon, path, badge }) => (
                   <li key={path}>
                     <button
-                      onClick={() => navigate(path)}
-                      className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+                      onClick={() => handleNavigation(path, label === 'Messages' ? 'messages' : label === 'View Bookings' ? 'bookings' : null)}
+                      className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md relative"
                     >
                       <Icon className="w-5 h-5 text-purple-500" />
                       <span className="text-sm">{label}</span>
+                      {badge > 0 && (
+                        <span className="absolute right-4 top-2 bg-red-600 text-white text-xs rounded-full px-2 py-0.5 font-bold animate-pulse">
+                          {badge}
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -522,7 +578,7 @@ export default function TeacherDashboard() {
             <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-slate-800">Latest Bookings</h3>
-                <button 
+                <button
                   onClick={() => navigate('/teacher/bookings')}
                   className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
                 >
@@ -538,8 +594,8 @@ export default function TeacherDashboard() {
                   </div>
                 ) : recentBookings && recentBookings.length > 0 ? (
                   recentBookings.slice(0, 5).map((booking) => (
-                    <div 
-                      key={booking.id || booking._id} 
+                    <div
+                      key={booking.id || booking._id}
                       className="p-5 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">

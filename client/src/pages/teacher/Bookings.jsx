@@ -94,6 +94,9 @@ export default function TeacherBookings() {
     completed: 0,
     cancelled: 0
   });
+  // Track loading state for each booking and action (Accept/Reject)
+  // { [bookingId]: 'accept' | 'reject' | null }
+  const [updatingBooking, setUpdatingBooking] = useState({ id: null, action: null });
 
   const ITEMS_PER_PAGE = 10;
 
@@ -196,6 +199,7 @@ export default function TeacherBookings() {
 
   // Handle booking status change
   const handleStatusChange = async (bookingId, newStatus) => {
+    setUpdatingBooking({ id: bookingId, action: newStatus === BOOKING_STATUS.CONFIRMED ? 'accept' : 'reject' });
     try {
       // Update status via API
       await bookingAPI.updateBookingStatus(bookingId, {
@@ -217,6 +221,8 @@ export default function TeacherBookings() {
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert(`Error updating booking status: ${error.message}`);
+    } finally {
+      setUpdatingBooking({ id: null, action: null });
     }
   };
 
@@ -433,6 +439,7 @@ export default function TeacherBookings() {
                 }}
                 formatDate={formatDate}
                 formatCurrency={formatCurrency}
+                updatingBooking={updatingBooking}
               />
             ))}
           </div>
@@ -479,10 +486,14 @@ export default function TeacherBookings() {
 }
 
 // Booking Card Component
-function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, formatCurrency }) {
+function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, formatCurrency, updatingBooking }) {
   const statusConfig = STATUS_CONFIG[booking.status];
   const StatusIcon = statusConfig.icon;
   const bookingId = booking._id || booking.id;
+
+  const isAccepting = updatingBooking.id === bookingId && updatingBooking.action === 'accept';
+  const isRejecting = updatingBooking.id === bookingId && updatingBooking.action === 'reject';
+  const isUpdating = updatingBooking.id === bookingId;
 
   return (
     <div className="bg-white border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors duration-200 shadow-sm">
@@ -540,6 +551,7 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
           <button
             onClick={() => onViewDetails(booking)}
             className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm"
+            disabled={isUpdating}
           >
             <Eye className="w-4 h-4" />
             Details
@@ -550,16 +562,18 @@ function BookingCard({ booking, onStatusChange, onViewDetails, formatDate, forma
               <button
                 onClick={() => onStatusChange(bookingId, BOOKING_STATUS.CONFIRMED)}
                 className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm"
+                disabled={isUpdating}
               >
-                <CheckCircle className="w-4 h-4" />
-                Accept
+                {isAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {isAccepting ? 'Saving...' : 'Accept'}
               </button>
               <button
                 onClick={() => onStatusChange(bookingId, BOOKING_STATUS.CANCELLED)}
                 className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm"
+                disabled={isUpdating}
               >
-                <XCircle className="w-4 h-4" />
-                Reject
+                {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                {isRejecting ? 'Saving...' : 'Reject'}
               </button>
             </div>
           )}

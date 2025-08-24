@@ -34,7 +34,8 @@ const NotificationsPage = () => {
   } = useNotifications();
 
   const navigate = useNavigate();
-  const [filter, setFilter] = useState('all');
+  // Add 'recent' as the default filter
+  const [filter, setFilter] = useState('recent');
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [showActions, setShowActions] = useState(null);
 
@@ -43,7 +44,7 @@ const NotificationsPage = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Get icon for notification type
+  // Get icon for notification type (payment types removed)
   const getNotificationIcon = (type, priority) => {
     const iconProps = {
       className: `w-6 h-6 ${
@@ -52,15 +53,11 @@ const NotificationsPage = () => {
         priority === 'medium' ? 'text-blue-500' : 'text-gray-500'
       }`
     };
-
     switch (type) {
       case 'booking_pending':
       case 'booking_approved':
       case 'booking_rejected':
         return <Calendar {...iconProps} />;
-      case 'payment_received':
-      case 'payment_refunded':
-        return <CreditCard {...iconProps} />;
       case 'message':
         return <MessageSquare {...iconProps} />;
       case 'class_reminder':
@@ -88,22 +85,29 @@ const NotificationsPage = () => {
   };
 
   // Filter notifications
-  const filteredNotifications = notifications.filter(notification => {
-    if (filter === 'all') return true;
-    if (filter === 'unread') return !notification.isRead;
-    return notification.category === filter;
-  });
+  let filteredNotifications = notifications;
+  if (filter === 'recent') {
+    filteredNotifications = notifications.slice(0, 5);
+  } else if (filter === 'all') {
+    // show all
+  } else if (filter === 'unread') {
+    filteredNotifications = notifications.filter(n => !n.isRead);
+  } else {
+    filteredNotifications = notifications.filter(n => n.category === filter);
+  }
 
-  // Handle notification click
+  // Handle notification click: only message notifications redirect to /student/messages
   const handleNotificationClick = async (notification) => {
     // Mark as read if unread
     if (!notification.isRead) {
       await markAsRead([notification._id]);
     }
-
-    // Navigate to action URL if available
-    if (notification.actionUrl) {
-      navigate(notification.actionUrl);
+    // Only message notifications redirect
+    if (notification.type === 'message') {
+      navigate('/student/messages');
+    } else {
+      // For bookings and reminders, do not redirect
+      showToast('No page to open for this notification.', 'info');
     }
   };
 
@@ -160,10 +164,10 @@ const NotificationsPage = () => {
   };
 
   const filterStats = {
+    recent: Math.min(5, notifications.length),
     all: notifications.length,
     unread: notifications.filter(n => !n.isRead).length,
     booking: notifications.filter(n => n.category === 'booking').length,
-    payment: notifications.filter(n => n.category === 'payment').length,
     message: notifications.filter(n => n.category === 'message').length,
     reminder: notifications.filter(n => n.category === 'reminder').length
   };
@@ -219,10 +223,10 @@ const NotificationsPage = () => {
           <div className="p-4 border-b">
             <div className="flex flex-wrap gap-2">
               {[
+                { key: 'recent', label: 'Recent', count: filterStats.recent },
                 { key: 'all', label: 'All', count: filterStats.all },
                 { key: 'unread', label: 'Unread', count: filterStats.unread },
                 { key: 'booking', label: 'Bookings', count: filterStats.booking },
-                { key: 'payment', label: 'Payments', count: filterStats.payment },
                 { key: 'message', label: 'Messages', count: filterStats.message },
                 { key: 'reminder', label: 'Reminders', count: filterStats.reminder }
               ].map(tab => (
@@ -379,7 +383,7 @@ const NotificationsPage = () => {
                                   </span>
                                 )}
                               </div>
-                              {notification.actionUrl && (
+                              {(notification.actionUrl || notification.category === 'message') && (
                                 <ExternalLink className="w-4 h-4 text-gray-400" />
                               )}
                             </div>

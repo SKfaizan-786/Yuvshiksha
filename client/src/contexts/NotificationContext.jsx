@@ -201,7 +201,7 @@ export const NotificationProvider = ({ children }) => {
 
     // Listen for new notifications
     const handleNewNotification = (notification) => {
-      console.log('ðŸ“¥ New notification received:', notification);
+      console.log('New notification received:', notification);
       addNotification({
         _id: notification.id,
         title: notification.title,
@@ -224,7 +224,7 @@ export const NotificationProvider = ({ children }) => {
 
     // Listen for message notifications
     const handleMessageNotification = (data) => {
-      console.log('ðŸ’¬ New message notification:', data);
+      console.log('New message notification:', data);
       showToast(`New message from ${data.sender.firstName}`, 'info');
     };
 
@@ -237,12 +237,23 @@ export const NotificationProvider = ({ children }) => {
     };
   }, [socket, isConnected, addNotification, showToast]);
 
-  // Fetch notifications on mount
+
+  // Fetch notifications on mount and when token changes (listen to localStorage)
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      fetchNotifications();
-    }
+    const fetchOnTokenChange = () => {
+      const token = getToken();
+      if (token) {
+        fetchNotifications();
+      } else {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    };
+    fetchOnTokenChange();
+    window.addEventListener('storage', fetchOnTokenChange);
+    return () => {
+      window.removeEventListener('storage', fetchOnTokenChange);
+    };
   }, [fetchNotifications]);
 
   // Periodically fetch unread count
@@ -264,6 +275,12 @@ export const NotificationProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Clear notifications (for logout)
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    setUnreadCount(0);
+  }, []);
+
   const value = {
     notifications,
     unreadCount,
@@ -274,7 +291,8 @@ export const NotificationProvider = ({ children }) => {
     markAllAsRead,
     deleteNotification,
     addNotification,
-    showToast
+    showToast,
+    clearNotifications
   };
 
   return (

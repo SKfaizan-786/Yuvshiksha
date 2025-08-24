@@ -316,7 +316,7 @@ class NotificationService {
         recipient: booking.student.id,
         sender: booking.teacher.id,
         title: 'Booking Not Approved - Refund Initiated',
-        message: `Unfortunately, ${teacherName} couldn't approve your class booking for ${booking.subject}. Your payment has been refunded.`,
+        message: `Unfortunately, ${teacherName} couldn't approve your class booking for ${booking.subject}.`,
         type: 'booking_rejected',
         category: 'booking',
         priority: 'medium',
