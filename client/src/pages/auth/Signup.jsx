@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 
 import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
+import PrivacyPolicyModal from './PrivacyPolicyModal';
+
 // Use fetch for API calls
 
 const passwordStrengthLevels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
@@ -71,6 +73,7 @@ const Signup = () => {
     gender: { valid: true, message: "" },
     maritalStatus: { valid: true, message: "" },
   });
+  const [showPolicy, setShowPolicy] = useState(false);
 
   // Network status effect
   useEffect(() => {
@@ -698,14 +701,13 @@ const Signup = () => {
               />
               <span className="text-sm text-slate-700">
                 I agree to the
-                <a
-                  href="#"
+                <button
+                  type="button"
                   className="text-violet-600 font-medium hover:underline ml-1"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={() => setShowPolicy(true)}
                 >
                   Terms & Conditions
-                </a>
+                </button>
               </span>
             </div>
 
@@ -804,6 +806,8 @@ const Signup = () => {
           </form>
         )}
       </div>
+
+      {showPolicy && <PrivacyPolicyModal onClose={() => setShowPolicy(false)} />}
     </div>
   );
 };

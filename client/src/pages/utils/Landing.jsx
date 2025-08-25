@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, 
   ArrowRight, 
@@ -15,54 +15,55 @@ import {
   Zap,
   TrendingUp,
   Shield,
-  Heart
+  Heart,
+  ArrowUp // Added import for the new icon
 } from 'lucide-react';
-
+ 
 // Custom hook for counting animation
 const useCountUp = (end, duration = 2000, delay = 0) => {
   const [count, setCount] = React.useState(0);
   const [hasStarted, setHasStarted] = React.useState(false);
-
+ 
   React.useEffect(() => {
     if (!hasStarted) return;
-
+ 
     let startTime;
     let animationFrame;
-
+ 
     const animate = (timestamp) => {
       if (!startTime) startTime = timestamp + delay;
       if (timestamp < startTime) {
         animationFrame = requestAnimationFrame(animate);
         return;
       }
-
+ 
       const progress = Math.min((timestamp - startTime) / duration, 1);
       // Ease out cubic for smooth deceleration
       const easeOutCubic = 1 - Math.pow(1 - progress, 3);
       const newCount = Math.floor(easeOutCubic * end);
       setCount(newCount);
-
+ 
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
       } else {
         setCount(end); // Ensure we end exactly at the target
       }
     };
-
+ 
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
   }, [end, duration, delay, hasStarted]);
-
+ 
   const startCounting = () => setHasStarted(true);
-
+ 
   return [count, startCounting, hasStarted];
 };
-
+ 
 // Intersection Observer hook for triggering animations when in view
 const useInView = (threshold = 0.1) => {
   const [inView, setInView] = React.useState(false);
   const ref = React.useRef();
-
+ 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -72,18 +73,18 @@ const useInView = (threshold = 0.1) => {
       },
       { threshold }
     );
-
+ 
     if (ref.current) {
       observer.observe(ref.current);
     }
-
+ 
     return () => observer.disconnect();
   }, [threshold]);
-
+ 
   return [ref, inView];
 };
-
-// Animation variants for sta                Join thousand              Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals. of students and teachers who have found success with Yuvshikshagered appearance
+ 
+// Animation variants for sta                Join thousand              Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals. of students and teachers who have found success with Yuvshikshagered appearance
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -93,12 +94,12 @@ const containerVariants = {
     },
   },
 };
-
+ 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
 };
-
+ 
 // Hero Stats Component with counting animation
 const StatCard = ({ number, label, delay, textColor = "text-slate-800" }) => {
   // Extract numeric value from string (e.g., "15,000+" -> 15000)
@@ -129,7 +130,7 @@ const StatCard = ({ number, label, delay, textColor = "text-slate-800" }) => {
     }
     return value.toLocaleString();
   };
-
+ 
   return (
     <motion.div
       ref={ref}
@@ -147,7 +148,7 @@ const StatCard = ({ number, label, delay, textColor = "text-slate-800" }) => {
     </motion.div>
   );
 };
-
+ 
 // Feature Card Component
 const FeatureCard = ({ icon, title, description, delay, className = "" }) => (
   <motion.div
@@ -163,7 +164,7 @@ const FeatureCard = ({ icon, title, description, delay, className = "" }) => (
     <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
   </motion.div>
 );
-
+ 
 // Testimonial Component
 const TestimonialCard = ({ name, role, content, avatar, delay }) => (
   <motion.div
@@ -189,8 +190,37 @@ const TestimonialCard = ({ name, role, content, avatar, delay }) => (
     </div>
   </motion.div>
 );
-
+ 
 export default function HomePage() {
+  const [showScrollButton, setShowScrollButton] = React.useState(false);
+ 
+  // Function to scroll smoothly to the top of the page
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+ 
+  // Effect to show/hide the button based on scroll position
+  React.useEffect(() => {
+    const handleScroll = () => {
+      // Show button after a certain scroll position, e.g., 200px
+      if (window.scrollY > 200) {
+        setShowScrollButton(true);
+      } else {
+        setShowScrollButton(false);
+      }
+    };
+ 
+    window.addEventListener('scroll', handleScroll);
+ 
+    // Clean up the event listener on component unmount
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []); // Empty dependency array ensures this effect runs only once on mount
+ 
   const features = [
     {
       icon: <Users />,
@@ -223,7 +253,7 @@ export default function HomePage() {
       description: 'Join thousands of students who have achieved their academic goals with us.',
     },
   ];
-
+ 
   const testimonials = [
     {
       name: "Sarah Chen",
@@ -244,7 +274,7 @@ export default function HomePage() {
       delay: 0.3
     }
   ];
-
+ 
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated CSS Background */}
@@ -277,7 +307,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/60 via-purple-900/50 to-indigo-900/60"></div>
         <div className="absolute inset-0 bg-black/20"></div>
       </div>
-
+ 
       {/* Animated gradient orbs for additional effect */}
       <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-float"></div>
@@ -317,7 +347,7 @@ export default function HomePage() {
                   Connecting students with expert teachers worldwide
                 </div>
               </motion.div>
-
+ 
               <motion.h1
                 className="hero-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
                 initial={{ opacity: 0, y: 20 }}
@@ -329,7 +359,7 @@ export default function HomePage() {
                   achieve your Goals
                 </span>
               </motion.h1>
-
+ 
               <motion.p
                 className="hero-subtitle text-lg sm:text-xl md:text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed px-4"
                 initial={{ opacity: 0, y: 20 }}
@@ -339,7 +369,7 @@ export default function HomePage() {
                 Find qualified tutors for personalized 1-on-1 lessons. Book instantly, 
                 learn at your pace, and excel in any subject with Yuvshiksha.
               </motion.p>
-
+ 
               <motion.div
                 className="flex flex-col sm:flex-row gap-4 justify-center mb-12 px-4"
                 initial={{ opacity: 0, y: 20 }}
@@ -367,7 +397,7 @@ export default function HomePage() {
                   Sign In
                 </Link>
               </motion.div>
-
+ 
               {/* Stats */}
               <motion.div
                 className="grid grid-cols-3 gap-4 sm:gap-8 max-w-sm sm:max-w-lg mx-auto px-4"
@@ -397,178 +427,196 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-      {/* Features Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/95 backdrop-blur-sm relative z-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
+ 
+        {/* Features Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/95 backdrop-blur-sm relative z-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <motion.h2
+                className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+              >
+                Everything you need to succeed
+              </motion.h2>
+              <motion.p
+                className="text-lg text-slate-600 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              >
+                Our platform provides all the tools and support you need for effective online learning
+              </motion.p>
+            </div>
+ 
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {features.map((feature, index) => (
+                <FeatureCard 
+                  key={index} 
+                  {...feature} 
+                  delay={0.3 + (index * 0.1)} 
+                  className="bg-white/80 backdrop-blur-sm border-white/60 hover:bg-white/90"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+ 
+        {/* How it Works Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50/90 backdrop-blur-sm relative z-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <motion.h2
+                className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+              >
+                How Yuvshiksha works
+              </motion.h2>
+              <motion.p
+                className="text-lg text-slate-600 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              >
+                Getting started is simple. Connect with expert tutors in just a few steps.
+              </motion.p>
+            </div>
+ 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <motion.div
+                className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
+                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-blue-600">1</span>
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Browse Teachers</h3>
+                <p className="text-slate-600">Find the perfect tutor based on subject and availability.</p>
+              </motion.div>
+ 
+              <motion.div
+                className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+              >
+                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-green-600">2</span>
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Book a Session</h3>
+                <p className="text-slate-600">Schedule your lesson at a time that works for you and make secure payment.</p>
+              </motion.div>
+ 
+              <motion.div
+                className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+              >
+                <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-purple-600">3</span>
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Start Learning</h3>
+                <p className="text-slate-600">Join your online session and start achieving your academic goals.</p>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+ 
+        {/* Testimonials Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/95 backdrop-blur-sm relative z-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <motion.h2
+                className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+              >
+                What our community says
+              </motion.h2>
+              <motion.p
+                className="text-lg text-slate-600 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              >
+                Join thousands of students and teachers who have found success with Yuvshiksha
+              </motion.p>
+            </div>
+ 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {testimonials.map((testimonial, index) => (
+                <TestimonialCard key={index} {...testimonial} />
+              ))}
+            </div>
+          </div>
+        </section>
+ 
+        {/* CTA Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/90 backdrop-blur-sm relative z-20">
+          <div className="max-w-4xl mx-auto text-center">
             <motion.h2
               className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
             >
-              Everything you need to succeed
+              Ready to start your learning journey?
             </motion.h2>
             <motion.p
-              className="text-lg text-slate-600 max-w-2xl mx-auto"
+              className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
             >
-              Our platform provides all the tools and support you need for effective online learning
+              Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals.
             </motion.p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <FeatureCard 
-                key={index} 
-                {...feature} 
-                delay={0.3 + (index * 0.1)} 
-                className="bg-white/80 backdrop-blur-sm border-white/60 hover:bg-white/90"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50/90 backdrop-blur-sm relative z-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <motion.h2
-              className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-            >
-              How Yuvshiksha works
-            </motion.h2>
-            <motion.p
-              className="text-lg text-slate-600 max-w-2xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-            >
-              Getting started is simple. Connect with expert tutors in just a few steps.
-            </motion.p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <motion.div
-              className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
+              className="flex flex-col sm:flex-row gap-4 justify-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-blue-600">1</span>
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Browse Teachers</h3>
-              <p className="text-slate-600">Find the perfect tutor based on subject and availability.</p>
-            </motion.div>
-
-            <motion.div
-              className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">2</span>
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Book a Session</h3>
-              <p className="text-slate-600">Schedule your lesson at a time that works for you and make secure payment.</p>
-            </motion.div>
-
-            <motion.div
-              className="text-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-            >
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-purple-600">3</span>
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Start Learning</h3>
-              <p className="text-slate-600">Join your online session and start achieving your academic goals.</p>
+              <Link 
+                to="/signup"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                Get Started Free
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+              <Link 
+                to="/login"
+                className="inline-flex items-center px-8 py-4 bg-white/80 backdrop-blur-sm border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:border-slate-300 hover:bg-white transition-all duration-300"
+              >
+                Sign In
+              </Link>
             </motion.div>
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/95 backdrop-blur-sm relative z-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <motion.h2
-              className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+        </section>
+ 
+        {/* Scroll to Top Button */}
+        <AnimatePresence>
+          {showScrollButton && (
+            <motion.button
+              onClick={scrollToTop}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+              className="fixed bottom-8 right-8 p-3 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors z-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Scroll to top"
             >
-              What our community says
-            </motion.h2>
-            <motion.p
-              className="text-lg text-slate-600 max-w-2xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-            >
-              Join thousands of students and teachers who have found success with Yuvshiksha
-            </motion.p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard key={index} {...testimonial} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/90 backdrop-blur-sm relative z-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2
-            className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.6 }}
-          >
-            Ready to start your learning journey?
-          </motion.h2>
-          <motion.p
-            className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-          >
-            Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals.
-          </motion.p>
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            <Link 
-              to="/signup"
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              Get Started Free
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
-            <Link 
-              to="/login"
-              className="inline-flex items-center px-8 py-4 bg-white/80 backdrop-blur-sm border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:border-slate-300 hover:bg-white transition-all duration-300"
-            >
-              Sign In
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
+              <ArrowUp size={24} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+ 
         {/* Footer */}
         <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-white/30 bg-white/95 backdrop-blur-sm relative z-20">
           <div className="max-w-7xl mx-auto">
@@ -578,17 +626,21 @@ export default function HomePage() {
                 <span className="text-xl font-bold text-slate-900">Yuvshiksha</span>
               </div>
               <div className="flex items-center space-x-6">
-                <Link to="/about" className="text-slate-600 hover:text-slate-900 transition-colors">
-                  About
-                </Link>
-                <Link to="/contact" className="text-slate-600 hover:text-slate-900 transition-colors">
-                  Contact
-                </Link>
+                <span className="text-slate-600 text-sm">
+                  Contact: <a
+                    href="https://mail.google.com/mail/?view=cm&fs=1&to=yuvshiksha@gmail.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-blue-700"
+                  >
+                    yuvshiksha@gmail.com
+                  </a>
+                </span>
               </div>
             </div>
             <div className="mt-6 pt-6 border-t border-white/30 text-center">
               <p className="text-slate-500 text-sm">
-                Â© 2025 Yuvshiksha. All rights reserved. Made with â¤ï¸ for students and teachers worldwide.
+                © 2025 Yuvshiksha. All rights reserved. Made with ❤️ for students and teachers worldwide.
               </p>
             </div>
           </div>

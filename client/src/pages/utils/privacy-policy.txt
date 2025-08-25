@@ -1,0 +1,91 @@
+Privacy Policy for Yuvshiksha
+Last Updated: August 25, 2025
+
+Yuvshiksha ("we", "our", "us") respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and services ("Platform"), in accordance with applicable Indian laws, including:
+
+- Information Technology Act, 2000 (IT Act)
+- Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011
+- Digital Personal Data Protection Act, 2023 (DPDP Act)
+- Consumer Protection (E-Commerce) Rules, 2020
+
+By using our Platform, you consent to this Privacy Policy.
+
+1. Information We Collect
+
+a) Personal Information (as defined under IT Rules, 2011 & DPDP Act, 2023)
+- Name, email address, phone number
+- Tutor qualifications, certifications, experience
+- Payment details (processed securely by third-party gateways)
+
+b) Sensitive Personal Data
+- Financial information (bank/UPI/payment details)
+- Authentication information (passwords, OTPs)
+
+c) Usage & Technical Data
+- Device details, operating system, IP address
+- Location data (if enabled by you)
+- App usage analytics
+
+d) Content Information
+- Profile photos, documents, resumes uploaded by Tutors
+- Messages, reviews, ratings exchanged on the Platform
+
+2. How We Use Your Data
+We process personal data for lawful purposes under the DPDP Act, 2023:
+- To create and manage your account
+- To connect Tutors and Learners
+- To process payments (in line with RBI guidelines)
+- To provide customer support
+- To send important updates, notifications, and promotional offers (with your consent)
+- To detect fraud, ensure safety, and comply with legal obligations
+
+3. Legal Basis for Processing
+We process your data on the following grounds:
+- Consent: You agree when signing up.
+- Contractual necessity: To provide services.
+- Legal obligation: To comply with Indian laws.
+- Legitimate interests: To improve services and prevent fraud.
+
+4. Data Sharing & Disclosure
+We do not sell or rent your data. However, data may be shared with:
+- Tutors & Learners: Limited details for session purposes
+- Payment Gateways: For transaction processing under RBI/Payment Act, 2007
+- Service Providers: Hosting, analytics, communication services
+- Legal Authorities: If required under the IT Act, 2000 or other laws
+
+5. Data Security
+We implement reasonable security practices under the IT Rules, 2011. Encryption, firewalls, and secure servers protect your information. However, no system is 100% secure; you use the Platform at your own risk.
+
+6. Data Retention
+Data will be retained only as long as necessary for providing services or as required under law (e.g., tax & compliance laws). Upon account deletion, personal data will be removed, except where retention is required by law.
+
+7. Your Rights (Under DPDP Act, 2023)
+You have the right to:
+- Access your personal data
+- Correct or update your data
+- Request data deletion (subject to legal retention)
+- Withdraw consent for specific processing
+- Opt-out of promotional communications
+
+Requests can be sent to 📧 privacy@yuvshiksha.com
+
+8. Children’s Privacy
+Our services are for users 18 years and above. Learners under 18 require parental/guardian consent, as per the Indian Contract Act, 1872.
+
+9. Cookies & Tracking
+We use cookies and analytics tools in compliance with the IT Act, 2000. Users may disable cookies via browser/device settings.
+
+10. International Data Transfers
+If your data is stored or processed outside India, it will comply with the DPDP Act, 2023, and any applicable Government of India cross-border data transfer regulations.
+
+11. Changes to Policy
+We may revise this Privacy Policy as required by law or business needs. Updates will be published on the Platform, and continued use means acceptance.
+
+12. Grievance Redressal
+In compliance with the IT Rules, 2011, and DPDP Act, 2023, we have appointed a Grievance Officer.
+📧 grievance@yuvshiksha.com
+📍 [Your Company Address]
+
+⚖ This version directly cites Indian data protection and IT laws, making it stronger if you plan to register your business in India.
+
+The email addresses have been updated to privacy@yuvshiksha.com and grievance@yuvshiksha.com. Please remember to fill in the physical address for your company in the Grievance Redressal section.
