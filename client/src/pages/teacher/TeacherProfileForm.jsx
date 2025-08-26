@@ -442,10 +442,12 @@ const TeacherProfileForm = () => {
       const cleanToken = token.replace(/^"(.*)"$/, '$1');
       const form = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'goals' && Array.isArray(value)) {
+        if ([
+          'subjectsTaught', 'boardsTaught', 'classesTaught', 'achievements'
+        ].includes(key) && Array.isArray(value)) {
+          value.forEach((item, i) => form.append(`${key}[${i}]`, JSON.stringify(item)));
+        } else if (key === 'goals' && Array.isArray(value)) {
           value.forEach((g, i) => form.append(`goals[${i}]`, g.text));
-        } else if (key === 'subjects' && Array.isArray(value)) {
-          value.forEach((s, i) => form.append(`subjects[${i}]`, s));
         } else if (key === 'availability' && Array.isArray(value)) {
           value.forEach((a, i) => form.append(`availability[${i}]`, JSON.stringify(a)));
         } else if (key === 'photo' && value) {

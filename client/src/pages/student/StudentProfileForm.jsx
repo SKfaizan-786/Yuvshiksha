@@ -407,6 +407,8 @@ const StudentProfileForm = () => {
       form.append('lastName', formData.lastName);
       form.append('phone', formData.phone);
       form.append('location', formData.location);
+      form.append('pinCode', formData.pinCode);
+      form.append('medium', formData.medium);
       form.append('subject', formData.subject);
       form.append('learningInterest', formData.learningInterest);
       form.append('bio', formData.bio);

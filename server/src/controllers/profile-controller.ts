@@ -97,17 +97,27 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
       qualifications: req.body.qualifications,
       experienceYears: req.body.experienceYears,
       currentOccupation: req.body.currentOccupation,
-      subjects: req.body.subjectsTaught || req.body.subjects,
-      boards: req.body.boardsTaught || req.body.boards,
-      classes: req.body.classesTaught || req.body.classes,
+      subjects: Array.isArray(req.body.subjectsTaught || req.body.subjects)
+        ? (req.body.subjectsTaught || req.body.subjects).map((s: any) => typeof s === 'string' ? JSON.parse(s) : s)
+        : [],
+      boards: Array.isArray(req.body.boardsTaught || req.body.boards)
+        ? (req.body.boardsTaught || req.body.boards).map((b: any) => typeof b === 'string' ? JSON.parse(b) : b)
+        : [],
+      classes: Array.isArray(req.body.classesTaught || req.body.classes)
+        ? (req.body.classesTaught || req.body.classes).map((c: any) => typeof c === 'string' ? JSON.parse(c) : c)
+        : [],
       teachingMode: req.body.teachingMode,
       preferredSchedule: req.body.preferredSchedule,
       bio: req.body.bio,
       teachingApproach: req.body.teachingApproach,
-      achievements: req.body.achievements,
+      achievements: Array.isArray(req.body.achievements)
+        ? req.body.achievements.map((a: any) => typeof a === 'string' ? JSON.parse(a) : a)
+        : [],
       hourlyRate: req.body.hourlyRate,
       photoUrl,
-      availability: req.body.availability
+      availability: Array.isArray(req.body.availability)
+        ? req.body.availability.map((a: any) => typeof a === 'string' ? JSON.parse(a) : a)
+        : []
     };
 
     if (Object.prototype.hasOwnProperty.call(req.body, 'isListed')) {
