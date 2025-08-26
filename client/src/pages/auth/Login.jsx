@@ -659,7 +659,7 @@ const Login = () => {
 
           <div className="space-y-3">
             {/* Custom Google Button with Purple Gradient */}
-            <div className="w-full">
+            <div className="w-full flex justify-center items-center">
               <GoogleLogin
                 onSuccess={handleGoogleLogin}
                 onError={() => {
