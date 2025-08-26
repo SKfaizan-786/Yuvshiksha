@@ -197,7 +197,7 @@ const Login = () => {
       setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
 
       try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+  const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -286,7 +286,7 @@ const Login = () => {
         if (type === "google") {
           // Send the Google credential to your backend
           const response = await axios.post(
-            "http://localhost:5000/api/auth/google",
+            import.meta.env.VITE_BACKEND_URL + '/api/auth/google',
             {
               credential: credentialResponse.credential,
             }
@@ -349,7 +349,7 @@ const Login = () => {
       setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
 
       const response = await axios.post(
-        "http://localhost:5000/api/auth/google",
+        import.meta.env.VITE_BACKEND_URL + '/api/auth/google',
         {
           credential: credentialResponse.credential,
         }
@@ -673,7 +673,7 @@ const Login = () => {
                 size="large"
                 text="continue_with"
                 shape="pill"
-                width="100%"
+                width={300}
                 render={({ onClick, disabled }) => (
                   <button
                     onClick={onClick}

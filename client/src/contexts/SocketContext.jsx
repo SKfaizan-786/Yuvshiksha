@@ -34,7 +34,7 @@ export const SocketProvider = ({ children, userId }) => {
       console.log('🔌 Initializing socket connection for user:', userId);
       
       // Try multiple possible URLs for socket connection
-      const envUrl = import.meta.env.VITE_API_URL;
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
       const fallbackUrl = 'http://localhost:5000';
       const originUrl = window.location.origin.replace(/:\d+$/, ':5000');
       const protocolUrl = window.location.protocol + '//' + window.location.hostname + ':5000';
