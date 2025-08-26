@@ -1,7 +1,7 @@
-Privacy Policy for Yuvshiksha
+Privacy Policy for Yuvsiksha
 Last Updated: August 25, 2025
 
-Yuvshiksha ("we", "our", "us") respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and services ("Platform"), in accordance with applicable Indian laws, including:
+Yuvsiksha ("we", "our", "us") respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and services ("Platform"), in accordance with applicable Indian laws, including:
 
 - Information Technology Act, 2000 (IT Act)
 - Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011
@@ -67,7 +67,7 @@ You have the right to:
 - Withdraw consent for specific processing
 - Opt-out of promotional communications
 
-Requests can be sent to 📧 privacy@yuvshiksha.com
+Requests can be sent to 📧 privacy@yuvsiksha.com
 
 8. Children’s Privacy
 Our services are for users 18 years and above. Learners under 18 require parental/guardian consent, as per the Indian Contract Act, 1872.
@@ -83,9 +83,9 @@ We may revise this Privacy Policy as required by law or business needs. Updates 
 
 12. Grievance Redressal
 In compliance with the IT Rules, 2011, and DPDP Act, 2023, we have appointed a Grievance Officer.
-📧 grievance@yuvshiksha.com
+📧 grievance@yuvsiksha.com
 📍 [Your Company Address]
 
 ⚖ This version directly cites Indian data protection and IT laws, making it stronger if you plan to register your business in India.
 
-The email addresses have been updated to privacy@yuvshiksha.com and grievance@yuvshiksha.com. Please remember to fill in the physical address for your company in the Grievance Redressal section.
+The email addresses have been updated to privacy@yuvsiksha.com and grievance@yuvsiksha.com. Please remember to fill in the physical address for your company in the Grievance Redressal section.

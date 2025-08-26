@@ -425,94 +425,66 @@ const TeacherProfileForm = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    console.log('Submitting:', formData);
     setUiState(prev => ({ ...prev, isSubmitting: true }));
-
     try {
-      console.log('Current token (raw from localStorage):', localStorage.getItem('token'));
       let token = localStorage.getItem('token');
-
-      // Check if token exists and handle alternative storage
       if (!token) {
-        const token2 = sessionStorage.getItem('token') || Cookies.get('token'); // Updated with cookies
+        const token2 = sessionStorage.getItem('token') || (window.Cookies && window.Cookies.get && window.Cookies.get('token'));
         if (token2) {
           localStorage.setItem('token', token2);
-          token = token2; // Assign token2 to token
+          token = token2;
         } else {
           showMessage('Session expired. Please login again.', 'error');
           navigate('/login');
           return;
         }
       }
-
-      // Remove surrounding quotes if present
       const cleanToken = token.replace(/^"(.*)"$/, '$1');
-      console.log('Cleaned token:', cleanToken);
-
-      const profileData = {
-        ...formData,
-        pinCode: formData.pinCode,
-        medium: formData.medium,
-        photoUrl: uiState.photoPreviewUrl
-      };
-
-      console.log('Request headers:', {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${cleanToken}`
+      const form = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'goals' && Array.isArray(value)) {
+          value.forEach((g, i) => form.append(`goals[${i}]`, g.text));
+        } else if (key === 'subjects' && Array.isArray(value)) {
+          value.forEach((s, i) => form.append(`subjects[${i}]`, s));
+        } else if (key === 'availability' && Array.isArray(value)) {
+          value.forEach((a, i) => form.append(`availability[${i}]`, JSON.stringify(a)));
+        } else if (key === 'photo' && value) {
+          form.append('photo', value);
+        } else if (value !== null && value !== undefined) {
+          form.append(key, value);
+        }
       });
-      console.log('Sending profile data:', profileData);
-
       const response = await fetch('http://localhost:5000/api/profile/teacher', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${cleanToken}`
         },
-        body: JSON.stringify(profileData)
+        body: form
       });
-
-      console.log('Response status:', response.status);
-
-      const responseText = await response.text();
-      const result = responseText ? JSON.parse(responseText) : {};
-
+      const result = await response.json();
       if (!response.ok) {
         throw new Error(result.message || `Server error: ${response.status}`);
       }
-
       const currentUser = getFromLocalStorage('currentUser') || {};
       const updatedUser = {
         ...currentUser,
         ...result.user,
         profileComplete: true,
-        // Ensure we save both formats for compatibility
         teacherProfileData: result.user.teacherProfile || currentUser.teacherProfileData,
         teacherProfile: result.user.teacherProfile || currentUser.teacherProfile
       };
-
-
       setToLocalStorage('currentUser', updatedUser);
-
-      // Force reload to ensure ProtectedRoute reads the latest localStorage
       showMessage('Profile saved successfully!', 'success');
       setUiState(prev => ({ ...prev, currentStep: 0, isSubmitting: false }));
       setTimeout(() => {
         window.location.href = '/teacher/dashboard';
       }, 500);
-
     } catch (error) {
-      console.error('Full error:', {
-        message: error.message,
-        stack: error.stack
-      });
-      showMessage(
-        error.message || 'Failed to save profile. Please try again.',
-        'error'
-      );
+      showMessage(error.message || 'Failed to save profile. Please try again.', 'error');
     } finally {
       setUiState(prev => ({ ...prev, isSubmitting: false }));
     }
-  }, [formData, uiState.photoPreviewUrl, navigate, showMessage]);
+  }, [formData, navigate, showMessage]);
 
 
   const handleNextStep = useCallback(() => {

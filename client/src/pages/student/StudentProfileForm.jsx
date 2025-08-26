@@ -399,32 +399,36 @@ const StudentProfileForm = () => {
         navigate('/login');
         return;
       }
-      // Remove any extra quotes from token
       if (typeof token === 'string') {
         token = token.replace(/^"|"$/g, '');
       }
-      // Prepare all fields for backend
-      const profileData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        location: formData.location,
-        subject: formData.subject,
-        learningInterest: formData.learningInterest,
-        learningGoals: formData.goals.map(g => g.text),
-        bio: formData.bio,
-        photoUrl: uiState.photoPreviewUrl,
-        mode: formData.mode,
-        board: formData.board,
-        subjects: formData.subjects || (formData.learningInterest ? [formData.learningInterest] : []),
-      };
+      const form = new FormData();
+      form.append('firstName', formData.firstName);
+      form.append('lastName', formData.lastName);
+      form.append('phone', formData.phone);
+      form.append('location', formData.location);
+      form.append('subject', formData.subject);
+      form.append('learningInterest', formData.learningInterest);
+      form.append('bio', formData.bio);
+      form.append('mode', formData.mode);
+      form.append('board', formData.board);
+      if (formData.goals && formData.goals.length > 0) {
+        formData.goals.forEach((g, i) => form.append(`learningGoals[${i}]`, g.text));
+      }
+      if (formData.subjects && formData.subjects.length > 0) {
+        formData.subjects.forEach((s, i) => form.append(`subjects[${i}]`, s));
+      } else if (formData.learningInterest) {
+        form.append('subjects[0]', formData.learningInterest);
+      }
+      if (formData.photo) {
+        form.append('photo', formData.photo);
+      }
       const response = await fetch('http://localhost:5000/api/profile/student', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(profileData)
+        body: form
       });
       const result = await response.json();
       if (!response.ok) {
@@ -445,7 +449,7 @@ const StudentProfileForm = () => {
     } finally {
       setUiState(prev => ({ ...prev, isSubmitting: false }));
     }
-  }, [formData, uiState.photoPreviewUrl, navigate, showMessage]);
+  }, [formData, navigate, showMessage]);
 
 
   const handleNextStep = useCallback(() => {

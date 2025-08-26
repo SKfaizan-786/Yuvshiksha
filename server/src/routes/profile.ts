@@ -10,6 +10,7 @@ import {
   addFavourite,
   removeFavourite
 } from '../controllers/profile-controller';
+import { upload } from '../utils/cloudinary';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleCheck';
 
@@ -21,12 +22,12 @@ router.delete('/favourites', authMiddleware, removeFavourite);
 
 // Teacher routes
 router.get('/teacher', authMiddleware, requireRole('teacher'), getTeacherProfile);
-router.put('/teacher', authMiddleware, requireRole('teacher'), updateTeacherProfile);
+router.put('/teacher', authMiddleware, requireRole('teacher'), upload.single('photo'), updateTeacherProfile);
 router.patch('/teacher/listing', authMiddleware, updateTeacherListingStatus);
 
 // Student routes
 router.get('/student', authMiddleware, requireRole('student'), getStudentProfile);
-router.put('/student', authMiddleware, requireRole('student'), updateStudentProfile);
+router.put('/student', authMiddleware, requireRole('student'), upload.single('photo'), updateStudentProfile);
 
 // Generic profile route (gets profile based on user role)
 router.get('/', authMiddleware, async (req, res) => {

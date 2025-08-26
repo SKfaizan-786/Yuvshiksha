@@ -48,7 +48,7 @@ export default function Navbar() {
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors duration-200">
-              Yuvshiksha
+              Yuvsiksha
             </span>
           </Link>
 

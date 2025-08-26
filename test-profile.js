@@ -1,6 +1,5 @@
 ﻿// Quick test script to check profile update issue
 const axios = require('axios');
-
 async function testStudentProfileUpdate() {
   try {
     console.log('Testing student profile update...');

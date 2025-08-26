@@ -2,6 +2,7 @@
 
 import { Request, Response } from 'express';
 import User, { IUser, ITeacherProfile } from '../models/User';
+import { uploadToCloudinary } from '../utils/cloudinary';
 
 // Utility to extract error message
 const getErrorMessage = (error: unknown): string =>
@@ -79,6 +80,14 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
+
+    let photoUrl = req.body.photoUrl;
+    if (req.file && req.file.buffer) {
+      // If a file is uploaded, upload to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer, 'profile-images');
+      photoUrl = result.url;
+    }
+
     // Build teacherProfile update object
     const teacherProfileUpdate: Partial<ITeacherProfile> = {
       phone: req.body.phone,
@@ -97,7 +106,7 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
       teachingApproach: req.body.teachingApproach,
       achievements: req.body.achievements,
       hourlyRate: req.body.hourlyRate,
-      photoUrl: req.body.photoUrl,
+      photoUrl,
       availability: req.body.availability
     };
 
@@ -202,6 +211,14 @@ export const updateStudentProfile = async (req: Request, res: Response) => {
       learningGoals = req.body.goals.filter((g: string) => typeof g === 'string' && g.trim() !== '');
     }
 
+
+    let photoUrl = req.body.photoUrl || '';
+    if (req.file && req.file.buffer) {
+      // If a file is uploaded, upload to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer, 'profile-images');
+      photoUrl = result.url;
+    }
+
     const updateData = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
@@ -219,7 +236,7 @@ export const updateStudentProfile = async (req: Request, res: Response) => {
         mode: req.body.mode || '',
         board: req.body.board || '',
         bio: req.body.bio || '',
-        photoUrl: req.body.photoUrl || '',
+        photoUrl,
       }
     };
 

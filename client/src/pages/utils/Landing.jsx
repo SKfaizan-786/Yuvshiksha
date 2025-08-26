@@ -623,24 +623,24 @@ export default function HomePage() {
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center mb-4 md:mb-0">
                 <GraduationCap className="w-8 h-8 text-blue-600 mr-2" />
-                <span className="text-xl font-bold text-slate-900">Yuvshiksha</span>
+                <span className="text-xl font-bold text-slate-900">Yuvsiksha</span>
               </div>
               <div className="flex items-center space-x-6">
                 <span className="text-slate-600 text-sm">
                   Contact: <a
-                    href="https://mail.google.com/mail/?view=cm&fs=1&to=yuvshiksha@gmail.com"
+                    href="https://mail.google.com/mail/?view=cm&fs=1&to=yuvsiksha@gmail.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-blue-700"
                   >
-                    yuvshiksha@gmail.com
+                    yuvsiksha@gmail.com
                   </a>
                 </span>
               </div>
             </div>
             <div className="mt-6 pt-6 border-t border-white/30 text-center">
               <p className="text-slate-500 text-sm">
-                © 2025 Yuvshiksha. All rights reserved. Made with ❤️ for students and teachers worldwide.
+                © 2025 Yuvsiksha. All rights reserved. Made with ❤️ for students and teachers worldwide.
               </p>
             </div>
           </div>

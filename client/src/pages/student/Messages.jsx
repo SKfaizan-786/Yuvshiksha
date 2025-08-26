@@ -699,7 +699,7 @@ const Messages = () => {
             <div className="flex-1 flex items-center justify-center bg-white/30 backdrop-blur-sm">
               <div className="text-center">
                 <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">Welcome to Yuvshiksha Messages</h3>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Welcome to Yuvsiksha Messages</h3>
                 <p className="text-gray-600">Select a conversation to start messaging</p>
               </div>
             </div>
