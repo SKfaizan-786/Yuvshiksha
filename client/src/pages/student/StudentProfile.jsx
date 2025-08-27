@@ -114,7 +114,7 @@ const StudentProfile = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/profile/student', {
+  const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/profile/student', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

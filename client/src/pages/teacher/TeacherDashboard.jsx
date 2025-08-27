@@ -187,7 +187,7 @@ export default function TeacherDashboard() {
       if (token) {
         try {
           const cleanToken = token.replace(/^"(.*)"$/, '$1');
-          const response = await fetch('http://localhost:5000/api/profile/teacher', {
+          const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/profile/teacher', {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${cleanToken}`,
