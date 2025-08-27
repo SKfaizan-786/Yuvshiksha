@@ -218,7 +218,7 @@ const TeacherProfileEdit = () => {
 
       // Send PUT request to backend
       const response = await fetch(
-        "http://localhost:5000/api/profile/teacher",
+        import.meta.env.VITE_BACKEND_URL + '/api/profile/teacher',
         {
           method: "PUT",
           headers: {

@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import passport from 'passport';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
@@ -85,8 +86,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions',
+  }),
   cookie: {
-    secure: false,
+    secure: false, // Set to true if using HTTPS only
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24,
   },
