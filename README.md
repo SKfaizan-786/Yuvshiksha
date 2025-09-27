@@ -603,9 +603,8 @@ We welcome contributions to Yuvshiksha! Here's how you can help:
 
 ### Getting Help
 - 📧 Email: yuvsiksha@gmail.com
-- 📖 Documentation: [Wiki](https://github.com/SKfaizan-786/Yuvsiksha/wiki)
-- 🐛 Issues: [GitHub Issues](https://github.com/SKfaizan-786/Yuvsiksha/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/SKfaizan-786/Yuvsiksha/discussions)
+
+*Note: Documentation, Issues, and Discussions sections will be available once the repository setup is complete.*
 
 ### FAQ
 
@@ -622,7 +621,7 @@ A: Update the Vite configuration to use HTTPS and update the Socket.IO client co
 
 - ✅ Real-time messaging system
 - ✅ Secure payment integration
-- ✅ Mobile-responsive design
+- 🔄 Mobile-responsive design (In Progress)
 - ✅ Role-based authentication
 - ✅ Comprehensive booking system
 - ✅ Professional teacher profiles
@@ -696,6 +695,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **GitHub**: [@SKfaizan-786](https://github.com/SKfaizan-786)
 
 **Developer**: Md. Haaris Hussain  
+**GitHub**: [@mdhaarishussain](https://github.com/mdhaarishussain)  
 **Contribution**: Frontend Development & UI/UX Design
 
 ---
