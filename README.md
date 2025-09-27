@@ -1,8 +1,8 @@
-# 🎓 Yuvshiksha - Online Learning Management System
+# 🎓 Yuvsiksha - Online Learning Management System
 
 <div align="center">
 
-![Yuvshiksha Logo](client/public/Yuvsiksha_logo.png)
+![Yuvsiksha Logo](client/public/Yuvsiksha_logo.png)
 
 **A comprehensive platform connecting students with qualified teachers for personalized learning experiences**
 
@@ -30,7 +30,7 @@
 
 ## 🌟 Overview
 
-Yuvshiksha is a modern, full-stack Learning Management System (LMS) that bridges the gap between students seeking personalized education and qualified teachers offering their expertise. Built with cutting-edge technologies, it provides a seamless platform for booking classes, managing schedules, processing payments, and facilitating real-time communication.
+Yuvsiksha is a modern, full-stack Learning Management System (LMS) that bridges the gap between students seeking personalized education and qualified teachers offering their expertise. Built with cutting-edge technologies, it provides a seamless platform for booking classes, managing schedules, processing payments, and facilitating real-time communication.
 
 ### 🎯 Mission
 To democratize quality education by making it accessible, affordable, and personalized for every student while empowering teachers with the tools they need to succeed.
@@ -106,7 +106,7 @@ To democratize quality education by making it accessible, affordable, and person
   - Password encryption with bcrypt
 
 - **Responsive Design**
-  - Mobile-first responsive UI
+  - Mobile-first responsive UI (Currently being optimized for mobile devices)
   - Cross-browser compatibility
   - Modern glass-morphism design
   - Smooth animations with Framer Motion
@@ -231,8 +231,8 @@ To democratize quality education by making it accessible, affordable, and person
 ### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/SKfaizan-786/Yuvshiksha.git
-cd Yuvshiksha
+git clone https://github.com/SKfaizan-786/Yuvsiksha.git
+cd Yuvsiksha
 
 # Install dependencies for both client and server
 npm run install-all
@@ -249,8 +249,8 @@ npm run dev
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/SKfaizan-786/Yuvshiksha.git
-cd Yuvshiksha
+git clone https://github.com/SKfaizan-786/Yuvsiksha.git
+cd Yuvsiksha
 ```
 
 ### 2. Backend Setup
@@ -290,7 +290,7 @@ NODE_ENV=development
 PORT=5000
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/yuvshiksha
+MONGDB_URI=mongodb://localhost:27017/yuvsiksha
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key
@@ -424,34 +424,42 @@ npm start
 
 ## 🚀 Deployment
 
-### Using Docker
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
+### Production Deployment
 
-# For production
-docker-compose -f docker-compose.prod.yml up --build
-```
+This project is deployed using:
+- **VPS Hosting**: Hostinger VPS for reliable server hosting
+- **Domain**: Custom domain purchased from GoDaddy
+- **Server Management**: Direct deployment without Docker containerization
 
-### Manual Deployment
-
-#### Backend (Node.js)
+#### Backend Deployment
 ```bash
 # Build the TypeScript code
 npm run build
 
-# Start with PM2 (recommended)
-pm2 start dist/index.js --name "yuvshiksha-api"
+# Start with PM2 (recommended for production)
+pm2 start dist/index.js --name "yuvsiksha-api"
+
+# Set up nginx reverse proxy
+# Configure SSL certificates
+# Set up environment variables on server
 ```
 
-#### Frontend (React)
+#### Frontend Deployment
 ```bash
 # Build for production
 npm run build
 
-# Serve with nginx or any static server
-# Copy dist/ folder to your web server
+# Upload build files to VPS
+# Configure nginx to serve static files
+# Set up domain routing from GoDaddy DNS
 ```
+
+#### Deployment Architecture
+- **VPS Server**: Hostinger VPS running Node.js backend
+- **Static Files**: Frontend served through nginx
+- **Database**: MongoDB Atlas (cloud database)
+- **Domain**: Custom domain with SSL from GoDaddy
+- **Process Management**: PM2 for keeping services running
 
 ### Environment-specific Configurations
 
@@ -470,58 +478,78 @@ npm run build
 
 ## 🧪 Testing
 
+### Why Testing is Important
+Testing ensures the application works correctly and prevents bugs from reaching production. It includes:
+- **Unit Tests**: Test individual functions and components
+- **Integration Tests**: Test how different parts work together
+- **E2E Tests**: Test complete user workflows
+- **API Tests**: Verify backend endpoints work correctly
+
 ### Running Tests
 ```bash
-# Backend tests
+# Backend tests - Test API endpoints, database operations, authentication
 cd server
 npm test
 
-# Frontend tests
+# Frontend tests - Test React components, user interactions, UI logic
 cd client
 npm test
 
-# E2E tests
+# E2E tests - Test complete user journeys (login, booking, payments)
 npm run test:e2e
 ```
 
 ### Test Coverage
 ```bash
-# Generate coverage reports
+# Generate coverage reports - Shows which code is tested
 npm run test:coverage
 ```
 
 ## 🐛 Troubleshooting
 
+### Why Troubleshooting Guide is Needed
+This section helps developers and users fix common problems that might occur during development or deployment. It saves time by providing quick solutions to frequent issues.
+
 ### Common Issues
 
-#### Socket Connection Issues
+#### Socket Connection Issues (Real-time Chat Problems)
 ```bash
-# Check if Socket.IO server is running
+# Problem: Messages not sending in real-time
+# Solution: Check if Socket.IO server is running
 curl http://localhost:5000/socket.io/
 
-# Verify CORS settings in server configuration
+# Verify CORS settings allow frontend to connect
 ```
 
-#### Payment Gateway Issues
+#### Payment Gateway Issues (Booking Payment Failures)
 ```bash
-# Verify Cashfree credentials
-# Check sandbox vs production environment
-# Validate webhook URLs
+# Problem: Payments failing during booking
+# Solutions:
+# 1. Verify Cashfree credentials are correct
+# 2. Check if using sandbox vs production environment
+# 3. Validate webhook URLs for payment confirmations
 ```
 
-#### Database Connection
+#### Database Connection (Data Not Loading)
 ```bash
-# Check MongoDB connection
-mongosh "mongodb://localhost:27017/yuvshiksha"
+# Problem: Profile data not showing, bookings not saving
+# Solution: Check MongoDB connection
+mongosh "mongodb://localhost:27017/yuvsiksha"
 
-# Verify environment variables
+# Verify environment variables are set correctly
 echo $MONGODB_URI
 ```
+
+#### Common Development Problems
+- **Blank Profile Data**: Check localStorage and API endpoints
+- **Login Issues**: Verify JWT tokens and authentication middleware
+- **Image Upload Fails**: Check file size limits and Cloudinary config
+- **Booking Not Working**: Verify payment integration and database connection
 
 ## 📁 Project Structure
 
 ```
-yuvshiksha/
+yuvsiksha/
 ├── client/                 # React frontend
 │   ├── public/            # Static assets
 │   ├── src/
@@ -574,10 +602,10 @@ We welcome contributions to Yuvshiksha! Here's how you can help:
 ## 📞 Support
 
 ### Getting Help
-- 📧 Email: support@yuvshiksha.com
-- 📖 Documentation: [Wiki](https://github.com/SKfaizan-786/Yuvshiksha/wiki)
-- 🐛 Issues: [GitHub Issues](https://github.com/SKfaizan-786/Yuvshiksha/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/SKfaizan-786/Yuvshiksha/discussions)
+- 📧 Email: yuvsiksha@gmail.com
+- 📖 Documentation: [Wiki](https://github.com/SKfaizan-786/Yuvsiksha/wiki)
+- 🐛 Issues: [GitHub Issues](https://github.com/SKfaizan-786/Yuvsiksha/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/SKfaizan-786/Yuvsiksha/discussions)
 
 ### FAQ
 
@@ -661,9 +689,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Team
 
-**Lead Developer**: SK Faizan  
-**Email**: skfaizan786@gmail.com  
+### Development Team
+
+**Lead Developer**: SK Faizanuddin  
+**Email**: faizanuddinsk56@gmail.com  
 **GitHub**: [@SKfaizan-786](https://github.com/SKfaizan-786)
+
+**Developer**: Md. Haaris Hussain  
+**Contribution**: Frontend Development & UI/UX Design
 
 ---
 
@@ -671,6 +704,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the education community**
 
-[⭐ Star this repo](https://github.com/SKfaizan-786/Yuvshiksha) | [🐛 Report Bug](https://github.com/SKfaizan-786/Yuvshiksha/issues) | [💡 Request Feature](https://github.com/SKfaizan-786/Yuvshiksha/issues/new)
+[⭐ Star this repo](https://github.com/SKfaizan-786/Yuvsiksha) | [🐛 Report Bug](https://github.com/SKfaizan-786/Yuvsiksha/issues) | [💡 Request Feature](https://github.com/SKfaizan-786/Yuvsiksha/issues/new)
 
 </div>
