@@ -92,7 +92,6 @@ const safelyParseJsonArray = (data: any): any[] => {
 
 export const updateTeacherProfile = async (req: Request, res: Response) => {
   try {
-    console.log('Received data:', req.body);
     if (!req.user?._id) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
@@ -109,7 +108,11 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
     const classesTaught = safelyParseJsonArray(req.body.classesTaught);
     const achievements = safelyParseJsonArray(req.body.achievements);
     const availability = safelyParseJsonArray(req.body.availability);
-    const teachingMode = safelyParseJsonArray(req.body.teachingMode);
+    
+    // Special handling for teachingMode to ensure valid enum values
+    let teachingMode = safelyParseJsonArray(req.body.teachingMode);
+    const validModes = ["Teacher's place", "Student's place", "Online"];
+    teachingMode = teachingMode.filter(mode => validModes.includes(mode));
 
     const teacherProfileUpdate: Partial<ITeacherProfile> = {
       phone: req.body.phone,
@@ -178,6 +181,29 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
 
   } catch (error: unknown) {
     console.error('Profile update error:', error);
+    
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes('File too large')) {
+        return res.status(413).json({
+          success: false,
+          message: 'File size too large. Please upload an image smaller than 1MB.'
+        });
+      }
+      if (error.message.includes('Only image files')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid file type. Only JPG, PNG, and GIF images are allowed.'
+        });
+      }
+      if (error.message.includes('teachingMode')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid teaching mode selection. Please select valid options.'
+        });
+      }
+    }
+    
     res.status(500).json({
       success: false,
       message: getErrorMessage(error)
@@ -209,6 +235,50 @@ export const getTeacherProfile = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     console.error('Teacher profile fetch error:', error);
     res.status(500).json({ message: 'Server error fetching teacher profile', error: getErrorMessage(error) });
+  }
+};
+
+export const deleteTeacherPhoto = async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    // Remove photo from teacher profile in database
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 
+        $unset: { 
+          'teacherProfile.photoUrl': '' 
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile photo deleted successfully',
+      user: {
+        _id: updatedUser._id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role,
+        profileComplete: updatedUser.profileComplete,
+        teacherProfile: updatedUser.teacherProfile
+      }
+    });
+
+  } catch (error: unknown) {
+    console.error('Photo deletion error:', error);
+    res.status(500).json({
+      success: false,
+      message: getErrorMessage(error)
+    });
   }
 };
 
@@ -310,6 +380,8 @@ export const getStudentProfile = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error fetching student profile', error: getErrorMessage(error) });
   }
 };
+
+
 
 // -------------------- Listing/Unlisting --------------------
 export const updateTeacherListingStatus = async (req: Request, res: Response) => {

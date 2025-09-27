@@ -10,7 +10,25 @@ cloudinary.config({
 });
 
 const storage = multer.memoryStorage();
-export const upload = multer({ storage });
+export const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 1 * 1024 * 1024, // 1MB limit for file uploads (MongoDB free tier)
+    fieldSize: 1 * 1024 * 1024  // 1MB limit for field data
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extName = allowedTypes.test(file.originalname.toLowerCase());
+    const mimeType = allowedTypes.test(file.mimetype);
+    
+    if (mimeType && extName) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPG, PNG, GIF) are allowed!'));
+    }
+  }
+});
 
 export const uploadToCloudinary = (fileBuffer: Buffer, folder = 'profile-images') => {
   return new Promise<{ url: string; public_id: string }>((resolve, reject) => {
