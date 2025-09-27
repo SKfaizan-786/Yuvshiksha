@@ -1,13 +1,49 @@
 ﻿import React, { useEffect, useState } from "react";
-import { getFromLocalStorage } from "../utils/storage";
+import { getFromLocalStorage, setToLocalStorage } from "../utils/storage";
+
+// Add backend fetch for latest teacher profile
+async function fetchTeacherProfileFromBackend() {
+  try {
+    const response = await fetch(
+      import.meta.env.VITE_BACKEND_URL + '/api/profile/teacher',
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      }
+    );
+    if (response.ok) {
+      const profileData = await response.json();
+      return profileData;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
 
 export default function TeacherSchedule() {
   const [availability, setAvailability] = useState([]);
   useEffect(() => {
-    // Try to get from currentUser in localStorage
-    const user = getFromLocalStorage("currentUser");
-    const teacherData = user?.teacherProfileData || user?.teacherProfile || {};
-    setAvailability(Array.isArray(teacherData.availability) ? teacherData.availability : []);
+    async function loadAvailability() {
+      let user = getFromLocalStorage("currentUser");
+      let teacherData = user?.teacherProfileData || user?.teacherProfile || {};
+      // Try backend fetch
+      const backendProfile = await fetchTeacherProfileFromBackend();
+      if (backendProfile) {
+        user = {
+          ...user,
+          ...backendProfile,
+          id: user?.id || backendProfile._id,
+          _id: user?._id || backendProfile._id,
+          teacherProfileData: backendProfile.teacherProfile || user?.teacherProfileData,
+        };
+        setToLocalStorage('currentUser', user);
+        teacherData = user.teacherProfileData || user.teacherProfile || {};
+      }
+      setAvailability(Array.isArray(teacherData.availability) ? teacherData.availability : []);
+    }
+    loadAvailability();
   }, []);
 
   // Group by day

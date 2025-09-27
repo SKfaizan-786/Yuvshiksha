@@ -39,7 +39,7 @@ export interface IStudentProfile {
   learningGoals?: string[];
   bio?: string;
   photoUrl?: string;
-  mode?: 'Teacher\'s place' | 'Student\'s place' | 'Online';
+  mode?: string[];
 }
 
 export interface ITeacherProfile {
@@ -53,7 +53,7 @@ export interface ITeacherProfile {
   subjects?: ITeachingSubject[];
   boards?: ITeachingBoard[];
   classes?: ITeachingClass[];
-  teachingMode?: 'Teacher\'s place' | 'Student\'s place' | 'Online';
+  teachingMode?: string[]; // Array of preferred teaching modes
   preferredSchedule?: string;
   bio?: string;
   teachingApproach?: string;
@@ -123,11 +123,10 @@ const TeacherProfileSchema = new Schema({
   subjects: [TeachingSubjectSchema],
   boards: [TeachingBoardSchema],
   classes: [TeachingClassSchema],
-  teachingMode: {
+  teachingMode: [{
     type: String,
-    enum: ["Teacher's place", "Student's place", "Online"],
-    default: "Online"
-  },
+    enum: ["Teacher's place", "Student's place", "Online"]
+  }],
   preferredSchedule: String,
   bio: String,
   teachingApproach: String,
@@ -205,11 +204,10 @@ const UserSchema = new Schema<IUser>(
       learningGoals: [String],
       bio: String,
       photoUrl: String,
-      mode: {
+      mode: [{
         type: String,
-        enum: ["Teacher's place", "Student's place", "Online"],
-        default: "Online"
-      },
+        enum: ["Teacher's place", "Student's place", "Online"]
+      }],
       board: String,
     },
     teacherProfile: TeacherProfileSchema,
@@ -235,9 +233,9 @@ UserSchema.methods.matchPassword = async function (enteredPassword: string): Pro
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// âœ… Export UserDocument type for type-safe request.user
+// ✅ Export UserDocument type for type-safe request.user
 export type UserDocument = IUser & Document;
 
-// âœ… Export the model correctly
+// ✅ Export the model correctly
 const UserModel = mongoose.model<UserDocument>('User', UserSchema);
 export default UserModel;

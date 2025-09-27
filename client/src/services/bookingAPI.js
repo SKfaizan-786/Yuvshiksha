@@ -1,21 +1,12 @@
 ﻿// API service for booking operations
 import API_CONFIG from '../config/api';
+
 const API_BASE_URL = API_CONFIG.BASE_URL + '/api';
 
-// Get auth token from localStorage and remove extra quotes if present
-const getAuthToken = () => {
-  let token = localStorage.getItem('token');
-  if (token && token.startsWith('"') && token.endsWith('"')) {
-    token = token.slice(1, -1);
-  }
-  console.log('[bookingAPI] Using token:', token);
-  return token;
-};
-
-// Create API headers
+// No need to manually get the token from cookies or create an Authorization header.
+// The browser will handle sending the HttpOnly cookie when 'credentials: include' is set.
 const getHeaders = () => ({
   'Content-Type': 'application/json',
-  'Authorization': `Bearer ${getAuthToken()}`
 });
 
 export const bookingAPI = {
@@ -26,11 +17,13 @@ export const bookingAPI = {
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(), // Only includes 'Content-Type'
+      credentials: 'include' // This is the crucial part that sends the HttpOnly cookie
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching bookings: ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(error.message || `Error fetching bookings: ${response.statusText}`);
     }
     
     return response.json();
@@ -43,11 +36,13 @@ export const bookingAPI = {
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(), // Only includes 'Content-Type'
+      credentials: 'include' // This sends the HttpOnly cookie
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching bookings: ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(error.message || `Error fetching bookings: ${response.statusText}`);
     }
     
     return response.json();
@@ -58,8 +53,9 @@ export const bookingAPI = {
     try {
       const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(bookingData)
+        headers: getHeaders(), // Only includes 'Content-Type'
+        body: JSON.stringify(bookingData),
+        credentials: 'include' // This sends the HttpOnly cookie
       });
       const data = await response.json();
       if (!response.ok) {
@@ -76,8 +72,9 @@ export const bookingAPI = {
   updateBookingStatus: async (bookingId, statusData) => {
     const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
       method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(statusData)
+      headers: getHeaders(), // Only includes 'Content-Type'
+      body: JSON.stringify(statusData),
+      credentials: 'include' // This sends the HttpOnly cookie
     });
     
     if (!response.ok) {
@@ -92,8 +89,9 @@ export const bookingAPI = {
   rescheduleBooking: async (bookingId, rescheduleData) => {
     const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/reschedule`, {
       method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(rescheduleData)
+      headers: getHeaders(), // Only includes 'Content-Type'
+      body: JSON.stringify(rescheduleData),
+      credentials: 'include' // This sends the HttpOnly cookie
     });
     
     if (!response.ok) {
@@ -108,11 +106,13 @@ export const bookingAPI = {
   getBookingDetails: async (bookingId) => {
     const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(), // Only includes 'Content-Type'
+      credentials: 'include' // This sends the HttpOnly cookie
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching booking details: ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(error.message || `Error fetching booking details: ${response.statusText}`);
     }
     
     return response.json();
@@ -122,10 +122,12 @@ export const bookingAPI = {
   getTeacherAvailability: async (teacherId, date) => {
     const response = await fetch(`${API_BASE_URL}/teachers/${teacherId}/availability?date=${date}`, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(), // Only includes 'Content-Type'
+      credentials: 'include' // This sends the HttpOnly cookie
     });
     if (!response.ok) {
-      throw new Error(`Error fetching availability: ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(error.message || `Error fetching availability: ${response.statusText}`);
     }
     return await response.json();
   }

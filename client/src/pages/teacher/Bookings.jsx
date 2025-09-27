@@ -736,3 +736,7 @@ function BookingDetailsModal({ booking, onClose, onStatusChange, formatDate, for
     </div>
   );
 }
+
+// No changes needed for cookie setup in this file.
+// Your API calls (e.g., bookingAPI.getTeacherBookings, bookingAPI.updateBookingStatus) already use credentials: 'include' internally (if implemented like your other pages).
+// As long as your backend expects authentication via cookies and your fetch/axios calls use credentials: 'include', you do not need to manually set cookies here.

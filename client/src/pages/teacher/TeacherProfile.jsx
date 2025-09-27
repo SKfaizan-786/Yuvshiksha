@@ -13,7 +13,28 @@ import {
   Clock,
   Edit3
 } from 'lucide-react';
-import { getFromLocalStorage } from '../utils/storage';
+import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
+
+// Add backend fetch for latest teacher profile
+async function fetchTeacherProfileFromBackend() {
+  try {
+    const response = await fetch(
+      import.meta.env.VITE_BACKEND_URL + '/api/profile/teacher',
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      }
+    );
+    if (response.ok) {
+      const profileData = await response.json();
+      return profileData;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
 
 const TeacherProfile = () => {
   const navigate = useNavigate();
@@ -21,13 +42,28 @@ const TeacherProfile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = getFromLocalStorage('currentUser');
-    if (!user || user.role !== 'teacher') {
-      navigate('/login');
-      return;
+    async function loadUser() {
+      let user = getFromLocalStorage('currentUser');
+      if (!user || user.role !== 'teacher') {
+        navigate('/login');
+        return;
+      }
+      // Try backend fetch
+      const backendProfile = await fetchTeacherProfileFromBackend();
+      if (backendProfile) {
+        user = {
+          ...user,
+          ...backendProfile,
+          id: user?.id || backendProfile._id,
+          _id: user?._id || backendProfile._id,
+          teacherProfileData: backendProfile.teacherProfile || user?.teacherProfileData,
+        };
+        setToLocalStorage('currentUser', user);
+      }
+      setCurrentUser(user);
+      setLoading(false);
     }
-    setCurrentUser(user);
-    setLoading(false);
+    loadUser();
   }, [navigate]);
 
   const formatDate = (dateString) => {
@@ -249,13 +285,31 @@ const TeacherProfile = () => {
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Teaching Mode</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
-                      {teacherData.teachingMode || 'Not provided'}
+                      {Array.isArray(teacherData.teachingMode) && teacherData.teachingMode.length > 0
+                        ? teacherData.teachingMode.join(', ')
+                        : teacherData.teachingMode || 'Not provided'}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Medium of Instruction</label>
                     <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">
                       {teacherData.medium || 'Not provided'}
+                    </p>
+                  </div>
+                  {/* Teaching Approach - make it span full width */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Teaching Approach</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[40px]">
+                      {teacherData.teachingApproach || 'Not provided'}
+                    </p>
+                  </div>
+                  {/* Achievements */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Achievements</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[40px]">
+                      {Array.isArray(teacherData.achievements) && teacherData.achievements.length > 0
+                        ? teacherData.achievements.map(a => a.text || a).join(', ')
+                        : 'Not provided'}
                     </p>
                   </div>
                   <div>

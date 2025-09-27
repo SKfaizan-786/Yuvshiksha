@@ -26,7 +26,7 @@ export const sendOtpToEmail = async (req: Request, res: Response) => {
   // Send email (Mailtrap)
   await sendEmail(
     email,
-    'Your OTP for Yuvshiksha Registration',
+    'Your OTP for Yuvsiksha Registration',
     `<p>Your OTP is: <b>${otp}</b>. It will expire in 5 minutes.</p>`
   );
 

@@ -22,8 +22,6 @@ import {
 import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 
-// Use fetch for API calls
-
 const passwordStrengthLevels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
 const passwordStrengthColors = [
   "bg-red-500",
@@ -224,8 +222,7 @@ const Signup = () => {
     setUi((u) => ({ ...u, isSubmitting: true, signupError: "" }));
 
     try {
-      // Call backend to send OTP email
-      const res = await fetch("http://localhost:5000/api/email-otp/send-otp", {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email-otp/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email })
@@ -259,8 +256,7 @@ const Signup = () => {
     setUi((u) => ({ ...u, otpLoading: true, otpError: "" }));
 
     try {
-      // Call backend to verify OTP
-      const res = await fetch("http://localhost:5000/api/email-otp/verify-otp", {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email-otp/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp: ui.otp })
@@ -268,8 +264,7 @@ const Signup = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "OTP verification failed");
 
-      // Register the user in the backend after OTP verification
-      const registerRes = await fetch("http://localhost:5000/api/auth/register", {
+      const registerRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -277,7 +272,6 @@ const Signup = () => {
       const registerData = await registerRes.json();
       if (!registerRes.ok) throw new Error(registerData.message || "Registration failed after OTP");
 
-      // Store user and token in localStorage
       setToLocalStorage("user", registerData.user);
       setToLocalStorage("currentUser", registerData.user);
       localStorage.setItem("token", registerData.token);
@@ -583,7 +577,7 @@ const Signup = () => {
                   {ui.otpStep ? "Verify Your Email" : "Create Account"}
                 </h1>
                 <p className="text-violet-200 text-sm">
-                  {ui.otpStep 
+                  {ui.otpStep
                     ? `Enter the 6-digit OTP sent to ${formData.email}`
                     : "Join our vibrant learning community"}
                 </p>

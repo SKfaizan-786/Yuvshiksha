@@ -13,35 +13,20 @@ import {
 } from 'lucide-react';
 
 const StudentProfile = () => {
-  // Handle input changes for editing profile fields
-  const handleInputChange = (field, value) => {
-    setEditedProfile((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-  // Cancel editing and reset editedProfile to currentUser data
-  const handleCancel = () => {
-    setEditedProfile({
-      ...currentUser,
-      ...currentUser.studentProfile,
-      subjects: currentUser.studentProfile?.subjects || [],
-      learningGoals: currentUser.studentProfile?.learningGoals || [],
-    });
-    setIsEditing(false);
-  };
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({});
+  const [subjectInput, setSubjectInput] = useState('');
+  const [goalInput, setGoalInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState('/default-profile.png');
 
   // Helper functions for localStorage
   const getFromLocalStorage = (key) => {
     try {
       const value = localStorage.getItem(key);
       if (!value) return null;
-      // If value looks like JSON, parse it, else return as-is (for tokens)
       if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
         return JSON.parse(value);
       }
@@ -67,35 +52,67 @@ const StudentProfile = () => {
       return;
     }
     setCurrentUser(user);
-    // Initialize editedProfile with a deep merge of currentUser and studentProfile
     setEditedProfile({
       ...user,
       ...user.studentProfile,
-      // Ensure subjects and learningGoals are initialized as arrays for editing
       subjects: user.studentProfile?.subjects || [],
       learningGoals: user.studentProfile?.learningGoals || [],
+      mode: user.studentProfile?.mode || [],
     });
+    setProfileImage(user.studentProfile?.photoUrl || '/default-profile.png');
     setLoading(false);
   }, [navigate]);
 
-  const handleSave = async () => {
-    if (!editedProfile.mode || !["Teacher's place", "Student's place", "Online"].includes(editedProfile.mode)) {
-      alert('Please select a valid Preferred Learning Mode.');
-      return;
+  const handleInputChange = (field, value) => {
+    setEditedProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const addTag = (field, inputValue) => {
+    if (inputValue.trim() && !editedProfile[field].includes(inputValue.trim())) {
+      setEditedProfile(prev => ({
+        ...prev,
+        [field]: [...prev[field], inputValue.trim()]
+      }));
+      if (field === 'subjects') setSubjectInput('');
+      if (field === 'learningGoals') setGoalInput('');
     }
-    const token = getFromLocalStorage('token');
-    if (!token) {
-      alert('No authentication token found');
+  };
+
+  const removeTag = (field, valueToRemove) => {
+    setEditedProfile(prev => ({
+      ...prev,
+      [field]: prev[field].filter(item => item !== valueToRemove)
+    }));
+  };
+
+  const handleCancel = () => {
+    setEditedProfile({
+      ...currentUser,
+      ...currentUser.studentProfile,
+      subjects: currentUser.studentProfile?.subjects || [],
+      learningGoals: currentUser.studentProfile?.learningGoals || [],
+      mode: currentUser.studentProfile?.mode || [],
+    });
+    setSubjectInput('');
+    setGoalInput('');
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!editedProfile.mode || editedProfile.mode.length === 0) {
+      alert('Please select at least one Preferred Learning Mode.');
       return;
     }
 
-    // Merge the updated data before sending
     const updatedData = {
-      ...currentUser.studentProfile, // Start with all existing student profile fields
-      ...editedProfile, // Overwrite with any changes from the edited state
-      // Ensure specific fields are correctly formatted before sending
+      ...currentUser.studentProfile,
+      ...editedProfile,
       subjects: Array.isArray(editedProfile.subjects) ? editedProfile.subjects : [],
       learningGoals: Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals : [],
+      mode: Array.isArray(editedProfile.mode) ? editedProfile.mode : [],
     };
     const finalProfileData = {
       firstName: updatedData.firstName,
@@ -114,39 +131,52 @@ const StudentProfile = () => {
     };
 
     try {
-  const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/profile/student', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/profile/student`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(finalProfileData),
+        credentials: 'include'
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || 'Failed to update profile');
+        const errorMessage = result.message || 'Failed to update profile';
+        if (response.status === 401) {
+          alert('Session expired. Please log in again.');
+          navigate('/login');
+          return;
+        }
+        alert(errorMessage);
         return;
       }
 
       setToLocalStorage('currentUser', result.user);
       setCurrentUser(result.user);
+      setProfileImage(result.user.studentProfile?.photoUrl || '/default-profile.png');
       setIsEditing(false);
+      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Failed to update profile due to a network error.');
+      alert('Failed to update profile due to a network error. Please try again.');
     }
+  };
+
+  const handleImageError = () => {
+    setProfileImage('/default-profile.png');
   };
 
   if (!currentUser) return null;
 
   const getProfileField = (field, fallback = 'Not provided') => {
     const value = isEditing ? editedProfile[field] : (currentUser.studentProfile && currentUser.studentProfile[field]) || currentUser[field];
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : fallback;
+    }
     return value || fallback;
   };
-
-  const profileImage = getProfileField('photoUrl') || '/default-profile.png';
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -166,9 +196,57 @@ const StudentProfile = () => {
     createdAt = new Date().toISOString();
   }
 
+  const renderTagInputField = (label, field, inputState, setInputState, icon) => {
+    return (
+      <div>
+        <label className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+          {icon} {label}
+        </label>
+        {isEditing ? (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputState}
+                onChange={(e) => setInputState(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag(field, inputState))}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                placeholder={`Add a ${field === 'subjects' ? 'subject' : 'goal'}...`}
+              />
+              <button
+                type="button"
+                onClick={() => addTag(field, inputState)}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+              >
+                Add
+              </button>
+            </div>
+            {editedProfile[field].length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {editedProfile[field].map((item, index) => (
+                  <div key={index} className="flex items-center bg-purple-100 px-3 py-1 rounded-full">
+                    <span>{item}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeTag(field, item)}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField(field)}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
-      {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
         <div className="absolute top-40 right-10 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-delayed"></div>
@@ -176,7 +254,6 @@ const StudentProfile = () => {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Link
             to="/student/dashboard"
@@ -191,21 +268,20 @@ const StudentProfile = () => {
             <p className="text-slate-600">View and manage your account information</p>
           </div>
 
-          <div className="w-32"></div> {/* Spacer for centering */}
+          <div className="w-32"></div>
         </div>
 
-        {/* Profile Card */}
         <div className="max-w-3xl mx-auto">
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            {/* Profile Header */}
             <div className="bg-gradient-to-r from-blue-700 to-purple-700 px-10 py-8 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div className="flex items-center gap-6">
                 <div className="w-28 h-28 bg-white/30 rounded-full flex items-center justify-center overflow-hidden border-4 border-white/40 shadow-lg">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-28 h-28 object-cover rounded-full" />
-                  ) : (
-                    <User className="w-12 h-12" />
-                  )}
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="w-28 h-28 object-cover rounded-full"
+                    onError={handleImageError}
+                  />
                 </div>
                 <div>
                   <h2 className="text-3xl font-extrabold tracking-tight">
@@ -244,9 +320,7 @@ const StudentProfile = () => {
                 </div>
               )}
             </div>
-            {/* Profile Content */}
             <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-              {/* Personal Information */}
               <div>
                 <h3 className="text-xl font-bold mb-5 text-blue-700 flex items-center gap-2"><User className="w-6 h-6" /> Personal Information</h3>
                 <div className="space-y-5">
@@ -338,7 +412,6 @@ const StudentProfile = () => {
                   </div>
                 </div>
               </div>
-              {/* Academic Information */}
               <div>
                 <h3 className="text-xl font-bold mb-5 text-purple-700 flex items-center gap-2"><Book className="w-6 h-6" /> Academic Information</h3>
                 <div className="space-y-5">
@@ -355,33 +428,28 @@ const StudentProfile = () => {
                       <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('grade')}</p>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Subjects of Interest</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={Array.isArray(editedProfile.subjects) ? editedProfile.subjects.join(', ') : (editedProfile.subjects || '')}
-                        onChange={(e) => handleInputChange('subjects', e.target.value.split(',').map(s => s.trim()))}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                      />
-                    ) : (
-                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('subjects') && Array.isArray(getProfileField('subjects')) ? getProfileField('subjects').join(', ') : getProfileField('subjects')}</p>
-                    )}
-                  </div>
+                  {renderTagInputField('Subjects of Interest', 'subjects', subjectInput, setSubjectInput, <Book className="w-6 h-6 text-purple-700" />)}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Preferred Learning Mode</label>
                     {isEditing ? (
-                      <select
-                        value={editedProfile.mode || ''}
-                        onChange={(e) => handleInputChange('mode', e.target.value)}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                        required
-                      >
-                        <option value="" disabled>Select mode</option>
-                        <option value="Teacher's place">Teacher's place</option>
-                        <option value="Student's place">Student's place</option>
-                        <option value="Online">Online</option>
-                      </select>
+                      <div className="space-y-2">
+                        {["Teacher's place", "Student's place", "Online"].map((option) => (
+                          <div key={option} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editedProfile.mode?.includes(option) || false}
+                              onChange={(e) => {
+                                const newModes = e.target.checked
+                                  ? [...(editedProfile.mode || []), option]
+                                  : (editedProfile.mode || []).filter((m) => m !== option);
+                                handleInputChange('mode', newModes);
+                              }}
+                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            />
+                            <label className="ml-2 text-sm text-gray-700">{option}</label>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('mode')}</p>
                     )}
@@ -395,29 +463,14 @@ const StudentProfile = () => {
                         onChange={(e) => handleInputChange('medium', e.target.value)}
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
                         placeholder="e.g., English, Hindi, Bengali"
-                        required
                       />
                     ) : (
                       <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('medium')}</p>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Learning Goals</label>
-                    {isEditing ? (
-                      <textarea
-                        value={Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals.join('\n') : (editedProfile.learningGoals || '')}
-                        onChange={(e) => handleInputChange('learningGoals', e.target.value.split('\n'))}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                        rows="3"
-                        placeholder="What are your learning objectives?"
-                      />
-                    ) : (
-                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[80px]">{getProfileField('learningGoals') && Array.isArray(getProfileField('learningGoals')) ? getProfileField('learningGoals').join(', ') : getProfileField('learningGoals')}</p>
-                    )}
-                  </div>
+                  {renderTagInputField('Learning Goals', 'learningGoals', goalInput, setGoalInput, <Book className="w-6 h-6 text-purple-700" />)}
                 </div>
               </div>
-              {/* Account Status */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
                 <div className="bg-gradient-to-r from-green-50 to-green-100 p-5 rounded-xl shadow flex flex-col items-start">
                   <div className="flex items-center gap-2">
@@ -431,9 +484,7 @@ const StudentProfile = () => {
                     <Calendar className="w-5 h-5 text-blue-600" />
                     <span className="font-semibold text-blue-800">Member Since</span>
                   </div>
-                  <p className="text-blue-700 mt-2 text-base">
-                    {formatDate(createdAt)}
-                  </p>
+                  <p className="text-blue-700 mt-2 text-base">{formatDate(createdAt)}</p>
                 </div>
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-5 rounded-xl shadow flex flex-col items-start">
                   <div className="flex items-center gap-2">
@@ -449,6 +500,6 @@ const StudentProfile = () => {
       </div>
     </div>
   );
-}
+};
 
 export default StudentProfile;

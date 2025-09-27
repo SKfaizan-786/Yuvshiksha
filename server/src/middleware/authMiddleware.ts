@@ -1,55 +1,41 @@
 ﻿import { Request, Response, NextFunction } from 'express';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
-import User, { IUser } from '../models/User'; // Ensure this path is correct
-import mongoose from 'mongoose'; // Keep this import
+import User, { IUser } from '../models/User';
+import mongoose from 'mongoose';
 
-// Define AuthenticatedRequest interface
 export interface AuthenticatedRequest extends Request {
   user?: IUser;
 }
 
-// !!! REMOVE THE 'declare global' BLOCK FROM HERE !!!
-// It should NOT be in this file. It belongs in a .d.ts file.
-/*
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any; // THIS IS THE CONFLICTING PART
-    }
-  }
-}
-*/
-
 export const authMiddleware = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    let token = req.header('Authorization');
+    // Remove or comment out debug logs for production
+    // console.log('Request Headers:', req.headers);
+    // console.log('Cookies:', req.cookies);
+
+    // FIX: For some deployments, cookie name may be 'token' or 'jwt' (check both)
+    let token = req.cookies.token || req.cookies.jwt;
 
     if (!token) {
-      console.log('No Authorization header provided.');
-      return res.status(401).json({ message: 'No token, authorization denied' });
+      // Also check for token in Authorization header (Bearer)
+      const authHeader = req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else {
+        return res.status(401).json({ message: 'No token, authorization denied' });
+      }
     }
-
-    // Clean the token: remove 'Bearer ' prefix and any surrounding quotes
-    token = token.replace(/^"|"$/g, '').replace('Bearer ', '');
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      res.status(500).json({ 
-        message: 'JWT secret not configured' 
-      });
-      return;
+      return res.status(500).json({ message: 'JWT secret not configured' });
     }
 
     const decoded = jwt.verify(token, jwtSecret) as { _id: string; iat: number; exp: number };
 
-    // Find user in database
     const user = await User.findById(decoded._id).select('-password');
-    
     if (!user) {
-      res.status(401).json({ 
-        message: 'Token is valid but user not found' 
-      });
-      return;
+      return res.status(401).json({ message: 'Token is valid but user not found' });
     }
 
     req.user = user;
@@ -57,22 +43,16 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
 
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ message: 'Invalid token' });
-      return;
+      return res.status(401).json({ message: 'Invalid token' });
     }
     if (error instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ message: 'Token has expired' });
-      return;
+      return res.status(401).json({ message: 'Token has expired' });
     }
     console.error('Auth middleware error:', error);
-    res.status(500).json({ message: 'Server error during authentication' });
+    return res.status(500).json({ message: 'Server error during authentication' });
   }
 };
 
-/**
- * Optional Auth Middleware - Same as authMiddleware but doesn't block if no token
- * Useful for routes that work for both authenticated and non-authenticated users
- */
 export const optionalAuthMiddleware = async (
   req: Request,
   res: Response,
@@ -81,7 +61,6 @@ export const optionalAuthMiddleware = async (
   try {
     const authHeader = req.headers.authorization;
     
-    // If no token, just continue without setting req.user
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       next();
       return;
@@ -99,13 +78,12 @@ export const optionalAuthMiddleware = async (
     const user = await User.findById(decoded._id).select('-password');
     
     if (user) {
-      req.user = user;
+      (req as AuthenticatedRequest).user = user;
     }
 
     next();
 
   } catch (error) {
-    // Don't block the request if token is invalid in optional auth
     console.log('Optional auth middleware error (non-blocking):', error);
     next();
   }

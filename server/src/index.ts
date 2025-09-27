@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import passport from 'passport';
@@ -26,11 +27,11 @@ dotenv.config();
 const app: Application = express();
 const server = createServer(app);
 const io = new SocketIOServer(server, {
-  cors: {
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
+  cors: {
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
 });
 
 
@@ -39,62 +40,66 @@ const io = new SocketIOServer(server, {
 export const connectedUsers = new Map<string, string>();
 
 io.on('connection', (socket) => {
-  // Handle user authentication
-  socket.on('authenticate', (userId: string) => {
-    connectedUsers.set(userId, socket.id);
-    socket.join(`user_${userId}`);
-    io.emit('user_online', userId);
-  });
+  // Handle user authentication
+  socket.on('authenticate', (userId: string) => {
+    connectedUsers.set(userId, socket.id);
+    socket.join(`user_${userId}`);
+    io.emit('user_online', userId);
+  });
 
-  socket.on('disconnect', () => {
-    for (const [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        connectedUsers.delete(userId);
-        io.emit('user_offline', userId);
-        break;
-      }
-    }
-  });
+  socket.on('disconnect', () => {
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        io.emit('user_offline', userId);
+        break;
+      }
+    }
+  });
 });
 
 // Helper to check if a user is online
 export function isUserOnline(userId: string): boolean {
-  return connectedUsers.has(userId);
+  return connectedUsers.has(userId);
 }
 
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json({ limit: '1mb' }));
+// Add the cookie-parser middleware here
+app.use(cookieParser());
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
 app.use(helmet());
 app.use(morgan('dev'));
 
 // Session
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI,
-    collectionName: 'sessions',
-  }),
-  cookie: {
-    secure: false, // Set to true if using HTTPS only
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24,
-  },
+  secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions',
+  }),
+  cookie: {
+    secure: true, // Always true for HTTPS
+    httpOnly: true,
+    sameSite: 'none',
+    domain: '.yuvshiksha.in',
+    maxAge: 1000 * 60 * 60 * 24,
+  },
 }));
 
 // Passport
@@ -103,25 +108,25 @@ app.use(passport.session());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    
-    // Set socket.io instance for notifications
-    import('./services/notificationService').then(({ setSocketIO }) => {
-      setSocketIO(io);
-    });
-    
-    // Initialize reminder service after DB connection
-    reminderService.init();
-  })
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .then(() => {
+    console.log('Connected to MongoDB');
+    
+    // Set socket.io instance for notifications
+    import('./services/notificationService').then(({ setSocketIO }) => {
+      setSocketIO(io);
+    });
+    
+    // Initialize reminder service after DB connection
+    reminderService.init();
+  })
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // MongoDB connection status logging
 mongoose.connection.on('connected', () => {
-  console.log('MongoDB connected successfully');
+  console.log('MongoDB connected successfully');
 });
 mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
+  console.error('MongoDB connection error:', err);
 });
 
 console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
@@ -130,10 +135,10 @@ console.log('CASHFREE_SECRET_KEY:', process.env.CASHFREE_SECRET_KEY ? '***' : 'M
 
 // Debug logging middleware - MOVED to a higher level
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Headers:', req.headers);
-  if (req.body) console.log('Body:', req.body);
-  next();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  if (req.body) console.log('Body:', req.body);
+  next();
 });
 
 // Routes
@@ -148,152 +153,191 @@ app.use('/api/email-otp', emailOtpRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
-  res.send('API is running...');
+  res.send('API is running...');
 });
 
 // Test DB Connection Route with TypeScript-safe check
 app.get('/test-db-connection', async (_req, res) => {
-  try {
-    await mongoose.connection.asPromise();
-    const db = mongoose.connection.db;
+  try {
+    await mongoose.connection.asPromise();
+    const db = mongoose.connection.db;
 
-    if (!db) {
-      return res.status(500).json({ message: 'Database is not ready' });
-    }
+    if (!db) {
+      return res.status(500).json({ message: 'Database is not ready' });
+    }
 
-    const testUser = await db.collection('users').findOne({});
-    console.log('Test DB Connection: Found a user:', testUser ? testUser._id : 'No user found');
-    res.json({ 
-      message: 'DB connection test complete', 
-      userFound: !!testUser, 
-      testUser: testUser ? testUser._id.toString() : null
-    });
-  } catch (err: any) {
-    console.error('Test DB Connection Error:', err);
-    res.status(500).json({ message: 'DB connection test failed', error: err.message });
-  }
+    const testUser = await db.collection('users').findOne({});
+    console.log('Test DB Connection: Found a user:', testUser ? testUser._id : 'No user found');
+    res.json({ 
+      message: 'DB connection test complete', 
+      userFound: !!testUser, 
+      testUser: testUser ? testUser._id.toString() : null
+    });
+  } catch (err: any) {
+    console.error('Test DB Connection Error:', err);
+    res.status(500).json({ message: 'DB connection test failed', error: err.message });
+  }
 });
 
 
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('User connected:', socket.id);
 
-  // Handle user authentication
-  socket.on('authenticate', (userId: string) => {
-    connectedUsers.set(userId, socket.id);
-    socket.join(`user_${userId}`);
-    console.log(`User ${userId} authenticated with socket ${socket.id}`);
-  });
+  // Handle user authentication
+  socket.on('authenticate', (userId: string) => {
+    connectedUsers.set(userId, socket.id);
+    socket.join(`user_${userId}`);
+    console.log(`🔐 User ${userId} authenticated with socket ${socket.id} and joined room user_${userId}`);
+    
+    // Notify other users that this user is online
+    socket.broadcast.emit('user_online', userId);
+  });
 
-  // Handle test ping
-  socket.on('test_ping', (data) => {
-    console.log('📡 Received test ping from client:', data);
-    socket.emit('test_pong', { message: 'Hello from server', timestamp: new Date() });
-  });
+  // Handle test ping
+  socket.on('test_ping', (data) => {
+    console.log('📡 Received test ping from client:', data);
+    socket.emit('test_pong', { message: 'Hello from server', timestamp: new Date() });
+  });
 
-  // Handle joining chat rooms
-  socket.on('join_room', (roomId: string) => {
-    socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room ${roomId}`);
-  });
+  // Handle joining chat rooms
+  socket.on('join_room', (roomId: string) => {
+    socket.join(roomId);
+    console.log(`🚪 Socket ${socket.id} joined chat room ${roomId}`);
+  });
 
-  // Handle sending messages
-  socket.on('send_message', async (data: {
-    sender: string;
-    recipient: string;
-    content: string;
-    messageType?: string;
-    booking?: string;
-  }) => {
-    try {
-      // Import Message model dynamically to avoid circular dependencies
-      const Message = (await import('./models/Message')).default;
-      
-      // Create new message
-      const newMessage = new Message({
-        sender: data.sender,
-        recipient: data.recipient,
-        content: data.content,
-        messageType: data.messageType || 'text',
-        booking: data.booking || null
-      });
+  // Handle sending messages
+  socket.on('send_message', async (data: {
+    sender: string;
+    recipient: string;
+    content: string;
+    messageType?: string;
+    booking?: string;
+  }) => {
+    try {
+      // Import Message model dynamically to avoid circular dependencies
+      const Message = (await import('./models/Message')).default;
+      
+      // Check if this is a new conversation by looking for existing messages between these users
+      const existingMessages = await Message.findOne({
+        $or: [
+          { sender: data.sender, recipient: data.recipient },
+          { sender: data.recipient, recipient: data.sender }
+        ]
+      });
+      
+      const isNewConversation = !existingMessages;
+      
+      // Create new message
+      const newMessage = new Message({
+        sender: data.sender,
+        recipient: data.recipient,
+        content: data.content,
+        messageType: data.messageType || 'text',
+        booking: data.booking || null
+      });
 
-      await newMessage.save();
-      
-      // Populate sender and recipient info
-      await newMessage.populate([
-        { path: 'sender', select: 'firstName lastName avatar email' },
-        { path: 'recipient', select: 'firstName lastName avatar email' }
-      ]);
+      await newMessage.save();
+      
+      // Populate sender and recipient info
+      await newMessage.populate([
+        { path: 'sender', select: 'firstName lastName avatar email' },
+        { path: 'recipient', select: 'firstName lastName avatar email' }
+      ]);
 
-      // Create room ID (consistent for both users)
-      const roomId = [data.sender, data.recipient].sort().join('_');
-      
-      // Emit to both users
-      io.to(roomId).emit('new_message', newMessage);
-      
-  // Also emit to individual user rooms in case they're not in the chat room
-      io.to(`user_${data.recipient}`).emit('message_notification', {
-        messageId: newMessage._id,
-        sender: newMessage.sender,
-        content: data.content,
-        timestamp: newMessage.createdAt
-      });
+      // Create room ID (consistent for both users)
+      const roomId = [data.sender, data.recipient].sort().join('_');
+      
+      console.log(`📨 Broadcasting message to room: ${roomId} and user_${data.recipient}${isNewConversation ? ' (NEW CONVERSATION)' : ''}`);
+      
+      // Emit to both users in the chat room
+      io.to(roomId).emit('new_message', newMessage);
+      
+      // If this is a new conversation, emit special event to notify about new conversation
+      if (isNewConversation) {
+        io.to(`user_${data.recipient}`).emit('new_conversation', {
+          participant: newMessage.sender,
+          lastMessage: {
+            content: data.content,
+            createdAt: newMessage.createdAt
+          },
+          unreadCount: 1
+        });
+      }
+      
+      // Also emit to individual user rooms in case they're not in the chat room
+      io.to(`user_${data.recipient}`).emit('message_notification', {
+        messageId: newMessage._id,
+        sender: newMessage.sender,
+        content: data.content,
+        timestamp: newMessage.createdAt
+      });
+      
+      // Send confirmation back to the sender
+      socket.emit('message_sent', {
+        _id: newMessage._id,
+        content: newMessage.content,
+        createdAt: newMessage.createdAt,
+        sender: newMessage.sender,
+        recipient: newMessage.recipient
+      });
 
-      // Create a message notification in the database
-      const { notificationService } = await import('./services/notificationService');
-      const populatedSender = newMessage.sender as any; // Type assertion for populated field
-      await notificationService.createNotification({
-        recipient: new (await import('mongoose')).Types.ObjectId(data.recipient),
-        sender: new (await import('mongoose')).Types.ObjectId(data.sender),
-        title: 'New Message',
-        message: `You have a new message from ${populatedSender.firstName} ${populatedSender.lastName}`,
-        type: 'message',
-        category: 'message',
-        priority: 'low',
-        actionUrl: `/messages/${data.sender}`,
-        data: {
-          messageId: newMessage._id,
-          senderId: data.sender
-        }
-      });
+      // Create a message notification in the database
+      const { notificationService } = await import('./services/notificationService');
+      const populatedSender = newMessage.sender as any; // Type assertion for populated field
+      await notificationService.createNotification({
+        recipient: new (await import('mongoose')).Types.ObjectId(data.recipient),
+        sender: new (await import('mongoose')).Types.ObjectId(data.sender),
+        title: 'New Message',
+        message: `You have a new message from ${populatedSender.firstName} ${populatedSender.lastName}`,
+        type: 'message',
+        category: 'message',
+        priority: 'low',
+        actionUrl: `/messages/${data.sender}`,
+        data: {
+          messageId: newMessage._id,
+          senderId: data.sender
+        }
+      });
 
-    } catch (error) {
-      console.error('Error sending message:', error);
-      socket.emit('message_error', { error: 'Failed to send message' });
-    }
-  });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  });
 
-  // Handle message read status
-  socket.on('mark_message_read', async (messageId: string) => {
-    try {
-      const Message = (await import('./models/Message')).default;
-      await Message.findByIdAndUpdate(messageId, {
-        isRead: true,
-        readAt: new Date()
-      });
-      
-      socket.broadcast.emit('message_read', { messageId });
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
-  });
+  // Handle message read status
+  socket.on('mark_message_read', async (messageId: string) => {
+    try {
+      const Message = (await import('./models/Message')).default;
+      await Message.findByIdAndUpdate(messageId, {
+        isRead: true,
+        readAt: new Date()
+      });
+      
+      socket.broadcast.emit('message_read', { messageId });
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  });
 
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    // Remove user from connected users
-    for (const [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        connectedUsers.delete(userId);
-        break;
-      }
-    }
-    console.log('User disconnected:', socket.id);
-  });
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    // Remove user from connected users and notify others
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        console.log(`🔌 User ${userId} disconnected (socket: ${socket.id})`);
+        
+        // Notify other users that this user is offline
+        socket.broadcast.emit('user_offline', userId);
+        break;
+      }
+    }
+  });
 });
 
 // Start Server
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -1,4 +1,5 @@
 import API_CONFIG from '../config/api';
+import Cookies from 'js-cookie';
 
 // Function to decode JWT token and extract user ID
 export const decodeJWT = (token) => {
@@ -25,7 +26,7 @@ export const getUserId = async () => {
   }
 
   // Try to decode from JWT token
-  const token = localStorage.getItem('token');
+  const token = Cookies.get('token');
   if (token) {
     const decoded = decodeJWT(token);
     console.log('🔍 Decoded JWT:', decoded);
@@ -48,7 +49,8 @@ export const getUserId = async () => {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      credentials: 'include'
     });
     
     if (response.ok) {

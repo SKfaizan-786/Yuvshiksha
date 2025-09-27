@@ -2,7 +2,6 @@
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, Loader2, MessageCircle } from "lucide-react";
 import API_CONFIG from '../../config/api';
-
 // Helper function to get teacher avatar, availability days, etc.
 const getTeacherAvatar = (teacher) => {
   if (teacher.profilePicture) {
@@ -29,11 +28,9 @@ export default function EnhancedTeacherPlatform() {
   useEffect(() => {
     const fetchFavourites = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
         const API_BASE_URL = API_CONFIG.BASE_URL;
         const res = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include'
         });
         if (res.ok) {
           const data = await res.json();
@@ -107,7 +104,8 @@ export default function EnhancedTeacherPlatform() {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -293,18 +291,16 @@ export default function EnhancedTeacherPlatform() {
   };
 
   const toggleFavorite = async (teacherId) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
     const API_BASE_URL = API_CONFIG.BASE_URL;
     const isFav = favorites.includes(teacherId);
     try {
       const res = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
         method: isFav ? 'DELETE' : 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ teacherId })
+        body: JSON.stringify({ teacherId }),
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();
@@ -654,8 +650,7 @@ export default function EnhancedTeacherPlatform() {
                             ))}
                           </div>
                           <div className="flex items-center space-x-2 text-gray-600 mt-2">
-                            <span className="text-xs font-semibold">Phone:</span>
-                            <span className="text-xs">{teacher.phone || 'N/A'}</span>
+                            {/* Phone removed as per request */}
                           </div>
                           <div className="flex items-center space-x-2 text-gray-600 mt-1">
                             <span className="text-xs font-semibold">Email:</span>

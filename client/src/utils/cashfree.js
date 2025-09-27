@@ -1,9 +1,11 @@
 ﻿// src/utils/cashfree.js
 
+import Cookies from 'js-cookie';
+
 export async function launchCashfreePayment({ amount, customerId, customerName, customerEmail, customerPhone, purpose, onSuccess, onFailure }) {
   try {
     // 1. First create the Cashfree order
-    const token = localStorage.getItem('token');
+    const token = Cookies.get('token');
     const res = await fetch('/api/payments/cashfree-order', {
       method: 'POST',
       headers: {
@@ -18,6 +20,7 @@ export async function launchCashfreePayment({ amount, customerId, customerName, 
         customerPhone, 
         purpose 
       }),
+      credentials: 'include'
     });
 
     const data = await res.json();

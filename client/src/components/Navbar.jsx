@@ -27,7 +27,12 @@ export default function Navbar() {
   const userRole = currentUser?.role;
   const isProfileComplete = currentUser?.profileComplete;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      // Ignore network errors, still clear local data
+    }
     localStorage.removeItem('currentUser');
     localStorage.removeItem('lastLoginTime');
     setCurrentUser(null);

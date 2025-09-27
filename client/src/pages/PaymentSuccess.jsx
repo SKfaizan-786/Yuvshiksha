@@ -1,7 +1,6 @@
-﻿
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
-import { bookingAPI } from '../services/bookingAPI';
+import { listingAPI } from '../services/listingAPI';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -12,94 +11,85 @@ export default function PaymentSuccess() {
   const hasProcessed = useRef(false);
 
   const orderId = searchParams.get('order_id');
-  // Get type and data from location.state or localStorage
   const type = location.state?.type || localStorage.getItem('pendingPaymentType');
-  const bookingData = location.state?.bookingData || JSON.parse(localStorage.getItem('pendingBookingData') || 'null');
   const listingData = location.state?.listingData || JSON.parse(localStorage.getItem('pendingListingData') || 'null');
 
   useEffect(() => {
-    if (hasProcessed.current || !orderId) return;
+    if (!orderId) {
+      setError("Missing payment order ID.");
+      setStatus('error');
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    if (hasProcessed.current || !orderId || status === 'error') return;
     hasProcessed.current = true;
 
     const verifyAndProcess = async () => {
       try {
-        // 1. Verify payment
+        // Step 1: Verify payment with the backend
         const verificationResponse = await fetch('/api/payments/verify', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId })
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ orderId }),
+          credentials: 'include',
         });
+
+        if (!verificationResponse.ok) {
+          const errorData = await verificationResponse.json();
+          throw new Error(errorData.message || 'Payment verification failed');
+        }
+
         const verificationData = await verificationResponse.json();
         if (!verificationData.success) {
           throw new Error(verificationData.message || 'Payment verification failed');
         }
 
-        if (type === 'listing') {
-          // Mark teacher as listed (update backend)
-          if (listingData) {
-            try {
-              const token = localStorage.getItem('token');
-              const res = await fetch('/api/profile/teacher/listing', {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(token ? { 'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}` } : {})
-                },
-                body: JSON.stringify({ isListed: true })
-              });
-              const result = await res.json();
-              if (!res.ok || !result.success) {
-                throw new Error(result.message || 'Failed to update listing status');
-              }
-              // Update localStorage user for instant dashboard update
-              const user = JSON.parse(localStorage.getItem('currentUser'));
-              if (user) {
-                user.teacherProfileData = user.teacherProfileData || {};
-                user.teacherProfileData.isListed = true;
-                user.teacherProfileData.listedAt = result.listedAt || new Date().toISOString();
-                localStorage.setItem('currentUser', JSON.stringify(user));
-              }
-              localStorage.removeItem('pendingListingData');
-              localStorage.removeItem('pendingPaymentType');
-              setStatus('success');
-              setTimeout(() => navigate('/teacher/dashboard'), 2000);
-            } catch (err) {
-              setError(err.message || 'Failed to update listing status');
-              setStatus('error');
-            }
-          } else {
-            setError('Listing data missing.');
-            setStatus('error');
-          }
-        } else {
-          // Default: booking flow
-          if (!bookingData) {
-            setError('Booking data missing.');
-            setStatus('error');
-            return;
-          }
-          await bookingAPI.createBooking(bookingData);
-          localStorage.removeItem('pendingBookingData');
-          localStorage.removeItem('pendingPaymentType');
-          setStatus('success');
-          setTimeout(() => navigate('/student/dashboard'), 2000);
+        // Step 2: Update teacher's listing status
+        if (!listingData) {
+          setError('Listing data missing.');
+          setStatus('error');
+          return;
         }
+
+        const result = await listingAPI.updateListingStatus(true);
+        
+        // Update localStorage
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (user) {
+          user.teacherProfileData = user.teacherProfileData || {};
+          user.teacherProfileData.isListed = true;
+          user.teacherProfileData.listedAt = result.listedAt || new Date().toISOString();
+          localStorage.setItem('currentUser', JSON.stringify(user));
+        }
+
+        // Clean up localStorage
+        localStorage.removeItem('pendingListingData');
+        localStorage.removeItem('pendingPaymentType');
+        localStorage.removeItem('pendingOrderId');
+        localStorage.removeItem('pendingPaymentSessionId');
+
+        setStatus('success');
+        setTimeout(() => navigate('/teacher/dashboard'), 2000);
+
       } catch (err) {
+        console.error('Processing error:', err);
         setError(err.message || 'Payment processing failed');
         setStatus('error');
       }
     };
+
     verifyAndProcess();
-  }, [orderId, type, bookingData, listingData, navigate]);
+  }, [orderId, listingData, navigate, status]); // Removed unused dependencies
 
   if (status === 'verifying') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-green-300">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4 border-green-600"></div>
-          <p className="text-gray-700">
-            {type === 'listing' ? 'Verifying payment and updating listing...' : 'Verifying payment and creating booking...'}
-          </p>
+          <p className="text-gray-700">Verifying payment and updating listing...</p>
         </div>
       </div>
     );
@@ -118,10 +108,10 @@ export default function PaymentSuccess() {
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">Payment Error</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
-              onClick={() => navigate(type === 'listing' ? '/teacher/dashboard' : '/')}
+              onClick={() => navigate('/teacher/dashboard')}
               className="w-full text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 bg-red-400"
             >
-              Back to {type === 'listing' ? 'Dashboard' : 'Home'}
+              Back to Dashboard
             </button>
           </div>
         </div>
@@ -139,12 +129,8 @@ export default function PaymentSuccess() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              {type === 'listing' ? 'Listing Payment Successful!' : 'Payment & Booking Successful!'}
-            </h2>
-            <p className="text-gray-600 mb-6">
-              {type === 'listing' ? 'You are now listed. Redirecting to dashboard...' : 'Your booking has been confirmed. Redirecting to dashboard...'}
-            </p>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Listing Payment Successful!</h2>
+            <p className="text-gray-600 mb-6">You are now listed. Redirecting to dashboard...</p>
           </div>
         </div>
       </div>

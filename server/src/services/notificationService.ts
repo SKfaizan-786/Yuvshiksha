@@ -32,12 +32,12 @@ class NotificationService {
   async createNotification(notificationData: NotificationData): Promise<INotification> {
     try {
       const notification = new Notification({
-        recipient: typeof notificationData.recipient === 'string' 
-          ? new Types.ObjectId(notificationData.recipient) 
+        recipient: typeof notificationData.recipient === 'string'
+          ? new Types.ObjectId(notificationData.recipient)
           : notificationData.recipient,
-        sender: notificationData.sender 
-          ? (typeof notificationData.sender === 'string' 
-              ? new Types.ObjectId(notificationData.sender) 
+        sender: notificationData.sender
+          ? (typeof notificationData.sender === 'string'
+              ? new Types.ObjectId(notificationData.sender)
               : notificationData.sender)
           : undefined,
         title: notificationData.title,
@@ -93,7 +93,7 @@ class NotificationService {
 
       const emailTemplate = this.getEmailTemplate(notification);
       await sendEmail(user.email, emailTemplate.subject, emailTemplate.html);
-      
+
       // Mark email as sent
       notification.emailSent = true;
       await notification.save();
@@ -106,8 +106,8 @@ class NotificationService {
 
   // Get email template based on notification type
   private getEmailTemplate(notification: INotification): { subject: string; html: string } {
-    const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    
+    const baseUrl = 'https://yuvsiksha.in'; // <-- live domain
+
     const templates = {
       booking_pending: {
         subject: '📚 New Class Booking Request - Action Required',
@@ -124,8 +124,8 @@ class NotificationService {
               <p><strong>Amount:</strong> ₹${notification.data?.amount || 'N/A'}</p>
             </div>
             <p>Please review and approve or reject this booking request.</p>
-            ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Booking</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <a href="${baseUrl}/teacher/bookings" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Booking</a>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -140,11 +140,10 @@ class NotificationService {
               <p><strong>Subject:</strong> ${notification.data?.subject || 'N/A'}</p>
               <p><strong>Date:</strong> ${notification.data?.classDate ? new Date(notification.data.classDate).toLocaleDateString() : 'N/A'}</p>
               <p><strong>Time:</strong> ${notification.data?.classTime || 'N/A'}</p>
-              ${notification.data?.meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${notification.data.meetingLink}">${notification.data.meetingLink}</a></p>` : ''}
             </div>
             <p>Get ready for your learning session!</p>
-            ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Details</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <a href="${baseUrl}/student/dashboard" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -162,8 +161,8 @@ class NotificationService {
             </div>
             <p>Don't worry! Your payment has been refunded and will be processed within 3-5 business days.</p>
             <p>You can explore other teachers and book again anytime.</p>
-            ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Find Other Teachers</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <a href="${baseUrl}/student/dashboard" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -183,7 +182,7 @@ class NotificationService {
             </div>
             <p>The amount will be transferred to your account as per the payment schedule.</p>
             ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Earnings</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -201,7 +200,7 @@ class NotificationService {
             </div>
             <p>If you have any questions about this refund, please contact our support team.</p>
             ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Transaction</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -215,11 +214,10 @@ class NotificationService {
               <p><strong>Subject:</strong> ${notification.data?.subject || 'N/A'}</p>
               <p><strong>Date:</strong> ${notification.data?.classDate ? new Date(notification.data.classDate).toLocaleDateString() : 'N/A'}</p>
               <p><strong>Time:</strong> ${notification.data?.classTime || 'N/A'}</p>
-              ${notification.data?.meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${notification.data.meetingLink}">${notification.data.meetingLink}</a></p>` : ''}
             </div>
             <p>Make sure you're ready and have all necessary materials!</p>
             ${notification.actionUrl ? `<a href="${baseUrl}${notification.actionUrl}" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Join Class</a>` : ''}
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       },
@@ -229,7 +227,7 @@ class NotificationService {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>${notification.title}</h2>
             <p>${notification.message}</p>
-            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+            <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
           </div>
         `
       }
@@ -241,7 +239,7 @@ class NotificationService {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>${notification.title}</h2>
           <p>${notification.message}</p>
-          <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Studity Team</p>
+          <p style="margin-top: 30px; color: #64748b; font-size: 14px;">Best regards,<br>Yuvsiksha Team</p>
         </div>
       `
     };
@@ -392,7 +390,7 @@ class NotificationService {
   async sendClassReminder(booking: IBooking, reminderType: '24h' | '1h' = '1h'): Promise<void> {
     try {
       const timeText = reminderType === '24h' ? '24 hours' : '1 hour';
-      
+
       // Remind both student and teacher
       const notifications = [
         {
@@ -441,11 +439,11 @@ class NotificationService {
       const skip = (page - 1) * limit;
 
       const query: any = { recipient: userId };
-      
+
       if (unreadOnly) {
         query.isRead = false;
       }
-      
+
       if (category) {
         query.category = category;
       }
@@ -510,7 +508,7 @@ class NotificationService {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-      
+
       const result = await Notification.deleteMany({
         isRead: true,
         createdAt: { $lt: cutoffDate }

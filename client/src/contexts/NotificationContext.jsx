@@ -2,6 +2,7 @@
 import { useSocket } from './SocketContext';
 import API_CONFIG from '../config/api';
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 /**
  * @typedef {Object} Notification
@@ -59,23 +60,16 @@ export const NotificationProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
   const { socket, isConnected } = useSocket();
 
-  // Get token for API requests
-  const getToken = () => localStorage.getItem('token');
-
-  // API request helper
+  // FIX: This function has been updated to remove manual token handling
   const apiRequest = async (url, options = {}) => {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
+    // The browser will automatically send the HttpOnly cookie with `withCredentials: true`
     return axios({
       url: `${API_CONFIG.BASE_URL}${url}`,
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         ...options.headers
       },
+      withCredentials: true, // This is the fix. It tells the browser to send the cookie.
       ...options
     });
   };
@@ -87,7 +81,7 @@ export const NotificationProvider = ({ children }) => {
       setError(null);
 
       const response = await apiRequest('/api/notifications');
-      
+
       setNotifications(response.data.notifications || []);
       setUnreadCount(response.data.unreadCount || 0);
     } catch (err) {
@@ -106,17 +100,15 @@ export const NotificationProvider = ({ children }) => {
         data: { notificationIds }
       });
 
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => 
+      setNotifications(prev =>
+        prev.map(notification =>
           notificationIds.includes(notification._id)
             ? { ...notification, isRead: true }
             : notification
         )
       );
 
-      // Update unread count
-      const markedUnreadCount = notifications.filter(n => 
+      const markedUnreadCount = notifications.filter(n =>
         notificationIds.includes(n._id) && !n.isRead
       ).length;
       setUnreadCount(prev => Math.max(0, prev - markedUnreadCount));
@@ -133,8 +125,7 @@ export const NotificationProvider = ({ children }) => {
         method: 'PATCH'
       });
 
-      // Update local state
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(notification => ({ ...notification, isRead: true }))
       );
       setUnreadCount(0);
@@ -151,10 +142,9 @@ export const NotificationProvider = ({ children }) => {
         method: 'DELETE'
       });
 
-      // Update local state
       const deletedNotification = notifications.find(n => n._id === notificationId);
       setNotifications(prev => prev.filter(n => n._id !== notificationId));
-      
+
       if (deletedNotification && !deletedNotification.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
@@ -184,7 +174,6 @@ export const NotificationProvider = ({ children }) => {
 
     setToasts(prev => [...prev, toast]);
 
-    // Auto remove toast after 5 seconds
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
@@ -199,7 +188,6 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    // Listen for new notifications
     const handleNewNotification = (notification) => {
       console.log('New notification received:', notification);
       addNotification({
@@ -216,13 +204,11 @@ export const NotificationProvider = ({ children }) => {
         createdAt: notification.createdAt
       });
 
-      // Show toast for important notifications
       if (notification.priority === 'high' || notification.priority === 'urgent') {
         showToast(notification.title, 'info');
       }
     };
 
-    // Listen for message notifications
     const handleMessageNotification = (data) => {
       console.log('New message notification:', data);
       showToast(`New message from ${data.sender.firstName}`, 'info');
@@ -238,30 +224,29 @@ export const NotificationProvider = ({ children }) => {
   }, [socket, isConnected, addNotification, showToast]);
 
 
-  // Fetch notifications on mount and when token changes (listen to localStorage)
+  // Fetch notifications on mount and when storage changes
   useEffect(() => {
-    const fetchOnTokenChange = () => {
-      const token = getToken();
-      if (token) {
+    const fetchOnStorageChange = () => {
+      // FIX: This logic is a bit flawed. It should check for user existence, not just a token.
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (user) {
         fetchNotifications();
       } else {
         setNotifications([]);
         setUnreadCount(0);
       }
     };
-    fetchOnTokenChange();
-    window.addEventListener('storage', fetchOnTokenChange);
+    fetchOnStorageChange();
+    window.addEventListener('storage', fetchOnStorageChange);
     return () => {
-      window.removeEventListener('storage', fetchOnTokenChange);
+      window.removeEventListener('storage', fetchOnStorageChange);
     };
   }, [fetchNotifications]);
 
   // Periodically fetch unread count
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-
     const fetchUnreadCount = async () => {
+      // We don't need to check the token here, as the ProtectedRoute handles this.
       try {
         const response = await apiRequest('/api/notifications/unread-count');
         setUnreadCount(response.data.unreadCount || 0);
@@ -270,7 +255,6 @@ export const NotificationProvider = ({ children }) => {
       }
     };
 
-    // Fetch unread count every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);

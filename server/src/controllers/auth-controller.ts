@@ -4,6 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 import User from '../models/User';
 import { sendEmail } from '../utils/sendEmail';
+import { IUser } from '../models/User';
 
 // Initialize Google OAuth client
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -51,6 +52,15 @@ export const register = async (req: Request, res: Response) => {
 
     const token = generateToken({ _id: user._id });
 
+    // Set the JWT as an httpOnly cookie
+    res.cookie('token', token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  domain: '.yuvshiksha.in',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.status(201).json({
       message: 'User registered successfully',
       user: {
@@ -61,12 +71,10 @@ export const register = async (req: Request, res: Response) => {
         role: user.role,
         profileComplete: user.profileComplete
       },
-      token
     });
   } catch (err) {
     console.error('Register error:', err);
 
-    // More detailed error response
     const errorResponse: any = {
       message: 'Server error during registration'
     };
@@ -94,6 +102,14 @@ export const login = async (req: Request, res: Response) => {
 
     const token = generateToken({ _id: user._id });
 
+    // Set the JWT as an httpOnly cookie
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.status(200).json({
       user: {
         _id: user._id,
@@ -103,7 +119,6 @@ export const login = async (req: Request, res: Response) => {
         role: user.role,
         profileComplete: user.profileComplete,
       },
-      token,
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -135,8 +150,15 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     const token = generateToken({ _id: user._id });
 
+    // Set the JWT as an httpOnly cookie
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.status(200).json({
-      token,
       user: {
         _id: user._id,
         email: user.email,
@@ -160,23 +182,18 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      // Return success even if user not found to prevent email enumeration
       return res.status(200).json({ message: 'If an account exists, a password reset email has been sent' });
     }
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-    // Set token and expiry (1 hour from now)
     user.resetPasswordToken = resetTokenHash;
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    // Create reset URL - using your frontend URL
-    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.BASE_URL}/reset-password/${resetToken}`;
 
-    // Email content
     const subject = 'Yuvshiksha Password Reset';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -185,7 +202,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
         <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
         <a href="${resetUrl}" 
            style="display: inline-block; padding: 10px 20px; background-color: #6d28d9; color: white; text-decoration: none; border-radius: 8px; margin: 15px 0;">
-           Reset Password
+            Reset Password
         </a>
         <p>If you didn't request this, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
@@ -194,7 +211,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
       </div>
     `;
 
-    // Send email using Resend
     await sendEmail(email, subject, html);
 
     res.status(200).json({ message: 'Password reset email sent' });
@@ -202,8 +218,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     console.error('Forgot password error:', err);
     const errorMessage =
       process.env.NODE_ENV === 'development' && err instanceof Error
-        ? err.message
-        : undefined;
+      ? err.message
+      : undefined;
     res.status(500).json({
       message: 'Failed to process password reset request',
       error: errorMessage
@@ -216,7 +232,6 @@ export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
 
-    // Hash the token to compare with DB
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await User.findOne({
@@ -240,10 +255,23 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+
+// Logout: clear the auth cookie
+export const logout = (req: Request, res: Response) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    domain: process.env.COOKIE_DOMAIN || undefined // set if needed
+  });
+  res.status(200).json({ message: 'Logged out successfully' });
+};
+
 export default {
   register,
   login,
   googleLogin,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  logout
 };

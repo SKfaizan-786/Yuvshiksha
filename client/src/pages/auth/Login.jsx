@@ -3,6 +3,8 @@ import { jwtDecode } from "jwt-decode";
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+// We no longer need to import Cookies, as we will not be manually setting them.
+// import Cookies from 'js-cookie';
 import {
   Eye,
   EyeOff,
@@ -22,7 +24,6 @@ import {
 } from "lucide-react";
 
 // --- IMPORT THE STORAGE UTILITIES ---
-// Corrected path: storage.js is in client/src/utils/
 import { setToLocalStorage, getFromLocalStorage } from "../../utils/storage";
 
 // Define constants for roles to avoid magic strings
@@ -48,7 +49,6 @@ const Login = () => {
     loginAttempts: 0,
     isLocked: false,
     lockoutTime: 0,
-    showBiometric: false,
     passwordStrength: 0,
     isOnline: true,
     lastLoginTime: null,
@@ -87,13 +87,9 @@ const Login = () => {
 
   // Initial setup effects
   useEffect(() => {
-    const biometricAvailable =
-      "webauthn" in window || navigator.userAgent.includes("Mobile");
     const lastLogin = getFromLocalStorage("lastLoginTime", null);
-
     setUiState((u) => ({
       ...u,
-      showBiometric: biometricAvailable,
       lastLoginTime: lastLogin ? new Date(lastLogin) : null,
     }));
   }, []);
@@ -102,10 +98,8 @@ const Login = () => {
   useEffect(() => {
     const handleOnline = () => setUiState((u) => ({ ...u, isOnline: true }));
     const handleOffline = () => setUiState((u) => ({ ...u, isOnline: false }));
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
@@ -116,7 +110,6 @@ const Login = () => {
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (uiState.focusedField === "password") {
-        // Only check for password field
         const capsLock = e.getModifierState && e.getModifierState("CapsLock");
         if (typeof capsLock === "boolean") {
           setUiState((u) => ({ ...u, showCapsLockWarning: capsLock }));
@@ -127,7 +120,7 @@ const Login = () => {
     };
     document.addEventListener("keydown", handleKeyPress);
     return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [uiState.focusedField]); // Depend on focusedField
+  }, [uiState.focusedField]);
 
   // Account lockout timer
   useEffect(() => {
@@ -197,35 +190,28 @@ const Login = () => {
       setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
 
       try {
-  const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/auth/login', {
+        const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ email: formData.email, password: formData.password })
+          body: JSON.stringify({ email: formData.email, password: formData.password }),
+          credentials: 'include'
         });
 
         const data = await response.json();
 
         if (response.ok) {
-          // Save token and user data
-          setToLocalStorage('token', data.token);
+          // Store non-sensitive user data in local storage.
+          // The token is handled automatically by the HttpOnly cookie.
           setToLocalStorage('currentUser', data.user);
           setToLocalStorage('lastLoginTime', new Date());
 
           // Navigate based on profile completion
           if (data.user.role === 'student') {
-            if (data.user.profileComplete) {
-              navigate('/student/dashboard');
-            } else {
-              navigate('/student/profile');
-            }
+            navigate(data.user.profileComplete ? '/student/dashboard' : '/student/profile');
           } else if (data.user.role === 'teacher') {
-            if (data.user.profileComplete) {
-              navigate('/teacher/dashboard');
-            } else {
-              navigate('/teacher/profile');
-            }
+            navigate(data.user.profileComplete ? '/teacher/dashboard' : '/teacher/profile-setup');
           } else {
             navigate('/');
           }
@@ -266,11 +252,11 @@ const Login = () => {
     [formData, isFormValid, navigate, uiState.isLocked, uiState.isSubmitting]
   );
 
-  const handleSocialLogin = useCallback(
-    async (type, credentialResponse) => {
+  const handleGoogleLogin = useCallback(
+    async (credentialResponse) => {
       if (
-        type === "google" &&
-        (!credentialResponse || !credentialResponse.credential)
+        !credentialResponse ||
+        !credentialResponse.credential
       ) {
         setUiState((u) => ({
           ...u,
@@ -283,113 +269,49 @@ const Login = () => {
       setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
 
       try {
-        if (type === "google") {
-          // Send the Google credential to your backend
-          const response = await axios.post(
-            import.meta.env.VITE_BACKEND_URL + '/api/auth/google',
-            {
-              credential: credentialResponse.credential,
-            }
-          );
+        const response = await axios.post(
+          import.meta.env.VITE_BACKEND_URL + '/api/auth/google',
+          {
+            credential: credentialResponse.credential,
+          },
+          { withCredentials: true }
+        );
 
-          const { token, user } = response.data;
+        const { user } = response.data;
 
-          // Store user data and token
-          setToLocalStorage("currentUser", user);
-          setToLocalStorage("token", token);
-          setToLocalStorage("lastLoginTime", new Date());
+        // CRITICAL FIX: The backend will set the HttpOnly cookie. We do not
+        // manually save the token to localStorage, as this is insecure and
+        // creates the inconsistencies you were seeing.
+        // The token variable is not even needed.
 
-          // Redirect based on role and profile completion
-          const redirectPath = user.profileComplete
-            ? `/${user.role}/dashboard`
-            : `/${user.role}/profile-setup`;
+        // Store non-sensitive user data in localStorage.
+        setToLocalStorage("currentUser", user);
+        setToLocalStorage("lastLoginTime", new Date());
 
-          navigate(redirectPath);
-        } else if (type === "biometric") {
-          // Keep existing biometric login logic
-          await new Promise((r) => setTimeout(r, 1500));
+        // Redirect based on role and profile completion
+        const redirectPath = user.profileComplete
+          ? `/${user.role}/dashboard`
+          : `/${user.role}/profile-setup`;
 
-          const mockUserData = {
-            email: "biometric@example.com",
-            role: USER_ROLES.STUDENT,
-            profileComplete: false,
-            firstName: "Biometric",
-            lastName: "User",
-            id: "biometric-user-" + Math.random().toString(36).substr(2, 9),
-          };
-
-          setToLocalStorage("currentUser", mockUserData);
-          setToLocalStorage("lastLoginTime", new Date());
-
-          navigate(`/${mockUserData.role}/profile-setup`);
-        }
+        navigate(redirectPath);
       } catch (error) {
-        console.error(`${type} login error:`, error);
+        console.error(`Google login error:`, error);
         setUiState((u) => ({
           ...u,
           isSubmitting: false,
-          errorMessage: error.response?.data?.message || `${type} login failed`,
+          errorMessage: error.response?.data?.message || "Google login failed",
         }));
       }
     },
     [navigate]
   );
+  
+  // This function is no longer needed since GoogleLogin has a render prop
+  // const handleGoogleLogin = (credentialResponse) => { /* ... */ };
 
-  const handleGoogleLogin = async (credentialResponse) => {
-    if (!credentialResponse || !credentialResponse.credential) {
-      setUiState((u) => ({
-        ...u,
-        isSubmitting: false,
-        errorMessage: "Invalid Google login response",
-      }));
-      return;
-    }
 
-    try {
-      setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
-
-      const response = await axios.post(
-        import.meta.env.VITE_BACKEND_URL + '/api/auth/google',
-        {
-          credential: credentialResponse.credential,
-        }
-      );
-
-      const { token, user } = response.data;
-
-      // Store user data and token
-      setToLocalStorage("currentUser", user);
-      setToLocalStorage("token", token);
-      setToLocalStorage("lastLoginTime", new Date());
-
-      // Redirect based on role and profile completion (match normal login)
-      if (user.role === 'student') {
-        if (user.profileComplete) {
-          navigate('/student/dashboard');
-        } else {
-          navigate('/student/profile');
-        }
-      } else if (user.role === 'teacher') {
-        if (user.profileComplete) {
-          navigate('/teacher/dashboard');
-        } else {
-          navigate('/teacher/profile');
-        }
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      setUiState((u) => ({
-        ...u,
-        isSubmitting: false,
-        errorMessage: error.response?.data?.message || "Google login failed",
-      }));
-    }
-  };
-
-  // Changed to directly navigate to a dedicated Forgot Password route
   const handleForgotPasswordClick = useCallback(() => {
-    navigate("/forgot-password"); // Assuming you have a /forgot-password route
+    navigate("/forgot-password");
   }, [navigate]);
 
   const renderInput = useCallback(
@@ -686,19 +608,6 @@ const Login = () => {
                 )}
               />
             </div>
-
-            {uiState.showBiometric && (
-              <button
-                onClick={() => handleSocialLogin("biometric")}
-                disabled={
-                  uiState.isSubmitting || uiState.isLocked || !uiState.isOnline
-                }
-                className="w-full py-3 px-4 border border-emerald-300 rounded-xl font-medium flex justify-center items-center space-x-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:border-emerald-400 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Smartphone className="w-5 h-5 text-emerald-600" />
-                <span className="text-emerald-700">Use Biometric Login</span>
-              </button>
-            )}
           </div>
 
           <div className="relative">

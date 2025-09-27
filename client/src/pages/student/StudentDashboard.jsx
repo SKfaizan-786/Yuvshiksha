@@ -28,18 +28,14 @@ import {
   GraduationCap,
   AlertTriangle,
 } from 'lucide-react';
+import Cookies from 'js-cookie';
 
-// --- Context for Current User ---
-// This prevents prop drilling and ensures user data is consistently available.
 const UserContext = createContext(null);
 
-// --- Helper Functions for Local Storage Consistency ---
-// Importing directly from the utility file
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useMessageNotifications } from '../../hooks/useMessageNotifications';
 import API_CONFIG from '../../config/api';
-// --- End Helper Functions ---
 
 // --- Sub-Components (Unchanged) ---
 const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed = false }) => {
@@ -71,7 +67,6 @@ const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed
 };
 
 const MainHeader = ({ currentUser, unreadMessageCount }) => {
-  // Use notification context
   const { unreadCount } = useNotifications();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
@@ -83,10 +78,15 @@ const MainHeader = ({ currentUser, unreadMessageCount }) => {
     return 'Evening';
   };
 
-  const { clearNotifications } = useNotifications();
-  const handleLogout = () => {
-    setToLocalStorage('currentUser', null); // Clear current user on logout
-    clearNotifications();
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      // Ignore network errors, still clear local data
+    }
+    setToLocalStorage('currentUser', null);
+    // You should also clear notifications context state on logout
+    // clearNotifications();
     navigate('/login');
   };
 
@@ -119,7 +119,6 @@ const MainHeader = ({ currentUser, unreadMessageCount }) => {
             </span>
           )}
         </button>
-        {/* Messages icon with badge */}
         <Link
           to="/student/messages"
           className="relative p-3 bg-white/70 backdrop-blur-sm rounded-xl hover:bg-white/80 transition-all duration-200 shadow-sm"
@@ -142,7 +141,7 @@ const MainHeader = ({ currentUser, unreadMessageCount }) => {
         {profileDropdownOpen && (
           <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl py-2 z-50 animate-fade-in-down transform scale-95 origin-top-right transition-all duration-200">
             <div className="flex items-center space-x-3 px-4 py-3 border-b border-slate-100 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-md"> {/* Theme accent */}
+              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-md">
                 {currentUser.firstName.charAt(0)}{currentUser.lastName.charAt(0)}
               </div>
               <div>
@@ -150,8 +149,8 @@ const MainHeader = ({ currentUser, unreadMessageCount }) => {
                 <p className="text-sm text-slate-500">{currentUser.email}</p>
               </div>
             </div>
-            <Link to={currentUser.role === 'student' ? "/student/profile" : "/teacher/profile"} className="flex items-center px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors duration-150">
-              <User className="w-4 h-4 mr-2 text-purple-500" /> {/* Theme accent */}
+            <Link to="/student/profile" className="flex items-center px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors duration-150">
+              <User className="w-4 h-4 mr-2 text-purple-500" />
               View Profile
             </Link>
             <div className="border-t border-slate-100 mt-2 pt-2">
@@ -166,14 +165,13 @@ const MainHeader = ({ currentUser, unreadMessageCount }) => {
     </div>
   );
 };
-
 const SessionCard = ({ session, onViewDetail }) => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     });
   };
   return (
@@ -193,7 +191,7 @@ const SessionCard = ({ session, onViewDetail }) => {
       <div className="flex items-center text-sm text-slate-700 mb-2">
         <span className="font-medium">Amount:</span>&nbsp;₹{session.amount}
       </div>
-      <button 
+      <button
         className="w-full mt-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
         onClick={() => onViewDetail(session)}
       >
@@ -202,18 +200,15 @@ const SessionCard = ({ session, onViewDetail }) => {
     </div>
   );
 };
-
 const StatCard = ({ title, value, icon: Icon, color, description }) => {
-  // Theme-consistent colors for stat cards
   const colorClasses = {
-    // These match the Signup header gradients
     primary: 'from-violet-600 to-indigo-600',
     secondary: 'from-purple-600 to-pink-600',
-    accent: 'from-blue-600 to-cyan-600', // A new addition for variety within the theme
+    accent: 'from-blue-600 to-cyan-600',
     success: 'from-emerald-500 to-green-600',
   };
 
-  const gradient = colorClasses[color] || colorClasses.primary; // Default to primary if color not found
+  const gradient = colorClasses[color] || colorClasses.primary;
 
   return (
     <div className={`relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg group`}>
@@ -231,8 +226,6 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
     </div>
   );
 };
-
-
 const SessionDetailModal = ({ session, onClose }) => {
   const [teacherDetails, setTeacherDetails] = useState(null);
   useEffect(() => {
@@ -253,8 +246,8 @@ const SessionDetailModal = ({ session, onClose }) => {
   if (!session) return null;
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', { 
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    return date.toLocaleString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
   let teacherName = 'N/A';
@@ -287,14 +280,13 @@ const SessionDetailModal = ({ session, onClose }) => {
     </div>
   );
 };
-
 const TeacherCard = ({ teacher, onToggleFavorite }) => {
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/40 hover:bg-white/80 transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <img 
-            src={teacher.image} 
+          <img
+            src={teacher.image}
             alt={teacher.name}
             className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
           />
@@ -303,18 +295,18 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
             <p className="text-slate-600 text-xs">{teacher.experience}</p>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => onToggleFavorite && onToggleFavorite(teacher.id)}
           className={`p-2 rounded-full transition-all duration-200 ${
-            teacher.isFavorite 
-              ? 'text-red-500 bg-red-50 hover:bg-red-100' 
+            teacher.isFavorite
+              ? 'text-red-500 bg-red-50 hover:bg-red-100'
               : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
           }`}
         >
           <Heart className={`w-4 h-4 ${teacher.isFavorite ? 'fill-current' : ''}`} />
         </button>
       </div>
-      
+
       <div className="space-y-2 mb-3">
         <div className="flex flex-wrap gap-1">
           {teacher.subjects.slice(0, 2).map((subject, index) => (
@@ -323,7 +315,7 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
             </span>
           ))}
         </div>
-        
+
         <div className="flex items-center justify-between text-xs text-slate-600">
           {teacher.rating > 0 && (
             <div className="flex items-center">
@@ -343,7 +335,7 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center text-sm font-semibold text-slate-800">
           <span className="text-green-600 mr-1">₹</span>
           {teacher.hourlyRate}/hour
@@ -352,7 +344,6 @@ const TeacherCard = ({ teacher, onToggleFavorite }) => {
     </div>
   );
 };
-
 const NotificationItem = ({ notification }) => {
   const notificationIcon = {
     session: <Calendar className="w-5 h-5 text-purple-500" />,
@@ -363,7 +354,7 @@ const NotificationItem = ({ notification }) => {
   };
 
   return (
-    <div className={`flex items-start p-4 rounded-xl transition-all duration-300 transform hover:scale-[1.01] hover:shadow-md ${notification.read ? 'bg-slate-50 text-slate-600' : 'bg-purple-50 text-slate-800 font-medium border border-purple-200'}`}> {/* Theme accent */}
+    <div className={`flex items-start p-4 rounded-xl transition-all duration-300 transform hover:scale-[1.01] hover:shadow-md ${notification.read ? 'bg-slate-50 text-slate-600' : 'bg-purple-50 text-slate-800 font-medium border border-purple-200'}`}>
       <div className="mr-3 flex-shrink-0">
         {notificationIcon[notification.type] || <Bell className="w-5 h-5 text-slate-400" />}
       </div>
@@ -378,35 +369,42 @@ const NotificationItem = ({ notification }) => {
   );
 };
 
-// --- Main StudentDashboard Component ---
 const StudentDashboard = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeMenuItem, setActiveMenuItem] = useState('dashboard'); // State for active sidebar item
-  const [dashboardData, setDashboardData] = useState(null); // All data for the dashboard
-  const [loading, setLoading] = useState(true); // For loading state
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
+  const [activeMenuItem, setActiveMenuItem] = useState('dashboard');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [favorites, setFavorites] = useState(() => getFromLocalStorage('favoriteTeachers', []));
   const [favoriteTeachersData, setFavoriteTeachersData] = useState([]);
   const hasFetchedData = useRef(false);
 
-  // Use notification context
   const { unreadCount } = useNotifications();
-  // Use message notifications
   const { unreadMessageCount } = useMessageNotifications();
 
+  // FIX: Move handleLogout inside StudentDashboard to avoid ReferenceError
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      // Ignore network errors, still clear local data
+    }
+    setToLocalStorage('currentUser', null);
+    // You should also clear notifications context state on logout
+    // clearNotifications();
+    navigate('/login');
+  };
+
   const handleFetchData = useCallback(async () => {
-    // Only fetch data once to avoid unnecessary re-renders
     if (hasFetchedData.current) return;
     hasFetchedData.current = true;
-    
+
     setLoading(true);
 
-    const token = localStorage.getItem('token');
     const userFromStorage = getFromLocalStorage('currentUser');
 
-    // Display cached data immediately if available
     const cachedDashboardData = getFromLocalStorage('dashboardData');
     const cachedTeachers = getFromLocalStorage('cachedTeachers');
 
@@ -416,31 +414,29 @@ const StudentDashboard = () => {
       setFavoriteTeachersData(cachedDashboardData.favoriteTeachersData || []);
       setLoading(false);
     }
-    
-    // Check for user authentication
-    if (!token && !userFromStorage) {
+
+    if (!userFromStorage) {
       navigate('/login');
       setLoading(false);
       return;
     }
 
     try {
-      const cleanToken = token ? token.replace(/^"|"$/g, '') : null;
       const API_BASE_URL = API_CONFIG.BASE_URL;
 
-      // Parallel API calls to fetch user profile, bookings, and favorites
+      // FIX: Changed fetch calls to rely on withCredentials and removed manual token headers
       const [profileRes, bookingsRes, favsRes, teachersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/profile/student`, {
-          headers: { 'Authorization': `Bearer ${cleanToken}` }
+          credentials: 'include'
         }),
         fetch(`${API_BASE_URL}/api/bookings/student?status=all&limit=1000`, {
-          headers: { 'Authorization': `Bearer ${cleanToken}` }
+          credentials: 'include'
         }),
         fetch(`${API_BASE_URL}/api/profile/favourites`, {
-          headers: { 'Authorization': `Bearer ${cleanToken}` }
+          credentials: 'include'
         }),
         fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_LIST}`, {
-          headers: { 'Authorization': `Bearer ${cleanToken}` }
+          credentials: 'include'
         })
       ]);
 
@@ -451,7 +447,7 @@ const StudentDashboard = () => {
       }
 
       if (!profileData.profileComplete) {
-        navigate('/student/profile');
+        navigate('/student/profile-setup');
         return;
       }
       setCurrentUser(profileData);
@@ -465,22 +461,18 @@ const StudentDashboard = () => {
       const bookings = bookingsData.bookings || [];
       const favIds = favsData.favourites || [];
       const teachers = teachersData.teachers || teachersData;
-      
+
       setFavorites(favIds);
 
-      // Format teachers for dashboard display
       const formattedTeachers = formatTeachersForDashboard(teachers, favIds);
       const randomTeachers = getRandomTeachers(formattedTeachers, 3);
-      
-      // Filter favorite teachers data
+
       const favTeachersData = formattedTeachers.filter(t => favIds.includes(t.id));
 
-      // Calculate stats
       const upcomingSessions = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'rejected').length;
       const completedSessions = bookings.filter(b => b.status === 'completed').length;
       const totalSpent = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').reduce((sum, b) => sum + (b.amount || 0), 0);
 
-      // Construct final dashboard data
       const newDashboardData = {
         firstName: profileData.firstName,
         stats: {
@@ -501,16 +493,14 @@ const StudentDashboard = () => {
       setDashboardData(newDashboardData);
       setToLocalStorage('dashboardData', newDashboardData);
       setToLocalStorage('cachedTeachers', formattedTeachers);
-      
+
     } catch (error) {
       console.error('Error fetching data:', error);
-      // If API calls fail, fallback to localStorage if no data was pre-loaded
       const storedData = getFromLocalStorage('dashboardData');
       if (storedData) {
         setDashboardData(storedData);
         setFavoriteTeachersData(storedData.favoriteTeachersData || []);
       } else {
-        // Handle case where no data is available at all
         setDashboardData({
           firstName: userFromStorage?.firstName || 'Student',
           stats: { upcomingSessions: 0, completedSessions: 0, favoriteTeachers: 0, totalSpent: 0 },
@@ -533,7 +523,6 @@ const StudentDashboard = () => {
     const isFav = favorites.includes(teacherId);
     let updatedFavorites;
 
-    // Optimistically update the UI
     if (isFav) {
       updatedFavorites = favorites.filter(id => id !== teacherId);
     } else {
@@ -542,7 +531,6 @@ const StudentDashboard = () => {
     setFavorites(updatedFavorites);
     localStorage.setItem('favoriteTeachers', JSON.stringify(updatedFavorites));
 
-    // Update favorite teachers data and stats
     setDashboardData(prevData => {
       const updatedFavTeachersData = prevData.favoriteTeachersData.filter(t => updatedFavorites.includes(t.id));
       const updatedRecentTeachers = prevData.recentTeachers.map(teacher => ({
@@ -561,27 +549,23 @@ const StudentDashboard = () => {
     });
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error("No token found");
-
+      // FIX: Removed manual token handling
       const API_BASE_URL = API_CONFIG.BASE_URL;
       const response = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
         method: isFav ? 'DELETE' : 'POST',
         headers: {
-          'Authorization': `Bearer ${token.replace(/^"|"$/g, '')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ teacherId })
+        body: JSON.stringify({ teacherId }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
         console.error('Failed to update favorite status on server.');
-        // Revert UI change if API call fails
         setFavorites(isFav ? [...favorites, teacherId] : favorites.filter(id => id !== teacherId));
       }
     } catch (error) {
       console.error('Error toggling favorite on server:', error);
-      // Revert UI change if API call fails
       setFavorites(isFav ? [...favorites, teacherId] : favorites.filter(id => id !== teacherId));
     }
   };
@@ -630,28 +614,22 @@ const StudentDashboard = () => {
     );
   }
 
-  // Common Tailwind classes for consistency
   const cardClass = "relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40";
   const sectionTitleClass = "text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3";
-  const sidebarClass = `${isSidebarCollapsed ? 'w-24' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 ${isSidebarCollapsed ? 'p-4' : 'p-6'} flex flex-col relative overflow-hidden shadow-lg z-10 transition-all duration-300`; 
+  const sidebarClass = `${isSidebarCollapsed ? 'w-24' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 ${isSidebarCollapsed ? 'p-4' : 'p-6'} flex flex-col relative overflow-hidden shadow-lg z-10 transition-all duration-300`;
   const mainContentClass = `flex-1 p-8 overflow-y-auto`;
 
   return (
     <UserContext.Provider value={currentUser}>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
-        {/* Animated gradient orbs for background effect */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
         </div>
-        
-        {/* Content */}
         <div className="relative z-10 flex min-h-screen w-full">
-          {/* Sidebar */}
           <aside className={sidebarClass}>
             <div className="relative z-10 flex flex-col h-full">
-              {/* Collapse Toggle Button */}
               <div className={`flex items-center mb-8 ${isSidebarCollapsed ? 'flex-col space-y-4' : 'justify-between'}`}>
                 {!isSidebarCollapsed && (
                   <Link to="/" className="flex items-center group">
@@ -664,7 +642,6 @@ const StudentDashboard = () => {
                     </div>
                   </Link>
                 )}
-                
                 {isSidebarCollapsed && (
                   <Link to="/" className="group mb-2">
                     <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
@@ -672,7 +649,6 @@ const StudentDashboard = () => {
                     </div>
                   </Link>
                 )}
-                
                 <button
                   onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                   className={`p-2 rounded-lg hover:bg-white/60 transition-colors duration-200 text-slate-600 hover:text-blue-600 shadow-sm ${isSidebarCollapsed ? 'w-full' : ''}`}
@@ -681,7 +657,6 @@ const StudentDashboard = () => {
                   {isSidebarCollapsed ? <ChevronRight className="w-5 h-5 mx-auto" /> : <ChevronLeft className="w-5 h-5" />}
                 </button>
               </div>
-
               <nav className={`flex-1 mb-8 overflow-hidden ${isSidebarCollapsed ? 'space-y-3' : 'space-y-2'}`}>
                 <SidebarButton
                   icon={Home}
@@ -706,8 +681,6 @@ const StudentDashboard = () => {
                   count={favorites.length}
                   isCollapsed={isSidebarCollapsed}
                 />
-                
-                {/* Messages Navigation */}
                 <div className="relative">
                   <Link
                     to="/student/messages"
@@ -723,16 +696,14 @@ const StudentDashboard = () => {
                   </Link>
                   {unreadMessageCount > 0 && (
                     <span className={`absolute bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-white shadow-sm ${
-                      isSidebarCollapsed 
-                        ? 'w-4 h-4 -top-1 -right-1' 
+                      isSidebarCollapsed
+                        ? 'w-4 h-4 -top-1 -right-1'
                         : 'w-5 h-5 top-2 right-2'
                     }`}>
                       {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                     </span>
                   )}
                 </div>
-                
-                {/* Navigation Links */}
                 <div className="border-t border-white/20 pt-4 mt-4">
                   <Link
                     to="/student/find-teachers"
@@ -744,13 +715,9 @@ const StudentDashboard = () => {
                   </Link>
                 </div>
               </nav>
-
               <div className="mt-auto">
                 <button
-                  onClick={() => {
-                    setToLocalStorage('currentUser', null);
-                    navigate('/login');
-                  }}
+                  onClick={handleLogout}
                   className={`w-full bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.02] hover:-translate-y-1 ${isSidebarCollapsed ? 'py-3 px-3' : 'py-3 space-x-2'}`}
                   title={isSidebarCollapsed ? 'Logout' : ''}
                 >
@@ -760,14 +727,10 @@ const StudentDashboard = () => {
               </div>
             </div>
           </aside>
-
-          {/* Main Content */}
           <main className={mainContentClass}>
             <MainHeader currentUser={currentUser} unreadMessageCount={unreadMessageCount} />
-
             {activeMenuItem === 'dashboard' && dashboardData && (
               <section className="space-y-10">
-                {/* Stat Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <StatCard
                     title="Upcoming Sessions"
@@ -798,8 +761,6 @@ const StudentDashboard = () => {
                     description="Learning investment"
                   />
                 </div>
-
-                {/* Upcoming Sessions */}
                 <div className={cardClass}>
                   <h2 className={sectionTitleClass}>
                     <Calendar className="w-7 h-7 text-purple-600" />
@@ -817,7 +778,7 @@ const StudentDashboard = () => {
                       <div className="text-center py-12 col-span-full">
                         <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                         <p className="text-slate-500 text-lg mb-4">No upcoming sessions</p>
-                        <Link 
+                        <Link
                           to="/student/find-teachers"
                           className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
                         >
@@ -828,8 +789,6 @@ const StudentDashboard = () => {
                     )}
                   </div>
                 </div>
-
-                {/* Recommended Teachers */}
                 <div className={cardClass}>
                   <h2 className={sectionTitleClass}>
                     <Users className="w-7 h-7 text-purple-600" />
@@ -848,7 +807,7 @@ const StudentDashboard = () => {
                         ))}
                       </div>
                       <div className="text-center mt-8">
-                        <Link 
+                        <Link
                           to="/student/find-teachers"
                           className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200"
                         >
@@ -861,18 +820,17 @@ const StudentDashboard = () => {
                     <div className="text-center py-12">
                       <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-500 text-lg mb-4">No teachers available</p>
-                      <Link 
+                      <p className="text-slate-400 mb-6">Start exploring and save your favorite teachers for quick access</p>
+                      <Link
                         to="/student/find-teachers"
                         className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
                       >
                         <Search className="w-5 h-5 mr-2" />
-                        Browse All Teachers
+                        Discover Teachers
                       </Link>
                     </div>
                   )}
                 </div>
-
-                {/* Recent Notifications */}
                 {(() => {
                   const { notifications = [] } = useNotifications();
                   return (
@@ -908,7 +866,6 @@ const StudentDashboard = () => {
               </section>
             )}
 
-            {/* Individual Section Views */}
             {activeMenuItem === 'sessions' && dashboardData && (
               <section>
                 <h2 className={sectionTitleClass}>
@@ -946,7 +903,7 @@ const StudentDashboard = () => {
                     <div className="text-center py-12">
                       <Calendar className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-500 text-lg mb-4">No sessions scheduled</p>
-                      <Link 
+                      <Link
                         to="/student/find-teachers"
                         className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
                       >
@@ -974,7 +931,7 @@ const StudentDashboard = () => {
                       <Heart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-500 text-lg mb-4">No favorite teachers yet</p>
                       <p className="text-slate-400 mb-6">Start exploring and save your favorite teachers for quick access</p>
-                      <Link 
+                      <Link
                         to="/student/find-teachers"
                         className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
                       >
@@ -986,7 +943,6 @@ const StudentDashboard = () => {
                 </div>
               </section>
             )}
-
           </main>
         </div>
       </div>

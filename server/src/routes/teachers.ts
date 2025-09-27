@@ -33,7 +33,7 @@ router.get('/list', authMiddleware, async (req: AuthenticatedRequest, res) => {
 });
 
 // Get specific teacher details
-router.get('/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+router.get('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const teacher = await User.findOne({
       _id: req.params.id,

@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import Cookies from 'js-cookie';
 import {
   User,
   GraduationCap,
@@ -27,10 +28,11 @@ const TeacherProfileEdit = () => {
     qualifications: "",
     experienceYears: "",
     currentOccupation: "",
-    subjects: [],
-    boards: [],
-    classes: [],
-    teachingMode: "",
+    subjects: "",
+    boards: "",
+    classes: "",
+    achievements: "", // add this line
+  teachingMode: [],
     preferredSchedule: "",
     teachingApproach: "",
     hourlyRate: "",
@@ -60,6 +62,37 @@ const TeacherProfileEdit = () => {
     "Sunday",
   ];
 
+  // Helper to convert array of objects to comma-separated string
+  function arrayToString(arr) {
+    if (!Array.isArray(arr)) return "";
+    // Always extract .text if present, fallback to string value
+    return arr
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          // Prefer .text, fallback to .value, fallback to stringified
+          return item.text || item.value || "";
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  // Helper to convert comma-separated string to array of objects with id and text
+  function stringToArray(str) {
+    if (!str) return [];
+    // FIX: Remove empty strings and ensure text is not empty
+    return str
+      .split(",")
+      .map((s, idx) => {
+        const text = s.trim();
+        // Only include if text is not empty
+        return text.length > 0 ? { id: idx + 1, text } : null;
+      })
+      .filter(Boolean);
+  }
+
   // Main useEffect to initialize user and form data
   useEffect(() => {
     const user = getFromLocalStorage("currentUser");
@@ -82,16 +115,11 @@ const TeacherProfileEdit = () => {
       experienceYears:
         teacherData.experienceYears || teacherData.experience || "",
       currentOccupation: teacherData.currentOccupation || "",
-      subjects: Array.isArray(teacherData.subjects)
-        ? teacherData.subjects.map((s) => s.text || s).join(", ")
-        : "",
-      boards: Array.isArray(teacherData.boards)
-        ? teacherData.boards.map((b) => b.text || b).join(", ")
-        : "",
-      classes: Array.isArray(teacherData.classes)
-        ? teacherData.classes.map((c) => c.text || c).join(", ")
-        : "",
-      teachingMode: teacherData.teachingMode || "",
+      subjects: arrayToString(teacherData.subjects),
+      boards: arrayToString(teacherData.boards),
+      classes: arrayToString(teacherData.classes),
+      achievements: arrayToString(teacherData.achievements),
+      teachingMode: Array.isArray(teacherData.teachingMode) ? teacherData.teachingMode : (teacherData.teachingMode ? [teacherData.teachingMode] : []),
       preferredSchedule: teacherData.preferredSchedule || "",
       teachingApproach: teacherData.teachingApproach || "",
       hourlyRate: teacherData.hourlyRate || "",
@@ -114,7 +142,7 @@ const TeacherProfileEdit = () => {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
+    const { name, value, files, checked } = e.target;
     if (name === "photo" && files && files[0]) {
       const file = files[0];
       const reader = new FileReader();
@@ -123,6 +151,13 @@ const TeacherProfileEdit = () => {
         setPhotoPreview(reader.result);
       };
       reader.readAsDataURL(file);
+    } else if (name === "teachingMode") {
+      setFormData((prev) => {
+        const newModes = checked
+          ? [...prev.teachingMode, value]
+          : prev.teachingMode.filter((m) => m !== value);
+        return { ...prev, teachingMode: newModes };
+      });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -188,46 +223,70 @@ const TeacherProfileEdit = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      // Prepare the data for the API
-      const mapToObjArray = (str) =>
-        str
-          .split(",")
-          .map((s, idx) => {
-            const text = s.trim();
-            return text ? { id: idx + 1, text } : null;
-          })
-          .filter(Boolean);
+      let response;
+      const isPhotoFile = fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files[0];
 
-      const profileData = {
-        ...formData,
-        subjects: mapToObjArray(formData.subjects),
-        boards: mapToObjArray(formData.boards),
-        classes: mapToObjArray(formData.classes),
-        experience: formData.experienceYears,
-        photoUrl: formData.photoUrl || "",
+      // Prepare the correct keys for backend
+      const arrayPayload = {
+        subjectsTaught: stringToArray(formData.subjects),
+        boardsTaught: stringToArray(formData.boards),
+        classesTaught: stringToArray(formData.classes),
+        achievements: stringToArray(formData.achievements),
         availability: formData.availability,
+        teachingMode: formData.teachingMode,
       };
 
-      // Get token
-      let token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-      if (!token && currentUser && currentUser.token) token = currentUser.token;
-      if (!token)
-        throw new Error("No authentication token found. Please log in again.");
-      token = token.replace(/^"|"$/g, "");
-
-      // Send PUT request to backend
-      const response = await fetch(
-        import.meta.env.VITE_BACKEND_URL + '/api/profile/teacher',
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(profileData),
-        }
-      );
+      if (isPhotoFile) {
+        const form = new FormData();
+        // Use correct keys for backend
+  form.append("subjectsTaught", JSON.stringify(arrayPayload.subjectsTaught));
+  form.append("boardsTaught", JSON.stringify(arrayPayload.boardsTaught));
+  form.append("classesTaught", JSON.stringify(arrayPayload.classesTaught));
+  form.append("achievements", JSON.stringify(arrayPayload.achievements));
+  form.append("availability", JSON.stringify(arrayPayload.availability));
+  form.append("teachingMode", JSON.stringify(arrayPayload.teachingMode));
+        Object.entries(formData).forEach(([key, value]) => {
+          if (
+            ["subjects", "boards", "classes", "achievements", "availability"].includes(key)
+          )
+            return; // already handled
+          if (key === "photo" && isPhotoFile) {
+            form.append("photo", fileInputRef.current.files[0]);
+          } else if (value !== null && value !== undefined) {
+            form.append(key, value);
+          }
+        });
+        response = await fetch(
+          import.meta.env.VITE_BACKEND_URL + "/api/profile/teacher",
+          {
+            method: "PUT",
+            credentials: "include",
+            body: form,
+          }
+        );
+      } else {
+        // Send as JSON (no file upload)
+        const payload = {
+          ...formData,
+          ...arrayPayload,
+        };
+        // Remove the old keys so only the correct ones are sent
+  delete payload.subjects;
+  delete payload.boards;
+  delete payload.classes;
+        // NOTE: Do NOT delete payload.achievements here - it has been overwritten with the array version, which we need to send
+        response = await fetch(
+          import.meta.env.VITE_BACKEND_URL + "/api/profile/teacher",
+          {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -240,16 +299,8 @@ const TeacherProfileEdit = () => {
       const updatedUser = {
         ...currentUser,
         ...result.user,
-        teacherProfile: {
-          ...currentUser.teacherProfile,
-          ...result.user.teacherProfile,
-          availability: result.user.teacherProfile.availability || [],
-        },
-        teacherProfileData: {
-          ...currentUser.teacherProfileData,
-          ...result.user.teacherProfile,
-          availability: result.user.teacherProfile.availability || [],
-        },
+        teacherProfile: result.user.teacherProfile, // use backend's updated profile only
+        teacherProfileData: result.user.teacherProfile, // keep in sync
       };
 
       setToLocalStorage("currentUser", updatedUser);
@@ -403,27 +454,28 @@ const TeacherProfileEdit = () => {
                       />
                     </div>
                     <div>
-                      <label
-                        htmlFor="teachingMode"
-                        className="block text-sm font-semibold text-slate-700 mb-1"
-                      >
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">
                         Preferred Teaching Mode
                       </label>
-                      <select
-                        name="teachingMode"
-                        id="teachingMode"
-                        value={formData.teachingMode}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      >
-                        <option value="" disabled hidden>
-                          Select mode
-                        </option>
-                        <option value="Teacher's place">Teacher's place</option>
-                        <option value="Student's place">Student's place</option>
-                        <option value="Online">Online</option>
-                      </select>
+                      <div className="flex flex-col gap-2 p-3 border rounded-lg border-gray-300">
+                        {[
+                          { value: "Teacher's place", label: "Teacher's place" },
+                          { value: "Student's place", label: "Student's place" },
+                          { value: 'Online', label: 'Online' }
+                        ].map((option) => (
+                          <label key={option.value} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              name="teachingMode"
+                              value={option.value}
+                              checked={formData.teachingMode.includes(option.value)}
+                              onChange={handleChange}
+                              className="h-4 w-4 text-violet-600 focus:ring-violet-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-gray-700">{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                     <div>
                       <label
@@ -595,6 +647,38 @@ const TeacherProfileEdit = () => {
                         name="classes"
                         id="classes"
                         value={formData.classes}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="teachingApproach"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Teaching Approach
+                      </label>
+                      <input
+                        type="text"
+                        name="teachingApproach"
+                        id="teachingApproach"
+                        value={formData.teachingApproach}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="achievements"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
+                      >
+                        Achievements (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        name="achievements"
+                        id="achievements"
+                        value={formData.achievements}
                         onChange={handleChange}
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
