@@ -13,22 +13,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan 62.72.31.227 >> ~/.ssh/known_hosts
+
     - name: Deploy via SSH
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        script: |
+      run: |
+        ssh -i ~/.ssh/id_rsa root@62.72.31.227 << 'EOF'
           cd /var/www/Yuvshiksha
           git pull origin main
 
           cd client
           npm install
           npm run build
-          sudo systemctl restart nginx
+          systemctl restart nginx
 
           cd ../server
           npm install
           npm run build
           pm2 restart all --update-env
+        EOF
