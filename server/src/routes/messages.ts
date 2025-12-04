@@ -1,8 +1,8 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import Message from '../models/Message';
 import User from '../models/User';
+import { authMiddleware, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -11,35 +11,21 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Messages routes are working!', timestamp: new Date() });
 });
 
-// Middleware to verify JWT token
-const authenticateToken = (req: any, res: any, next: any) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err: any, user: any) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-};
-
 // Get conversations for a user
-router.get('/conversations', authenticateToken, async (req: any, res) => {
+router.get('/conversations', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     console.log('🔍 Fetching conversations for user ID:', userId);
     console.log('🆔 User ID type:', typeof userId, userId.constructor.name);
-    
+
     // Convert userId to ObjectId for aggregation
     const userObjectId = new mongoose.Types.ObjectId(userId);
     console.log('🔄 Converted to ObjectId:', userObjectId);
-    
+
     // First, let's check if there are any messages for this user
     const userMessages = await Message.find({
       $or: [
@@ -48,7 +34,7 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
       ],
       isDeleted: false
     });
-    
+
     console.log('📩 Found messages for user:', userMessages.length);
     console.log('📋 Sample messages:', userMessages.slice(0, 3).map(m => ({
       id: m._id,
@@ -56,7 +42,7 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
       recipient: m.recipient,
       content: m.content.substring(0, 50)
     })));
-    
+
     // Get all messages where user is sender or recipient
     const messages = await Message.aggregate([
       {
@@ -144,7 +130,7 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
       };
     });
 
-    res.json(messagesWithOnline);
+    res.json({ conversations: messagesWithOnline });
   } catch (error) {
     console.error('❌ Error in conversations endpoint:', error);
     res.status(500).json({ message: 'Failed to fetch conversations' });
@@ -152,9 +138,13 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
 });
 
 // Get messages between two users
-router.get('/conversation/:participantId', authenticateToken, async (req: any, res) => {
+router.get('/conversation/:participantId', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     const { participantId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
@@ -190,9 +180,13 @@ router.get('/conversation/:participantId', authenticateToken, async (req: any, r
 });
 
 // Get total unread message count for a user
-router.get('/unread-count', authenticateToken, async (req: any, res) => {
+router.get('/unread-count', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     const unreadCount = await Message.countDocuments({
@@ -209,10 +203,14 @@ router.get('/unread-count', authenticateToken, async (req: any, res) => {
 });
 
 // Send a new message
-router.post('/send', authenticateToken, async (req: any, res) => {
+router.post('/send', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { recipient, content, messageType = 'text', booking, replyTo } = req.body;
-    const userId = req.user._id;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
 
     console.log('💬 Sending message from user:', userId, 'to recipient:', recipient);
     console.log('📝 Message content:', content);
@@ -236,7 +234,7 @@ router.post('/send', authenticateToken, async (req: any, res) => {
     });
 
     await newMessage.save();
-    
+
     console.log('💾 Message saved with ID:', newMessage._id);
     console.log('📊 Message details:', {
       id: newMessage._id,
@@ -244,7 +242,7 @@ router.post('/send', authenticateToken, async (req: any, res) => {
       recipient: newMessage.recipient,
       content: newMessage.content
     });
-    
+
     await newMessage.populate([
       { path: 'sender', select: 'firstName lastName avatar email' },
       { path: 'recipient', select: 'firstName lastName avatar email' },
@@ -279,19 +277,23 @@ router.post('/send', authenticateToken, async (req: any, res) => {
 });
 
 // Mark message as read
-router.patch('/:messageId/read', authenticateToken, async (req: any, res) => {
+router.patch('/:messageId/read', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { messageId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
 
     const message = await Message.findOneAndUpdate(
-      { 
-        _id: messageId, 
-        recipient: userId 
+      {
+        _id: messageId,
+        recipient: userId
       },
-      { 
-        isRead: true, 
-        readAt: new Date() 
+      {
+        isRead: true,
+        readAt: new Date()
       },
       { new: true }
     );
@@ -308,19 +310,23 @@ router.patch('/:messageId/read', authenticateToken, async (req: any, res) => {
 });
 
 // Delete a message
-router.delete('/:messageId', authenticateToken, async (req: any, res) => {
+router.delete('/:messageId', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { messageId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
 
     const message = await Message.findOneAndUpdate(
-      { 
-        _id: messageId, 
-        sender: userId 
+      {
+        _id: messageId,
+        sender: userId
       },
-      { 
-        isDeleted: true, 
-        deletedAt: new Date() 
+      {
+        isDeleted: true,
+        deletedAt: new Date()
       },
       { new: true }
     );
@@ -337,9 +343,13 @@ router.delete('/:messageId', authenticateToken, async (req: any, res) => {
 });
 
 // Search messages
-router.get('/search', authenticateToken, async (req: any, res) => {
+router.get('/search', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     const { query, participantId } = req.query;
 
     if (!query) {
