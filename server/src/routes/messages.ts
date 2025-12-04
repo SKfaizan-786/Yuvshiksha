@@ -130,7 +130,7 @@ router.get('/conversations', authMiddleware, async (req: AuthenticatedRequest, r
       };
     });
 
-    res.json({ conversations: messagesWithOnline });
+    res.json(messagesWithOnline);
   } catch (error) {
     console.error('❌ Error in conversations endpoint:', error);
     res.status(500).json({ message: 'Failed to fetch conversations' });
