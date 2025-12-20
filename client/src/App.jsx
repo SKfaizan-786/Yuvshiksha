@@ -1,4 +1,4 @@
-﻿import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getFromLocalStorage } from './utils/storage';
 
@@ -9,6 +9,7 @@ import PaymentFailed from "./pages/PaymentFailed";
 
 // Shared Components
 import Navbar from "./components/Navbar.jsx";
+import FloatingNavbar from "./components/ui/FloatingNavbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { SocketProvider } from "./contexts/SocketContext.jsx";
 import { NotificationProvider } from "./contexts/NotificationContext.jsx";
@@ -90,6 +91,7 @@ function App() {
 
   // Define routes where navbar should NOT be shown
   const noNavbarRoutes = [
+    '/',
     '/login',
     '/signup',
     '/student/dashboard',
@@ -111,6 +113,9 @@ function App() {
 
   // Check if current route should show navbar
   const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
+  
+  // Landing page uses floating navbar
+  const isLandingPage = location.pathname === '/';
 
   // Debug the userId being passed to SocketProvider
   console.log('🔍 App.jsx - Rendering with userId:', userId, 'from user:', currentUser);
@@ -118,6 +123,7 @@ function App() {
   return (
     <SocketProvider userId={userId}>
       <NotificationProvider>
+        {isLandingPage && <FloatingNavbar />}
         {shouldShowNavbar && <Navbar />}
         <Routes>
           {/* Payment Routes */}
