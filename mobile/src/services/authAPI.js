@@ -57,6 +57,13 @@ export const authAPI = {
       apiClient.post(API_CONFIG.ENDPOINTS.AUTH.GOOGLE_AUTH, { token: googleToken })
     );
   },
+
+  // Get current user profile
+  getProfile: async () => {
+    return apiRequest(() =>
+      apiClient.get('/api/auth/profile')
+    );
+  },
 };
 
 export default authAPI;

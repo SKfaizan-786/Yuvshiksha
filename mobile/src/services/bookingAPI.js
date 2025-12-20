@@ -30,7 +30,7 @@ export const bookingAPI = {
   // Get student bookings
   getStudentBookings: async () => {
     return apiRequest(() =>
-      apiClient.get(API_CONFIG.ENDPOINTS.BOOKINGS.STUDENT)
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BOOKINGS.STUDENT}?status=all&limit=1000`)
     );
   },
 
@@ -52,6 +52,13 @@ export const bookingAPI = {
   cancelBooking: async (bookingId, reason) => {
     return apiRequest(() =>
       apiClient.post(`${API_CONFIG.ENDPOINTS.BOOKINGS.CANCEL}/${bookingId}`, { reason })
+    );
+  },
+
+  // Get teacher availability
+  getTeacherAvailability: async (teacherId, date) => {
+    return apiRequest(() =>
+      apiClient.get(`/api/teachers/${teacherId}/availability?date=${date}`)
     );
   },
 };

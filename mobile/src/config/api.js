@@ -18,8 +18,8 @@ const getBackendUrl = () => {
   if (__DEV__) {
     // Development mode
     // Option 1: Use VPS URL directly (recommended)
-    return 'https://your-vps-domain.com'; // 🔧 REPLACE THIS with your VPS URL
-    
+    return 'https://api.yuvsiksha.in'; // ✅ Your VPS backend URL
+
     // Option 2: Use local backend for development (uncomment if needed)
     // For Android emulator: use 10.0.2.2
     // For iOS simulator: use localhost
@@ -28,7 +28,7 @@ const getBackendUrl = () => {
   }
 
   // Production mode - use VPS backend URL
-  return 'https://your-vps-domain.com'; // 🔧 REPLACE THIS with your VPS URL
+  return 'https://api.yuvsiksha.in'; // ✅ Your VPS backend URL
 };
 
 const API_CONFIG = {
@@ -38,7 +38,7 @@ const API_CONFIG = {
     // Auth endpoints
     AUTH: {
       LOGIN: '/api/auth/login',
-      SIGNUP: '/api/auth/signup',
+      SIGNUP: '/api/auth/register',
       LOGOUT: '/api/auth/logout',
       FORGOT_PASSWORD: '/api/auth/forgot-password',
       RESET_PASSWORD: '/api/auth/reset-password',
@@ -49,9 +49,8 @@ const API_CONFIG = {
     PROFILE: {
       GET: '/api/profile',
       UPDATE: '/api/profile',
-      UPLOAD_IMAGE: '/api/profile/upload-image',
-      STUDENT_SETUP: '/api/profile/student/setup',
-      TEACHER_SETUP: '/api/profile/teacher/setup',
+      STUDENT_SETUP: '/api/profile/student',
+      TEACHER_SETUP: '/api/profile/teacher',
     },
     // Teachers endpoints
     TEACHERS: {
@@ -72,14 +71,14 @@ const API_CONFIG = {
     },
     // Payments endpoints
     PAYMENTS: {
-      CREATE_ORDER: '/api/payments/create-order',
+      CREATE_ORDER: '/api/payments/cashfree-order',
       VERIFY: '/api/payments/verify',
       GET_STATUS: '/api/payments/status',
     },
     // Notifications endpoints
     NOTIFICATIONS: {
       GET_ALL: '/api/notifications',
-      MARK_READ: '/api/notifications/read',
+      MARK_READ: '/api/notifications/mark-read',
       DELETE: '/api/notifications',
       SETTINGS: '/api/notifications/settings',
     },

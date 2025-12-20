@@ -20,40 +20,61 @@ export const profileAPI = {
     );
   },
 
-  // Upload profile image
-  uploadImage: async (imageUri) => {
-    const formData = new FormData();
-    
-    // Extract file extension from URI
-    const uriParts = imageUri.split('.');
-    const fileType = uriParts[uriParts.length - 1];
-    
-    formData.append('image', {
-      uri: imageUri,
-      name: `profile-${Date.now()}.${fileType}`,
-      type: `image/${fileType}`,
-    });
-
+  // Student profile setup
+  studentSetup: async (setupData) => {
+    const isFormData = setupData instanceof FormData;
     return apiRequest(() =>
-      apiClient.post(API_CONFIG.ENDPOINTS.PROFILE.UPLOAD_IMAGE, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      apiClient.put(API_CONFIG.ENDPOINTS.PROFILE.STUDENT_SETUP, setupData, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+        transformRequest: (data, headers) => {
+          if (isFormData) {
+            // React Native / Axios fix: removing Content-Type lets the browser/native client set it with boundary
+            // However, sometimes we need to be careful. 
+            // Usually just not setting it is enough if we weren't overriding defaults.
+            // Since we have default application/json, we might need to delete it.
+            return data;
+          }
+          return JSON.stringify(data);
         },
       })
     );
   },
 
-  // Student profile setup
-  studentSetup: async (setupData) => {
+  // Teacher profile setup
+  teacherSetup: async (setupData) => {
+    const isFormData = setupData instanceof FormData;
     return apiRequest(() =>
-      apiClient.post(API_CONFIG.ENDPOINTS.PROFILE.STUDENT_SETUP, setupData)
+      apiClient.put(API_CONFIG.ENDPOINTS.PROFILE.TEACHER_SETUP, setupData, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+      })
     );
   },
 
-  // Teacher profile setup
-  teacherSetup: async (setupData) => {
+  // Get favorite teachers
+  getFavorites: async () => {
     return apiRequest(() =>
-      apiClient.post(API_CONFIG.ENDPOINTS.PROFILE.TEACHER_SETUP, setupData)
+      apiClient.get('/api/profile/favourites')
+    );
+  },
+
+  // Add teacher to favorites
+  addFavorite: async (teacherId) => {
+    return apiRequest(() =>
+      apiClient.post('/api/profile/favourites', { teacherId })
+    );
+  },
+
+  // Remove teacher from favorites
+  removeFavorite: async (teacherId) => {
+    return apiRequest(() =>
+      apiClient.delete(`/api/profile/favourites/${teacherId}`)
+    );
+  },
+
+  // Update teacher listing status
+  updateListingStatus: async (isListed) => {
+    return apiRequest(() =>
+      apiClient.patch('/api/profile/teacher/listing', { isListed })
     );
   },
 };

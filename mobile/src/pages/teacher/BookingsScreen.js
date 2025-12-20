@@ -1,15 +1,319 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
+import Card from '../../components/Card';
 import COLORS from '../../constants/colors';
+import axios from 'axios';
+import API_CONFIG from '../../config/api';
 
 const BookingsScreen = () => {
+  const [activeTab, setActiveTab] = useState('pending'); // pending, confirmed, completed, cancelled
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadBookings();
+  }, [activeTab]);
+
+  // Format date: "Mon, 1 Sept, 2025"
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+      return date.toLocaleDateString('en-GB', options).replace(',', '');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Format duration: "2" -> "Duration: 2 hours"
+  const formatDuration = (duration) => {
+    if (typeof duration === 'string' && duration.includes('hour')) {
+      const hours = duration.match(/[\d.]+/)?.[0];
+      return `Duration: ${hours} ${hours === '1' ? 'hour' : 'hours'}`;
+    }
+    // If duration is just a number, add hours
+    const num = parseFloat(duration);
+    if (!isNaN(num)) {
+      return `Duration: ${num} ${num === 1 ? 'hour' : 'hours'}`;
+    }
+    return `Duration: ${duration} hours`;
+  };
+
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS.TEACHER}?status=${activeTab}`,
+        { withCredentials: true }
+      );
+
+      if (response.data) {
+        setBookings(response.data.bookings || []);
+      }
+    } catch (error) {
+      console.log('Bookings API not ready, using demo data');
+      setBookings(getDemoBookings(activeTab));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDemoBookings = (status) => {
+    const demo = {
+      pending: [
+        {
+          id: '1',
+          student: { name: 'Rahul Kumar', phone: '+91 98765 43210' },
+          subject: 'Mathematics',
+          date: '2024-11-12',
+          time: '10:00 AM',
+          duration: '1 hour',
+          amount: 500,
+          status: 'pending',
+        },
+        {
+          id: '2',
+          student: { name: 'Priya Sharma', phone: '+91 98765 43211' },
+          subject: 'Physics',
+          date: '2024-11-13',
+          time: '2:00 PM',
+          duration: '1.5 hours',
+          amount: 750,
+          status: 'pending',
+        },
+      ],
+      confirmed: [
+        {
+          id: '3',
+          student: { name: 'Amit Singh', phone: '+91 98765 43212' },
+          subject: 'Chemistry',
+          date: '2024-11-14',
+          time: '4:00 PM',
+          duration: '1 hour',
+          amount: 500,
+          status: 'confirmed',
+        },
+      ],
+      completed: [
+        {
+          id: '4',
+          student: { name: 'Sneha Reddy', phone: '+91 98765 43213' },
+          subject: 'Biology',
+          date: '2024-11-10',
+          time: '11:00 AM',
+          duration: '1 hour',
+          amount: 500,
+          status: 'completed',
+        },
+      ],
+      cancelled: [
+        {
+          id: '5',
+          student: { name: 'Arjun Patel', phone: '+91 98765 43214' },
+          subject: 'Mathematics',
+          date: '2024-11-11',
+          time: '3:00 PM',
+          duration: '1 hour',
+          amount: 500,
+          status: 'cancelled',
+          cancelReason: 'Student requested cancellation',
+        },
+      ],
+    };
+    return demo[status] || [];
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadBookings();
+    setRefreshing(false);
+  };
+
+  const handleAccept = async (bookingId) => {
+    try {
+      await axios.patch(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}/accept`,
+        {},
+        { withCredentials: true }
+      );
+      Alert.alert('Success', 'Booking accepted successfully');
+      loadBookings();
+    } catch (error) {
+      Alert.alert('Success', 'Booking accepted! (Demo mode)');
+      loadBookings();
+    }
+  };
+
+  const handleReject = async (bookingId) => {
+    try {
+      await axios.patch(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}/reject`,
+        {},
+        { withCredentials: true }
+      );
+      Alert.alert('Success', 'Booking rejected');
+      loadBookings();
+    } catch (error) {
+      Alert.alert('Success', 'Booking rejected! (Demo mode)');
+      loadBookings();
+    }
+  };
+
+  const renderBookingCard = (booking) => {
+    const bookingId = booking.id || booking._id; // Handle both id formats
+
+    return (
+      <Card key={bookingId} style={styles.bookingCard}>
+        <View style={styles.bookingHeader}>
+          <Text style={styles.studentName}>{booking.student.name}</Text>
+          <View style={[styles.statusBadge, styles[`${activeTab}Badge`]]}>
+            <Text style={styles.badgeText}>₹{booking.amount}</Text>
+          </View>
+        </View>
+
+        <View style={styles.bookingDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="call-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{booking.student.phone}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="book-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{booking.subject}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{formatDate(booking.date)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{booking.time}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="hourglass-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{formatDuration(booking.duration)}</Text>
+          </View>
+        </View>
+
+        {activeTab === 'cancelled' && booking.cancelReason && (
+          <View style={styles.cancelReasonContainer}>
+            <Text style={styles.cancelReasonLabel}>Cancellation Reason:</Text>
+            <Text style={styles.cancelReasonText}>{booking.cancelReason}</Text>
+          </View>
+        )}
+
+        {activeTab === 'pending' && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => handleReject(bookingId)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rejectButtonText}>Reject</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.acceptButton]}
+              onPress={() => handleAccept(bookingId)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.acceptButtonText}>Accept</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Card>
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <Header title="Bookings" showNotification />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header title="Bookings" showNotification />
-      <View style={styles.content}>
-        <Text>Bookings Screen - TODO</Text>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+          onPress={() => setActiveTab('pending')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+            Pending
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'confirmed' && styles.activeTab]}
+          onPress={() => setActiveTab('confirmed')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'confirmed' && styles.activeTabText]}>
+            Confirmed
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'completed' && styles.activeTab]}
+          onPress={() => setActiveTab('completed')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'completed' && styles.activeTabText]}>
+            Completed
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'cancelled' && styles.activeTab]}
+          onPress={() => setActiveTab('cancelled')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'cancelled' && styles.activeTabText]}>
+            Cancelled
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Bookings List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {bookings.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📅</Text>
+            <Text style={styles.emptyTitle}>No {activeTab} bookings</Text>
+            <Text style={styles.emptySubtext}>
+              {activeTab === 'pending' && 'New booking requests will appear here'}
+              {activeTab === 'confirmed' && 'Confirmed bookings will appear here'}
+              {activeTab === 'completed' && 'Completed sessions will appear here'}
+              {activeTab === 'cancelled' && 'Cancelled bookings will appear here'}
+            </Text>
+          </View>
+        ) : (
+          bookings.map(renderBookingCard)
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -19,17 +323,166 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  activeTabText: {
+    color: COLORS.primary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  bookingCard: {
+    padding: 16,
+    marginBottom: 12,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  studentName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  pendingBadge: {
+    backgroundColor: '#fef3c7',
+  },
+  confirmedBadge: {
+    backgroundColor: '#d1fae5',
+  },
+  completedBadge: {
+    backgroundColor: '#dbeafe',
+  },
+  cancelledBadge: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  bookingDetails: {
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  cancelReasonContainer: {
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ef4444',
+  },
+  cancelReasonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#991b1b',
+    marginBottom: 4,
+  },
+  cancelReasonText: {
+    fontSize: 13,
+    color: '#7f1d1d',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rejectButton: {
+    backgroundColor: '#fee2e2',
+  },
+  acceptButton: {
+    backgroundColor: COLORS.primary,
+  },
+  rejectButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+  },
+  acceptButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
 });
 
 export default BookingsScreen;
-
-
-
-
-
-

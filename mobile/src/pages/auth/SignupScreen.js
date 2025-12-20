@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Input from '../../components/Input';
@@ -34,6 +34,8 @@ const SignupScreen = () => {
     password: '',
     confirmPassword: '',
     role: USER_ROLES.STUDENT, // Default to student
+    gender: '', // For teachers
+    maritalStatus: '', // For teachers
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -73,6 +75,16 @@ const SignupScreen = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    // Validate teacher-specific fields
+    if (formData.role === USER_ROLES.TEACHER) {
+      if (!validators.isRequired(formData.gender)) {
+        newErrors.gender = 'Gender is required for teachers';
+      }
+      if (!validators.isRequired(formData.maritalStatus)) {
+        newErrors.maritalStatus = 'Marital status is required for teachers';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -91,7 +103,7 @@ const SignupScreen = () => {
       if (response.success) {
         // Save user data to context and storage
         await login(response.data.user);
-        
+
         // Navigation will be handled automatically by RootNavigator
         console.log('✅ Signup successful');
       } else {
@@ -105,10 +117,6 @@ const SignupScreen = () => {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    // TODO: Implement Google Sign-In
-    Alert.alert('Coming Soon', 'Google Sign-Up will be available soon!');
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -213,6 +221,117 @@ const SignupScreen = () => {
               leftIcon={<Ionicons name="mail-outline" size={20} color={COLORS.gray[500]} />}
             />
 
+            {/* Teacher-specific fields */}
+            {formData.role === USER_ROLES.TEACHER && (
+              <>
+                <View style={styles.teacherFieldsContainer}>
+                  <Text style={styles.teacherFieldsLabel}>Teacher Information</Text>
+
+                  {/* Gender Selection */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Gender *</Text>
+                    <View style={styles.optionButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.optionButton,
+                          formData.gender === 'male' && styles.optionButton_active,
+                        ]}
+                        onPress={() => handleChange('gender', 'male')}
+                      >
+                        <Ionicons
+                          name="male"
+                          size={20}
+                          color={formData.gender === 'male' ? COLORS.white : COLORS.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            formData.gender === 'male' && styles.optionButtonText_active,
+                          ]}
+                        >
+                          Male
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.optionButton,
+                          formData.gender === 'female' && styles.optionButton_active,
+                        ]}
+                        onPress={() => handleChange('gender', 'female')}
+                      >
+                        <Ionicons
+                          name="female"
+                          size={20}
+                          color={formData.gender === 'female' ? COLORS.white : COLORS.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            formData.gender === 'female' && styles.optionButtonText_active,
+                          ]}
+                        >
+                          Female
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
+                  </View>
+
+                  {/* Marital Status Selection */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Marital Status *</Text>
+                    <View style={styles.optionButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.optionButton,
+                          formData.maritalStatus === 'married' && styles.optionButton_active,
+                        ]}
+                        onPress={() => handleChange('maritalStatus', 'married')}
+                      >
+                        <Ionicons
+                          name="people"
+                          size={20}
+                          color={formData.maritalStatus === 'married' ? COLORS.white : COLORS.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            formData.maritalStatus === 'married' && styles.optionButtonText_active,
+                          ]}
+                        >
+                          Married
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.optionButton,
+                          formData.maritalStatus === 'unmarried' && styles.optionButton_active,
+                        ]}
+                        onPress={() => handleChange('maritalStatus', 'unmarried')}
+                      >
+                        <Ionicons
+                          name="person"
+                          size={20}
+                          color={formData.maritalStatus === 'unmarried' ? COLORS.white : COLORS.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            formData.maritalStatus === 'unmarried' && styles.optionButtonText_active,
+                          ]}
+                        >
+                          Unmarried
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    {errors.maritalStatus && <Text style={styles.errorText}>{errors.maritalStatus}</Text>}
+                  </View>
+                </View>
+              </>
+            )}
+
             <Input
               label="Password"
               value={formData.password}
@@ -239,22 +358,6 @@ const SignupScreen = () => {
               loading={loading}
               fullWidth
               style={styles.signupButton}
-            />
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google Sign Up */}
-            <Button
-              title="Continue with Google"
-              onPress={handleGoogleSignup}
-              variant="outline"
-              fullWidth
-              icon={<Ionicons name="logo-google" size={20} color={COLORS.textPrimary} style={{ marginRight: 8 }} />}
             />
           </View>
 
@@ -371,6 +474,62 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  teacherFieldsContainer: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  teacherFieldsLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+  },
+  optionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  optionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+  },
+  optionButton_active: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  optionButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  optionButtonText_active: {
+    color: COLORS.white,
+  },
+  errorText: {
+    fontSize: 12,
+    color: COLORS.error || '#ef4444',
+    marginTop: 4,
   },
 });
 

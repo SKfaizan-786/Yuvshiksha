@@ -5,8 +5,8 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Button from '../../components/Button';
 import COLORS from '../../constants/colors';
@@ -24,11 +24,10 @@ const LandingScreen = () => {
         {/* Logo and Title */}
         <View style={styles.header}>
           <Image
-            source={require('../../../assets/icon.png')}
+            source={require('../../../assets/Yuvsiksha_logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>Yuvshiksha</Text>
           <Text style={styles.subtitle}>
             Connect with Expert Teachers for Personalized Learning
           </Text>

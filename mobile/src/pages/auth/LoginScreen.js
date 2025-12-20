@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Input from '../../components/Input';
@@ -71,7 +71,7 @@ const LoginScreen = () => {
       if (response.success) {
         // Save user data to context and storage
         await login(response.data.user);
-        
+
         // Navigation will be handled automatically by RootNavigator
         console.log('✅ Login successful');
       } else {
@@ -83,11 +83,6 @@ const LoginScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = async () => {
-    // TODO: Implement Google Sign-In
-    Alert.alert('Coming Soon', 'Google Sign-In will be available soon!');
   };
 
   return (
@@ -148,22 +143,6 @@ const LoginScreen = () => {
               loading={loading}
               fullWidth
               style={styles.loginButton}
-            />
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google Sign In */}
-            <Button
-              title="Continue with Google"
-              onPress={handleGoogleLogin}
-              variant="outline"
-              fullWidth
-              icon={<Ionicons name="logo-google" size={20} color={COLORS.textPrimary} style={{ marginRight: 8 }} />}
             />
           </View>
 

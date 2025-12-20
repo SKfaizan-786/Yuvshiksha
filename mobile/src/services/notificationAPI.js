@@ -7,16 +7,18 @@ import API_CONFIG from '../config/api';
 
 export const notificationAPI = {
   // Get all notifications
-  getNotifications: async () => {
+  getNotifications: async (params = {}) => {
     return apiRequest(() =>
-      apiClient.get(API_CONFIG.ENDPOINTS.NOTIFICATIONS.GET_ALL)
+      apiClient.get(API_CONFIG.ENDPOINTS.NOTIFICATIONS.GET_ALL, { params })
     );
   },
 
   // Mark notification as read
   markAsRead: async (notificationId) => {
     return apiRequest(() =>
-      apiClient.put(`${API_CONFIG.ENDPOINTS.NOTIFICATIONS.MARK_READ}/${notificationId}`)
+      apiClient.patch(API_CONFIG.ENDPOINTS.NOTIFICATIONS.MARK_READ, {
+        notificationIds: [notificationId]
+      })
     );
   },
 

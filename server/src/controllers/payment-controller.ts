@@ -65,9 +65,11 @@ export const createCashfreeOrder = async (req: Request, res: Response) => {
     const data: any = response.data;
     console.log('✅ Cashfree order created:', data.order_id);
 
+    // Return payment link for mobile/web compatibility
     res.json({
       orderId: data.order_id,
       paymentSessionId: data.payment_session_id,
+      paymentLink: data.payment_link || `https://payments.cashfree.com/links/${data.payment_session_id}`,
       ...data
     });
   } catch (error: any) {

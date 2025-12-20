@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { useSocket } from './SocketContext';
+import notificationAPI from '../services/notificationAPI';
+import messageAPI from '../services/messageAPI';
 import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext({
   notifications: [],
   unreadCount: 0,
-  markAsRead: () => {},
-  clearNotification: () => {},
-  clearAll: () => {},
-  expoPushToken: null,
+  unreadMessageCount: 0,
+  totalUnreadCount: 0,
+  loading: false,
+  refreshNotifications: async () => { },
+  markAsRead: async () => { },
 });
 
 export const useNotifications = () => {
@@ -21,146 +21,100 @@ export const useNotifications = () => {
   return context;
 };
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const [expoPushToken, setExpoPushToken] = useState(null);
-  const { socket, isConnected } = useSocket();
-  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  // Register for push notifications
+  // Default to recent 5
+  const [filterParams, setFilterParams] = useState({ limit: 5 });
+
+  const { user, isAuthenticated } = useAuth();
+
+  // Initial fetch and polling setup
   useEffect(() => {
-    registerForPushNotificationsAsync();
-  }, []);
+    let intervalId;
 
-  // Listen to socket notifications
-  useEffect(() => {
-    if (socket && isConnected && user) {
-      console.log('🔔 NotificationContext - Setting up socket listeners');
+    if (isAuthenticated && user) {
+      // Fetch immediately
+      refreshNotifications();
 
-      // Listen for new notifications
-      socket.on('notification', (notification) => {
-        console.log('🔔 Received notification:', notification);
-        addNotification(notification);
-        
-        // Show local notification
-        showLocalNotification(notification);
-      });
-
-      // Listen for notification read status updates
-      socket.on('notification_read', ({ notificationId }) => {
-        console.log('👁️ Notification marked as read:', notificationId);
-        markAsRead(notificationId);
-      });
-
-      return () => {
-        socket.off('notification');
-        socket.off('notification_read');
-      };
+      // Poll every 30 seconds
+      intervalId = setInterval(() => {
+        refreshNotifications(true); // silent refresh
+      }, 30000);
     }
-  }, [socket, isConnected, user]);
 
-  const registerForPushNotificationsAsync = async () => {
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isAuthenticated, user, filterParams]); // Re-fetch when filterParams change
+
+  const refreshNotifications = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF231F7C',
-        });
+      // 1. Fetch Notifications with current filters
+      const notifResponse = await notificationAPI.getNotifications(filterParams);
+      if (notifResponse.success) {
+        // Backend returns: { notifications: [], pagination: {}, unreadCount: number }
+        const data = notifResponse.data || {};
+        const notifs = data.notifications || [];
+
+        setNotifications(notifs);
+
+        // Calculate unread notifications
+        const unread = typeof data.unreadCount === 'number'
+          ? data.unreadCount
+          : notifs.filter(n => !n.isRead).length;
+
+        setUnreadCount(unread);
       }
 
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        console.log('❌ Failed to get push token for push notification!');
-        return;
-      }
-      
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log('✅ Expo Push Token:', token);
-      setExpoPushToken(token);
-      
-      // TODO: Send this token to your backend to store it with the user
-      // You can send it via socket or API call
-      if (socket && isConnected) {
-        socket.emit('register_push_token', { token });
+      // 2. Fetch Messages (Conversations) to count unread
+      const msgResponse = await messageAPI.getConversations();
+      if (msgResponse.success) {
+        const conversations = msgResponse.data || [];
+        // Sum up unread counts from all conversations
+        const unreadMsg = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+        setUnreadMessageCount(unreadMsg);
       }
     } catch (error) {
-      console.error('❌ Error registering for push notifications:', error);
+      console.error('❌ Error refreshing notifications:', error);
+    } finally {
+      if (!silent) setLoading(false);
     }
   };
 
-  const showLocalNotification = async (notification) => {
+  const updateFilter = (newParams) => {
+    setFilterParams(newParams);
+  };
+
+  const markAsRead = async (notificationId) => {
     try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: notification.title || 'New Notification',
-          body: notification.message || notification.body,
-          data: notification.data || {},
-          sound: true,
-        },
-        trigger: null, // Show immediately
-      });
+      // Optimistic update
+      setNotifications(prev =>
+        prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      // API call
+      await notificationAPI.markAsRead(notificationId);
     } catch (error) {
-      console.error('❌ Error showing local notification:', error);
+      console.error('❌ Error marking notification as read:', error);
+      // Revert if needed, but usually fine to ignore
     }
   };
-
-  const addNotification = (notification) => {
-    setNotifications((prev) => [
-      {
-        id: notification.id || Date.now().toString(),
-        ...notification,
-        read: false,
-        createdAt: notification.createdAt || new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  };
-
-  const markAsRead = (notificationId) => {
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === notificationId ? { ...notif, read: true } : notif
-      )
-    );
-  };
-
-  const clearNotification = (notificationId) => {
-    setNotifications((prev) =>
-      prev.filter((notif) => notif.id !== notificationId)
-    );
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const unreadCount = notifications.filter((notif) => !notif.read).length;
 
   const value = {
     notifications,
     unreadCount,
+    unreadMessageCount,
+    totalUnreadCount: unreadCount + unreadMessageCount,
+    loading,
+    refreshNotifications,
     markAsRead,
-    clearNotification,
-    clearAll,
-    expoPushToken,
+    updateFilter,
   };
 
   return (
@@ -171,5 +125,3 @@ export const NotificationProvider = ({ children }) => {
 };
 
 export default NotificationContext;
-
-

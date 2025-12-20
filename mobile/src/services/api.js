@@ -44,34 +44,40 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle responses and errors
 apiClient.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, 
+    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
                 `Status: ${response.status}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    
-    console.error(`❌ API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`, 
-                  `Status: ${error.response?.status}`);
-    
+
+    // Don't log error for login endpoint with 401 (invalid credentials)
+    const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
+    const is401Error = error.response?.status === 401;
+
+    if (!isLoginEndpoint || !is401Error) {
+      console.error(`❌ API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
+                    `Status: ${error.response?.status}`);
+    }
+
     // Handle 401 Unauthorized - Token expired or invalid
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginEndpoint) {
       originalRequest._retry = true;
-      
+
       // TODO: Implement token refresh logic here if your backend supports it
       // For now, just log the error
       console.log('🔐 Unauthorized - User needs to log in again');
-      
+
       // You might want to trigger a logout or redirect to login
       // This can be done by emitting an event or using a navigation service
     }
-    
+
     // Handle network errors
     if (!error.response) {
       console.error('🌐 Network error - Check your internet connection');
       error.message = 'Network error. Please check your internet connection.';
     }
-    
+
     return Promise.reject(error);
   }
 );

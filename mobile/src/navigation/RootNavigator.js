@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import AuthStack from './AuthStack';
 import StudentStack from './StudentStack';
@@ -25,10 +26,10 @@ const RootNavigator = () => {
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6366f1" />
         <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -41,8 +42,9 @@ const RootNavigator = () => {
     );
   }
 
-  // If authenticated, determine which stack to show based on role
+  // If authenticated, determine which stack to show based on role and profile completion
   const getNavigatorByRole = () => {
+    // Check if profile is complete - if not, navigate to respective stack which will handle profile setup
     switch (user.role) {
       case 'student':
         return <StudentStack />;
@@ -77,9 +79,3 @@ const styles = StyleSheet.create({
 });
 
 export default RootNavigator;
-
-
-
-
-
-

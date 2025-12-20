@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 
 /**
@@ -17,10 +18,12 @@ const Header = ({
   onNotificationPress,
   onMenuPress,
   rightComponent,
-  backgroundColor = COLORS.white,
-  textColor = COLORS.textPrimary,
+  backgroundColor = COLORS.primary,
+  textColor = COLORS.white,
 }) => {
   const navigation = useNavigation();
+  // Safe optional chain in case context is not provided (e.g. usage outside provider in tests)
+  const { totalUnreadCount } = useNotificationsSafe();
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -39,7 +42,8 @@ const Header = ({
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <View style={[styles.container, { backgroundColor }]}>
         {/* Left side - Back button or Menu */}
         <View style={styles.leftContainer}>
@@ -69,10 +73,16 @@ const Header = ({
           ) : showNotification ? (
             <TouchableOpacity onPress={handleNotificationPress} style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={24} color={textColor} />
-              {/* You can add a badge here for unread notifications */}
+              {totalUnreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           ) : (
-            <View style={styles.iconButton} />
+            <View style={[styles.iconButton, { backgroundColor: 'transparent' }]} />
           )}
         </View>
       </View>
@@ -80,25 +90,36 @@ const Header = ({
   );
 };
 
+// Helper hook to avoid crash if Context is missing
+import { useNotifications } from '../contexts/NotificationContext';
+const useNotificationsSafe = () => {
+  try {
+    return useNotifications();
+  } catch (e) {
+    return { totalUnreadCount: 0 };
+  }
+};
 const styles = StyleSheet.create({
   safeArea: {
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: COLORS.primary,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: COLORS.primary,
+    borderBottomWidth: 0,
+    elevation: 0, // Flat look
+    shadowOpacity: 0, // Remove shadow
   },
   leftContainer: {
     flex: 1,
     alignItems: 'flex-start',
   },
   centerContainer: {
-    flex: 2,
+    flex: 4,
     alignItems: 'center',
   },
   rightContainer: {
@@ -107,11 +128,35 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: COLORS.white,
+    letterSpacing: 0.5,
   },
   iconButton: {
-    padding: 8,
-    minWidth: 40,
+    padding: 10,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.15)', // Light glass effect
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

@@ -23,7 +23,7 @@ export const paymentAPI = {
   // Get payment status
   getPaymentStatus: async (orderId) => {
     return apiRequest(() =>
-      apiClient.get(`${API_CONFIG.ENDPOINTS.PAYMENTS.GET_STATUS}/${orderId}`)
+      apiClient.get(`${API_CONFIG.ENDPOINTS.PAYMENTS.GET_STATUS}?orderId=${orderId}`)
     );
   },
 };
