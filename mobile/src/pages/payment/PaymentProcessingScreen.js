@@ -56,7 +56,15 @@ const PaymentProcessingScreen = () => {
 
       console.log('WebBrowser result:', result);
 
-      // When browser closes, verify payment status
+      // Check if user cancelled/dismissed the browser
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        console.log('User cancelled payment, returning to dashboard');
+        // User cancelled - go back to dashboard
+        navigation.navigate('TeacherDashboard');
+        return;
+      }
+
+      // When browser closes normally, verify payment status
       console.log('Browser closed, verifying payment status...');
 
       // Wait a moment for payment to process
@@ -67,8 +75,9 @@ const PaymentProcessingScreen = () => {
 
     } catch (err) {
       console.error('Payment initialization error:', err);
-      setError('Failed to open payment gateway');
-      setStatus('error');
+      // On error, go back to dashboard instead of showing error screen
+      console.log('Payment error, returning to dashboard');
+      navigation.navigate('TeacherDashboard');
     }
   };
 
