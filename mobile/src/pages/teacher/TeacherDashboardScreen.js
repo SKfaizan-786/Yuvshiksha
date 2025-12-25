@@ -150,22 +150,28 @@ const TeacherDashboardScreen = () => {
 
       const response = await paymentAPI.createOrder(orderData);
 
+      console.log('Full payment API response:', JSON.stringify(response, null, 2));
+
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to create payment order');
       }
 
-      const { orderId, paymentSessionId } = response.data;
+      // Extract only the fields we need (avoid spreading entire Cashfree response)
+      const orderId = response.data.orderId || response.data.order_id;
+      const paymentSessionId = response.data.paymentSessionId || response.data.payment_session_id;
+      const paymentLink = response.data.paymentLink || response.data.payment_link;
 
       if (!orderId || !paymentSessionId) {
         throw new Error('Payment session could not be created');
       }
 
-      console.log('Payment order created:', { orderId, paymentSessionId });
+      console.log('Payment order created:', { orderId, paymentSessionId, paymentLink });
 
       // Navigate to payment processing screen
       navigation.navigate('PaymentProcessing', {
         orderId,
         paymentSessionId,
+        paymentLink,
       });
 
     } catch (error) {

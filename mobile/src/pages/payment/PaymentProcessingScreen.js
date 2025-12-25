@@ -6,17 +6,16 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { CFErrorResponse, CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
+import * as WebBrowser from 'expo-web-browser';
 import COLORS from '../../constants/colors';
 
 /**
  * PaymentProcessingScreen
- * Handles Cashfree payment using native SDK
+ * Handles Cashfree payment using WebBrowser (fast loading like website)
  */
 const PaymentProcessingScreen = () => {
   const route = useRoute();
@@ -24,7 +23,7 @@ const PaymentProcessingScreen = () => {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('initializing'); // initializing, processing, error
 
-  const { orderId, paymentSessionId } = route.params || {};
+  const { orderId, paymentSessionId, paymentLink } = route.params || {};
 
   useEffect(() => {
     if (!orderId || !paymentSessionId) {
@@ -42,38 +41,33 @@ const PaymentProcessingScreen = () => {
 
       setStatus('processing');
 
-      // Set Cashfree environment (Production)
-      CFPaymentGatewayService.setCallback({
-        onVerify: (orderInfo) => {
-          console.log('✅ Payment verification:', orderInfo);
-          // Payment successful - navigate to success screen
-          navigation.replace('PaymentSuccess', { orderId });
-        },
-        onError: (error, orderInfo) => {
-          console.error('❌ Payment error:', error, orderInfo);
-          // Payment failed - navigate to failure screen
-          navigation.replace('PaymentFailed', {
-            orderId,
-            reason: error.message || 'Payment failed'
-          });
-        },
+      // Use payment bridge page from our backend (works like website)
+      const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}`;
+
+      console.log('Opening payment bridge URL:', paymentUrl);
+      console.log('Order ID:', orderId);
+      console.log('Session ID:', paymentSessionId);
+
+      // Open in browser
+      const result = await WebBrowser.openBrowserAsync(paymentUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        controlsColor: COLORS.primary,
       });
 
-      // Create payment session object
-      const session = {
-        orderID: orderId,
-        paymentSessionID: paymentSessionId,
-        environment: 'PRODUCTION', // Use 'SANDBOX' for testing
-      };
+      console.log('WebBrowser result:', result);
 
-      console.log('Starting Cashfree payment session:', session);
+      // When browser closes, verify payment status
+      console.log('Browser closed, verifying payment status...');
 
-      // Start the payment
-      CFPaymentGatewayService.doPayment(session);
+      // Wait a moment for payment to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Navigate to success screen which will verify payment
+      navigation.replace('PaymentSuccess', { orderId });
 
     } catch (err) {
       console.error('Payment initialization error:', err);
-      setError('Failed to initialize payment');
+      setError('Failed to open payment gateway');
       setStatus('error');
     }
   };
@@ -86,7 +80,10 @@ const PaymentProcessingScreen = () => {
         { text: 'Continue Payment', style: 'cancel' },
         {
           text: 'Cancel',
-          onPress: () => navigation.replace('TeacherDashboard'),
+          onPress: () => {
+            // Go back to the previous screen (Teacher Dashboard)
+            navigation.goBack();
+          },
           style: 'destructive'
         }
       ]
@@ -104,7 +101,7 @@ const PaymentProcessingScreen = () => {
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => navigation.replace('TeacherDashboard')}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.buttonText}>Back to Dashboard</Text>
           </TouchableOpacity>
@@ -121,16 +118,16 @@ const PaymentProcessingScreen = () => {
           <Ionicons name="card-outline" size={64} color={COLORS.primary} />
         </View>
         <Text style={styles.title}>
-          {status === 'initializing' ? 'Initializing Payment' : 'Processing Payment'}
+          {status === 'initializing' ? 'Initializing Payment' : 'Opening Payment Gateway'}
         </Text>
         <Text style={styles.message}>
           {status === 'initializing'
             ? 'Please wait while we prepare your payment...'
-            : 'Complete your payment in the payment screen that will open shortly.'}
+            : 'The payment page will open in your browser. Complete your payment and return to the app.'}
         </Text>
         <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
         <Text style={styles.helperText}>
-          The payment gateway will open in a moment. Please do not close this screen.
+          After completing payment, you'll be redirected back to the app.
         </Text>
         <TouchableOpacity style={styles.secondaryButton} onPress={handleCancel}>
           <Text style={styles.secondaryButtonText}>Cancel Payment</Text>
