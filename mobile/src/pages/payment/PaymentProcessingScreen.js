@@ -102,57 +102,59 @@ const PaymentProcessingScreen = () => {
         { text: 'Continue Payment', style: 'cancel' },
         {
           text: 'Cancel',
-          onPress: () => {
-            // Go back to the previous screen (Teacher Dashboard)
-            navigation.goBack();
-          },
+          onPress: () => navigation.navigate('TeacherDashboard'),
           style: 'destructive'
         }
       ]
     );
   };
 
-  if (status === 'error') {
-    return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.errorContainer}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="alert-circle" size={64} color={COLORS.error} />
-          </View>
-          <Text style={styles.errorTitle}>Payment Error</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.buttonText}>Back to Dashboard</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   // Processing or initializing state
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.contentContainer}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="card-outline" size={64} color={COLORS.primary} />
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconWrapper}>
+            <Ionicons name="card-outline" size={48} color={COLORS.primary} />
+          </View>
+          <Text style={styles.title}>Processing Payment</Text>
+          <Text style={styles.subtitle}>
+            Opening secure payment gateway...
+          </Text>
         </View>
-        <Text style={styles.title}>
-          {status === 'initializing' ? 'Initializing Payment' : 'Opening Payment Gateway'}
-        </Text>
-        <Text style={styles.message}>
-          {status === 'initializing'
-            ? 'Please wait while we prepare your payment...'
-            : 'The payment page will open in your browser. Complete your payment and return to the app.'}
-        </Text>
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-        <Text style={styles.helperText}>
-          After completing payment, you'll be redirected back to the app.
-        </Text>
-        <TouchableOpacity style={styles.secondaryButton} onPress={handleCancel}>
-          <Text style={styles.secondaryButtonText}>Cancel Payment</Text>
+
+        {/* Loading Indicator */}
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loaderText}>Please wait</Text>
+        </View>
+
+        {/* Security Badge */}
+        <View style={styles.securityBadge}>
+          <Ionicons name="shield-checkmark" size={20} color="#16a34a" />
+          <Text style={styles.securityText}>256-bit SSL Encrypted</Text>
+        </View>
+
+        {/* Info Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+            <Text style={styles.infoText}>Secure payment via Cashfree</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="lock-closed" size={20} color={COLORS.primary} />
+            <Text style={styles.infoText}>Your data is protected</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="time" size={20} color={COLORS.primary} />
+            <Text style={styles.infoText}>Payment will open in browser</Text>
+          </View>
+        </View>
+
+        {/* Cancel Button */}
+        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+          <Text style={styles.cancelButtonText}>Cancel Payment</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -170,79 +172,93 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
     alignItems: 'center',
-    paddingHorizontal: 24,
+    marginBottom: 40,
   },
-  iconContainer: {
-    marginBottom: 24,
+  iconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.textPrimary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  message: {
-    fontSize: 16,
+  subtitle: {
+    fontSize: 15,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
+    lineHeight: 22,
   },
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.error,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+  loaderContainer: {
+    alignItems: 'center',
     marginBottom: 32,
-    lineHeight: 24,
   },
-  loader: {
-    marginVertical: 24,
-  },
-  helperText: {
+  loaderText: {
+    marginTop: 16,
     fontSize: 14,
-    color: COLORS.gray[500],
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 24,
-    fontStyle: 'italic',
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: '100%',
+  securityBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  secondaryButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.gray[300],
+    borderColor: '#bbf7d0',
+    marginBottom: 32,
   },
-  buttonText: {
-    fontSize: 16,
+  securityText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.white,
+    color: '#16a34a',
   },
-  secondaryButtonText: {
+  infoCard: {
+    width: '100%',
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoText: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    fontWeight: '500',
+    flex: 1,
+  },
+  cancelButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.gray[300],
+    backgroundColor: COLORS.white,
+  },
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,

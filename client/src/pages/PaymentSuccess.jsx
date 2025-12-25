@@ -43,7 +43,25 @@ export default function PaymentSuccess() {
         }
 
         const verificationData = await verificationResponse.json();
+        
+        // Check if payment was cancelled or not completed
         if (!verificationData.success) {
+          const status = verificationData.status || verificationData.order?.order_status;
+          
+          // If payment is still ACTIVE/pending, it means user cancelled
+          if (status === 'ACTIVE' || status === 'PENDING' || status === 'pending') {
+            console.log('Payment was cancelled or not completed, redirecting to dashboard');
+            // Clean up localStorage
+            localStorage.removeItem('pendingListingData');
+            localStorage.removeItem('pendingPaymentType');
+            localStorage.removeItem('pendingOrderId');
+            localStorage.removeItem('pendingPaymentSessionId');
+            // Redirect to dashboard immediately - no error page
+            navigate('/teacher/dashboard');
+            return;
+          }
+          
+          // For other failures, show error
           throw new Error(verificationData.message || 'Payment verification failed');
         }
 
