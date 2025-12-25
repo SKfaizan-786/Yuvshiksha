@@ -43,7 +43,7 @@ const PaymentProcessingScreen = () => {
         navigation.replace('PaymentSuccess', { orderId });
       } else if (url.includes('payment-cancelled') || url.includes('payment-failed')) {
         console.log('Payment cancelled/failed, returning to dashboard');
-        navigation.navigate('Dashboard');
+        navigation.goBack();
       }
     };
 
@@ -83,14 +83,14 @@ const PaymentProcessingScreen = () => {
       // If browser was dismissed without deep link callback, return to dashboard
       if (result.type === 'cancel' || result.type === 'dismiss') {
         console.log('User dismissed browser, returning to dashboard');
-        navigation.navigate('Dashboard');
+        navigation.goBack();
       }
 
     } catch (err) {
       console.error('Payment initialization error:', err);
       // On error, go back to dashboard
       console.log('Payment error, returning to dashboard');
-      navigation.navigate('Dashboard');
+      navigation.goBack();
     }
   };
 
@@ -102,7 +102,7 @@ const PaymentProcessingScreen = () => {
         { text: 'Continue Payment', style: 'cancel' },
         {
           text: 'Cancel',
-          onPress: () => navigation.navigate('Dashboard'),
+          onPress: () => navigation.goBack(),
           style: 'destructive'
         }
       ]

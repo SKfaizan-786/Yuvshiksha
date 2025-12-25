@@ -49,59 +49,174 @@ function getPaymentHTML(sessionId: string, orderId: string): string {
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f8f9fa;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
+        
         .container {
             background: white;
             border-radius: 20px;
-            padding: 40px;
-            max-width: 400px;
+            padding: 40px 32px;
+            max-width: 440px;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .header {
             text-align: center;
+            margin-bottom: 40px;
         }
-        .logo { font-size: 32px; font-weight: bold; color: #667eea; margin-bottom: 10px; }
-        .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+        
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: #f3f4f6;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-wrapper svg {
+            width: 40px;
+            height: 40px;
+            color: #374151;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .status-container {
+            text-align: center;
+            padding: 32px 0;
+        }
+        
         .loader {
-            width: 50px; height: 50px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            width: 52px;
+            height: 52px;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #111827;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 30px auto;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status { color: #333; font-size: 16px; margin-top: 20px; }
-        .error { background: #fee; border: 1px solid #fcc; border-radius: 8px; padding: 15px; margin-top: 20px; color: #c33; }
-        .success { background: #efe; border: 1px solid #cfc; border-radius: 8px; padding: 15px; margin-top: 20px; color: #3c3; }
-        .retry-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            margin-top: 15px;
-            cursor: pointer;
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-text {
+            color: #111827;
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .status-subtext {
+            color: #6b7280;
             font-size: 14px;
+            line-height: 1.6;
         }
-        #cashfree-container { margin-top: 20px; min-height: 400px; }
+        
+        .security-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 32px;
+            padding: 14px 18px;
+            background: #f0fdf4;
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .security-icon {
+            width: 18px;
+            height: 18px;
+            color: #16a34a;
+        }
+        
+        .security-text {
+            color: #16a34a;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        #cashfree-container {
+            margin-top: 24px;
+            min-height: 400px;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px;
+            }
+            
+            .container {
+                padding: 32px 24px;
+            }
+            
+            .title {
+                font-size: 22px;
+            }
+            
+            .icon-wrapper {
+                width: 72px;
+                height: 72px;
+            }
+            
+            .icon-wrapper svg {
+                width: 36px;
+                height: 36px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">Yuvsiksha</div>
-        <div class="subtitle">Secure Payment Gateway</div>
-        <div id="status-container">
-            <div class="loader"></div>
-            <div class="status">Initializing payment...</div>
+        <div class="header">
+            <div class="icon-wrapper">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+            </div>
+            <div class="title">Processing Payment</div>
+            <div class="subtitle">Opening secure payment gateway...</div>
         </div>
+        
+        <div id="status-container" class="status-container">
+            <div class="loader"></div>
+            <div class="status-text">Initializing Payment</div>
+            <div class="status-subtext">Please wait while we prepare your secure payment...</div>
+        </div>
+        
+        <div class="security-badge">
+            <svg class="security-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span class="security-text">256-bit SSL Encrypted</span>
+        </div>
+        
         <div id="cashfree-container"></div>
     </div>
     <script>
