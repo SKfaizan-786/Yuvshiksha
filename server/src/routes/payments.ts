@@ -109,7 +109,12 @@ function getPaymentHTML(sessionId: string, orderId: string): string {
         const orderId = '${orderId}';
         let initTimeout;
         
-        console.log('Payment page loaded with:', { paymentSessionId, orderId });
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const source = urlParams.get('source'); // 'mobile' or null (website)
+        const isMobileApp = source === 'mobile';
+        
+        console.log('Payment page loaded with:', { paymentSessionId, orderId, source, isMobileApp });
         
         if (!paymentSessionId) {
             showError('Invalid payment link. Missing session ID.');
@@ -117,10 +122,29 @@ function getPaymentHTML(sessionId: string, orderId: string): string {
             // Set timeout for initialization
             initTimeout = setTimeout(() => {
                 console.error('Payment initialization timeout');
-                showError('Payment is taking too long to load. Please check your internet connection and try again.');
+                handleRedirect('cancelled', 'Payment timeout');
             }, 15000); // 15 second timeout
             
             initializePayment();
+        }
+        
+        // Redirect helper - handles both mobile app and website
+        function handleRedirect(status, reason = '') {
+            if (isMobileApp) {
+                // Mobile app - use deep link
+                if (status === 'success') {
+                    window.location.href = \`yuvshiksha://payment-success?orderId=\${orderId}\`;
+                } else {
+                    window.location.href = \`yuvshiksha://payment-cancelled?orderId=\${orderId}\`;
+                }
+            } else {
+                // Website - use web URL
+                if (status === 'success') {
+                    window.location.href = \`https://yuvsiksha.in/payment-success?orderId=\${orderId}\`;
+                } else {
+                    window.location.href = \`https://yuvsiksha.in/teacher-dashboard\`;
+                }
+            }
         }
         
         async function initializePayment() {
@@ -157,45 +181,23 @@ function getPaymentHTML(sessionId: string, orderId: string): string {
                     
                     if (result.error) {
                         console.error('Payment error:', result.error);
-                        showError(result.error.message || 'Payment failed');
-                        setTimeout(() => {
-                            window.location.href = \`yuvshiksha://payment-failed?orderId=\${orderId}&reason=\${encodeURIComponent(result.error.message || 'Payment failed')}\`;
-                        }, 2000);
+                        handleRedirect('cancelled', result.error.message);
                     }
                     
                     if (result.paymentDetails) {
                         console.log('Payment successful:', result.paymentDetails);
-                        showSuccess();
-                        setTimeout(() => {
-                            window.location.href = \`yuvshiksha://payment-success?orderId=\${orderId}\`;
-                        }, 1500);
+                        handleRedirect('success');
                     }
                 }).catch((error) => {
                     console.error('Checkout error:', error);
-                    showError(error.message || 'Failed to open payment checkout');
+                    handleRedirect('cancelled', error.message);
                 });
                 
             } catch (error) {
                 clearTimeout(initTimeout);
                 console.error('Payment initialization error:', error);
-                showError(error.message || 'Failed to initialize payment');
+                handleRedirect('cancelled', error.message);
             }
-        }
-        
-        function showError(message) {
-            document.getElementById('status-container').style.display = 'block';
-            document.getElementById('status-container').innerHTML = 
-                \`<div class="error">
-                    <strong>Payment Error</strong><br>
-                    \${message}
-                    <br><button class="retry-btn" onclick="location.reload()">Retry</button>
-                </div>\`;
-        }
-        
-        function showSuccess() {
-            document.getElementById('status-container').style.display = 'block';
-            document.getElementById('status-container').innerHTML = 
-                '<div class="success"><strong>✓ Payment Successful!</strong><br>Redirecting back to app...</div>';
         }
         
         // Handle page visibility change (when user switches apps)

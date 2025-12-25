@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -32,7 +33,29 @@ const PaymentProcessingScreen = () => {
       return;
     }
 
+    // Set up deep link listener for payment callbacks
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('Deep link received:', url);
+
+      if (url.includes('payment-success')) {
+        console.log('Payment successful, navigating to success screen');
+        navigation.replace('PaymentSuccess', { orderId });
+      } else if (url.includes('payment-cancelled') || url.includes('payment-failed')) {
+        console.log('Payment cancelled/failed, returning to dashboard');
+        navigation.navigate('TeacherDashboard');
+      }
+    };
+
+    // Add listener
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
     initializePayment();
+
+    // Cleanup
+    return () => {
+      subscription.remove();
+    };
   }, [orderId, paymentSessionId]);
 
   const initializePayment = async () => {
@@ -42,7 +65,8 @@ const PaymentProcessingScreen = () => {
       setStatus('processing');
 
       // Use payment bridge page from our backend (works like website)
-      const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}`;
+      // Add source=mobile so backend knows to redirect to app deep links
+      const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}&source=mobile`;
 
       console.log('Opening payment bridge URL:', paymentUrl);
       console.log('Order ID:', orderId);
@@ -56,26 +80,15 @@ const PaymentProcessingScreen = () => {
 
       console.log('WebBrowser result:', result);
 
-      // Check if user cancelled/dismissed the browser
+      // If browser was dismissed without deep link callback, return to dashboard
       if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.log('User cancelled payment, returning to dashboard');
-        // User cancelled - go back to dashboard
+        console.log('User dismissed browser, returning to dashboard');
         navigation.navigate('TeacherDashboard');
-        return;
       }
-
-      // When browser closes normally, verify payment status
-      console.log('Browser closed, verifying payment status...');
-
-      // Wait a moment for payment to process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Navigate to success screen which will verify payment
-      navigation.replace('PaymentSuccess', { orderId });
 
     } catch (err) {
       console.error('Payment initialization error:', err);
-      // On error, go back to dashboard instead of showing error screen
+      // On error, go back to dashboard
       console.log('Payment error, returning to dashboard');
       navigation.navigate('TeacherDashboard');
     }
