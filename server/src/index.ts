@@ -117,13 +117,20 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
         "'self'",
+        "https://sdk.cashfree.com", // Cashfree SDK source maps
         "https://api.cashfree.com", // Cashfree API
         "https://sandbox.cashfree.com", // Cashfree Sandbox
         "https://payments.cashfree.com", // Cashfree Payments
       ],
       frameSrc: [
         "'self'",
+        "https://sdk.cashfree.com", // Cashfree SDK frames
         "https://payments.cashfree.com", // Cashfree payment frames
+      ],
+      formAction: [
+        "'self'",
+        "https://api.cashfree.com", // Cashfree form submissions
+        "https://sandbox.cashfree.com",
       ],
     },
   },
