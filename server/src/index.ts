@@ -67,10 +67,10 @@ const PORT = process.env.PORT || 5000;
 
 // Add a simple health check endpoint to test CORS
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    cors_origin: process.env.CORS_ORIGIN 
+    cors_origin: process.env.CORS_ORIGIN
   });
 });
 
@@ -92,7 +92,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 });
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -102,7 +102,32 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(helmet());
+
+// Configure helmet with custom CSP for Cashfree payment integration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for inline payment scripts
+        "https://sdk.cashfree.com", // Cashfree SDK
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: [
+        "'self'",
+        "https://api.cashfree.com", // Cashfree API
+        "https://sandbox.cashfree.com", // Cashfree Sandbox
+        "https://payments.cashfree.com", // Cashfree Payments
+      ],
+      frameSrc: [
+        "'self'",
+        "https://payments.cashfree.com", // Cashfree payment frames
+      ],
+    },
+  },
+}));
 app.use(morgan('dev'));
 
 // Debug middleware for request size (temporary)
@@ -140,12 +165,12 @@ app.use(passport.session());
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => {
     console.log('Connected to MongoDB');
-    
+
     // Set socket.io instance for notifications
     import('./services/notificationService').then(({ setSocketIO }) => {
       setSocketIO(io);
     });
-    
+
     // Initialize reminder service after DB connection
     reminderService.init();
   })
@@ -198,9 +223,9 @@ app.get('/test-db-connection', async (_req, res) => {
 
     const testUser = await db.collection('users').findOne({});
     console.log('Test DB Connection: Found a user:', testUser ? testUser._id : 'No user found');
-    res.json({ 
-      message: 'DB connection test complete', 
-      userFound: !!testUser, 
+    res.json({
+      message: 'DB connection test complete',
+      userFound: !!testUser,
       testUser: testUser ? testUser._id.toString() : null
     });
   } catch (err: any) {
@@ -219,7 +244,7 @@ io.on('connection', (socket) => {
     connectedUsers.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`🔐 User ${userId} authenticated with socket ${socket.id} and joined room user_${userId}`);
-    
+
     // Notify other users that this user is online
     socket.broadcast.emit('user_online', userId);
   });
@@ -247,7 +272,7 @@ io.on('connection', (socket) => {
     try {
       // Import Message model dynamically to avoid circular dependencies
       const Message = (await import('./models/Message')).default;
-      
+
       // Check if this is a new conversation by looking for existing messages between these users
       const existingMessages = await Message.findOne({
         $or: [
@@ -255,9 +280,9 @@ io.on('connection', (socket) => {
           { sender: data.recipient, recipient: data.sender }
         ]
       });
-      
+
       const isNewConversation = !existingMessages;
-      
+
       // Create new message
       const newMessage = new Message({
         sender: data.sender,
@@ -268,7 +293,7 @@ io.on('connection', (socket) => {
       });
 
       await newMessage.save();
-      
+
       // Populate sender and recipient info
       await newMessage.populate([
         { path: 'sender', select: 'firstName lastName avatar email' },
@@ -277,12 +302,12 @@ io.on('connection', (socket) => {
 
       // Create room ID (consistent for both users)
       const roomId = [data.sender, data.recipient].sort().join('_');
-      
+
       console.log(`📨 Broadcasting message to room: ${roomId} and user_${data.recipient}${isNewConversation ? ' (NEW CONVERSATION)' : ''}`);
-      
+
       // Emit to both users in the chat room
       io.to(roomId).emit('new_message', newMessage);
-      
+
       // If this is a new conversation, emit special event to notify about new conversation
       if (isNewConversation) {
         io.to(`user_${data.recipient}`).emit('new_conversation', {
@@ -294,7 +319,7 @@ io.on('connection', (socket) => {
           unreadCount: 1
         });
       }
-      
+
       // Also emit to individual user rooms in case they're not in the chat room
       io.to(`user_${data.recipient}`).emit('message_notification', {
         messageId: newMessage._id,
@@ -302,7 +327,7 @@ io.on('connection', (socket) => {
         content: data.content,
         timestamp: newMessage.createdAt
       });
-      
+
       // Send confirmation back to the sender
       socket.emit('message_sent', {
         _id: newMessage._id,
@@ -344,7 +369,7 @@ io.on('connection', (socket) => {
         isRead: true,
         readAt: new Date()
       });
-      
+
       socket.broadcast.emit('message_read', { messageId });
     } catch (error) {
       console.error('Error marking message as read:', error);
@@ -358,7 +383,7 @@ io.on('connection', (socket) => {
       if (socketId === socket.id) {
         connectedUsers.delete(userId);
         console.log(`🔌 User ${userId} disconnected (socket: ${socket.id})`);
-        
+
         // Notify other users that this user is offline
         socket.broadcast.emit('user_offline', userId);
         break;
