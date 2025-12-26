@@ -48,7 +48,6 @@
       "package": "com.yuvshiksha.app",
       "edgeToEdgeEnabled": true
     },
-
     "plugins": [
       [
         "expo-image-picker",
@@ -58,7 +57,10 @@
       ]
     ],
     "extra": {
-      "backendUrl": "https://api.yuvsiksha.in"
+      "backendUrl": "https://api.yuvsiksha.in",
+      "eas": {
+        "projectId": "0c4320b4-e998-4991-ad5c-e94d2bcb6918"
+      }
     }
   }
 }
