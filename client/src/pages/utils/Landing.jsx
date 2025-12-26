@@ -468,6 +468,7 @@ export default function Landing() {
               <span className="text-xl font-bold text-white">Yuvsiksha</span>
             </div>
             <div className="flex items-center gap-6 text-sm">
+              <Link to="/privacy-policy" className="text-slate-400 hover:text-cyan-400 transition-colors">Privacy Policy</Link>
               <a href="mailto:yuvsiksha@gmail.com" className="text-slate-400 hover:text-cyan-400 transition-colors">Contact Us</a>
               <Link to="/login" className="text-slate-400 hover:text-cyan-400 transition-colors">Sign In</Link>
               <Link to="/signup" className="text-slate-400 hover:text-cyan-400 transition-colors">Get Started</Link>
