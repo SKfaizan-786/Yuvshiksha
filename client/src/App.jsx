@@ -25,6 +25,7 @@ import Signup from "./pages/auth/Signup.jsx";
 import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
 import ResetPassword from "./pages/auth/ResetPassword.jsx";
 import NotFound from "./pages/auth/NotFound.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 
 // Student Pages
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
