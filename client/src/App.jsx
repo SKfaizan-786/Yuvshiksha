@@ -138,6 +138,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Utility Routes */}
