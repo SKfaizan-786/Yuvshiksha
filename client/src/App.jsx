@@ -26,6 +26,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
 import ResetPassword from "./pages/auth/ResetPassword.jsx";
 import NotFound from "./pages/auth/NotFound.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
+import DeleteAccount from "./pages/DeleteAccount.jsx";
 
 // Student Pages
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
@@ -139,6 +140,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Utility Routes */}
