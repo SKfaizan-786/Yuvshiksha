@@ -38,6 +38,7 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
       tokenIssuedAt: new Date(decoded.iat * 1000).toISOString(),
     });
 
+    // Try to find user
     const user = await User.findById(decoded._id).select('-password');
 
     console.log('🔍 Auth Middleware - User lookup result:', {
@@ -46,9 +47,25 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
     });
 
     if (!user) {
-      console.error('❌ User not found in database for ID:', decoded._id);
+      // Double-check: try finding user with different query
+      const userCheck = await User.findOne({ _id: decoded._id });
+      console.error('❌ User not found with findById. Trying findOne:', {
+        foundWithFindOne: !!userCheck,
+        userId: decoded._id,
+      });
+
+      // Check if ANY user exists in database
+      const userCount = await User.countDocuments();
+      console.error('📊 Total users in database:', userCount);
+
       return res.status(401).json({ message: 'Token is valid but user not found' });
     }
+
+    console.log('✅ User authenticated:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    });
 
     req.user = user;
     next();
