@@ -45,7 +45,7 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE"
       ],
-      "package": "com.yuvsiksha.app",
+      "package": "com.yuvshiksha.app",
       "versionCode": 2,
       "edgeToEdgeEnabled": true
     },
