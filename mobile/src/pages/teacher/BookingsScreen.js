@@ -64,76 +64,12 @@ const BookingsScreen = () => {
         setBookings(response.data.bookings || []);
       }
     } catch (error) {
-      console.log('Bookings API not ready, using demo data');
-      setBookings(getDemoBookings(activeTab));
+      console.error('Error loading bookings:', error);
+      // Show empty state instead of demo data
+      setBookings([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getDemoBookings = (status) => {
-    const demo = {
-      pending: [
-        {
-          id: '1',
-          student: { name: 'Rahul Kumar', phone: '+91 98765 43210' },
-          subject: 'Mathematics',
-          date: '2024-11-12',
-          time: '10:00 AM',
-          duration: '1 hour',
-          amount: 500,
-          status: 'pending',
-        },
-        {
-          id: '2',
-          student: { name: 'Priya Sharma', phone: '+91 98765 43211' },
-          subject: 'Physics',
-          date: '2024-11-13',
-          time: '2:00 PM',
-          duration: '1.5 hours',
-          amount: 750,
-          status: 'pending',
-        },
-      ],
-      confirmed: [
-        {
-          id: '3',
-          student: { name: 'Amit Singh', phone: '+91 98765 43212' },
-          subject: 'Chemistry',
-          date: '2024-11-14',
-          time: '4:00 PM',
-          duration: '1 hour',
-          amount: 500,
-          status: 'confirmed',
-        },
-      ],
-      completed: [
-        {
-          id: '4',
-          student: { name: 'Sneha Reddy', phone: '+91 98765 43213' },
-          subject: 'Biology',
-          date: '2024-11-10',
-          time: '11:00 AM',
-          duration: '1 hour',
-          amount: 500,
-          status: 'completed',
-        },
-      ],
-      cancelled: [
-        {
-          id: '5',
-          student: { name: 'Arjun Patel', phone: '+91 98765 43214' },
-          subject: 'Mathematics',
-          date: '2024-11-11',
-          time: '3:00 PM',
-          duration: '1 hour',
-          amount: 500,
-          status: 'cancelled',
-          cancelReason: 'Student requested cancellation',
-        },
-      ],
-    };
-    return demo[status] || [];
   };
 
   const onRefresh = async () => {

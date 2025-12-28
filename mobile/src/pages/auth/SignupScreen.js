@@ -100,28 +100,16 @@ const SignupScreen = () => {
     try {
       const { confirmPassword, ...signupData } = formData;
 
-      console.log('📤 Sending signup data:', { ...signupData, password: '***' });
-
       const response = await authAPI.signup(signupData);
-
-      console.log('📥 Signup Response:', {
-        success: response.success,
-        hasToken: !!response.data?.token,
-        hasUser: !!response.data?.user,
-        userId: response.data?.user?._id,
-        userRole: response.data?.user?.role,
-      });
 
       if (response.success) {
         // Check if we have both token and user
         if (!response.data?.user) {
-          console.error('❌ No user data in signup response!');
           Alert.alert('Error', 'Signup failed - no user data received');
           return;
         }
 
         if (!response.data?.user?._id) {
-          console.error('❌ User has no ID!');
           Alert.alert('Error', 'Signup failed - invalid user data');
           return;
         }
@@ -129,16 +117,10 @@ const SignupScreen = () => {
         // Save token if present in response
         if (response.data.token) {
           await saveToStorage(STORAGE_KEYS.AUTH_TOKEN, response.data.token);
-          console.log('🔑 Token saved to storage');
-        } else {
-          console.warn('⚠️ No token in signup response');
         }
 
         // Save user data to context and storage
         await login(response.data.user);
-
-        // Navigation will be handled automatically by RootNavigator
-        console.log('✅ Signup successful');
       } else {
         Alert.alert('Signup Failed', response.message || 'Failed to create account');
       }

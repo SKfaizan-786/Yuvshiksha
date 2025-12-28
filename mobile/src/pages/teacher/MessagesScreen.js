@@ -41,52 +41,9 @@ const MessagesScreen = () => {
         setConversations(response.data);
       }
     } catch (error) {
-      console.log('Messages API error:', error.response?.data || error.message);
-      // Demo data fallback
-      setConversations([
-        {
-          _id: '1',
-          participant: {
-            _id: 's1',
-            firstName: 'Rahul',
-            lastName: 'Kumar',
-            avatar: null,
-          },
-          lastMessage: {
-            content: 'Thank you for the class today!',
-            createdAt: new Date().toISOString(),
-          },
-          unreadCount: 2,
-        },
-        {
-          _id: '2',
-          participant: {
-            _id: 's2',
-            firstName: 'Priya',
-            lastName: 'Sharma',
-            avatar: null,
-          },
-          lastMessage: {
-            content: "Can we reschedule tomorrow's class?",
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-          },
-          unreadCount: 0,
-        },
-        {
-          _id: '3',
-          participant: {
-            _id: 's3',
-            firstName: 'Amit',
-            lastName: 'Singh',
-            avatar: null,
-          },
-          lastMessage: {
-            content: 'I have a doubt in chapter 5',
-            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          },
-          unreadCount: 1,
-        },
-      ]);
+      console.error('Messages API error:', error.response?.data || error.message);
+      // Show empty state - no demo data
+      setConversations([]);
     } finally {
       setLoading(false);
     }

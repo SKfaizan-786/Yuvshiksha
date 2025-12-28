@@ -292,15 +292,7 @@ const TeacherProfileFormScreen = () => {
       formDataToSend.append('availability', JSON.stringify(formData.availability));
       formDataToSend.append('achievements', JSON.stringify(achievementsArray));
 
-      // Debug logging
-      console.log('🔍 Teacher Profile Setup - Debug Info:');
-      console.log('👤 Current User:', user);
-      console.log('📝 User Role:', user?.role);
-      console.log('📤 Submitting to API...');
-
       const response = await profileAPI.teacherSetup(formDataToSend);
-
-      console.log('📥 API Response:', response);
 
       if (response.success) {
         await updateUser({ profileComplete: true });
@@ -461,12 +453,14 @@ const TeacherProfileFormScreen = () => {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Location *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, styles.multilineInput]}
                   placeholder="e.g., Kolkata, West Bengal — please include your locality for better accuracy"
                   placeholderTextColor={COLORS.gray[400]}
                   value={formData.location}
                   onChangeText={(text) => setFormData({ ...formData, location: text })}
-                  numberOfLines={2}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
                 />
               </View>
               {renderInput('Pin Code', formData.pinCode, 'pinCode', 'e.g., 700001', false, 'number-pad')}

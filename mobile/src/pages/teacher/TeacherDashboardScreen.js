@@ -105,14 +105,8 @@ const TeacherDashboardScreen = () => {
         });
       }
     } catch (error) {
-      console.log('Dashboard API error:', error.response?.data || error.message);
-      // Demo data fallback
-      setStats({
-        totalBookings: 24,
-        pendingBookings: 3,
-        totalEarnings: 15000,
-        todayClasses: 2,
-      });
+      console.error('Dashboard API error:', error.response?.data || error.message);
+      // Keep stats at 0 if API fails - no demo data
     } finally {
       setLoading(false);
     }
