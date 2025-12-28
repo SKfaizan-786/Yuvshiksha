@@ -50,7 +50,16 @@ export const register = async (req: Request, res: Response) => {
     }
     const user = await User.create(userData);
 
+    console.log('✅ User created:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      profileComplete: user.profileComplete
+    });
+
     const token = generateToken({ _id: user._id });
+
+    console.log('🔑 Token generated for user ID:', user._id.toString());
 
     // Set the JWT as an httpOnly cookie (for web)
     res.cookie('token', token, {

@@ -33,8 +33,20 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
 
     const decoded = jwt.verify(token, jwtSecret) as { _id: string; iat: number; exp: number };
 
+    console.log('🔍 Auth Middleware - Token decoded:', {
+      userId: decoded._id,
+      tokenIssuedAt: new Date(decoded.iat * 1000).toISOString(),
+    });
+
     const user = await User.findById(decoded._id).select('-password');
+
+    console.log('🔍 Auth Middleware - User lookup result:', {
+      found: !!user,
+      userId: decoded._id,
+    });
+
     if (!user) {
+      console.error('❌ User not found in database for ID:', decoded._id);
       return res.status(401).json({ message: 'Token is valid but user not found' });
     }
 
@@ -60,7 +72,7 @@ export const optionalAuthMiddleware = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       next();
       return;
@@ -68,7 +80,7 @@ export const optionalAuthMiddleware = async (
 
     const token = authHeader.substring(7);
     const jwtSecret = process.env.JWT_SECRET;
-    
+
     if (!jwtSecret) {
       next();
       return;
@@ -76,7 +88,7 @@ export const optionalAuthMiddleware = async (
 
     const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
     const user = await User.findById(decoded._id).select('-password');
-    
+
     if (user) {
       (req as AuthenticatedRequest).user = user;
     }

@@ -406,27 +406,29 @@ const TeacherProfileFormScreen = () => {
   };
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <View style={styles.headerContent}>
-        <Text style={styles.headerTitle}>
-          {isEdit ? 'Edit Profile' : 'Complete Profile'}
-        </Text>
-        {!isEdit && (
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        )}
+    <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
+      <View style={styles.headerContainer}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>
+            {isEdit ? 'Edit Profile' : 'Complete Profile'}
+          </Text>
+          {!isEdit && (
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {renderHeader()}
       {renderStepIndicator()}
       <KeyboardAvoidingView
@@ -580,10 +582,13 @@ const TeacherProfileFormScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  headerSafeArea: {
+    backgroundColor: COLORS.primary,
+  },
   headerContainer: {
     backgroundColor: COLORS.primary,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
@@ -593,23 +598,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
     color: COLORS.white,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
   },
   logoutText: {
     color: COLORS.white,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   loader: { flex: 1 },
