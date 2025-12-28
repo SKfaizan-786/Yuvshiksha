@@ -13,17 +13,22 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
     // console.log('Request Headers:', req.headers);
     // console.log('Cookies:', req.cookies);
 
-    // FIX: For some deployments, cookie name may be 'token' or 'jwt' (check both)
-    let token = req.cookies.token || req.cookies.jwt;
+    let token = null;
+
+    // IMPORTANT: Check Authorization header FIRST (for mobile apps)
+    // Mobile apps send token in Authorization header, not cookies
+    const authHeader = req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+
+    // Fall back to cookies (for web apps)
+    if (!token) {
+      token = req.cookies.token || req.cookies.jwt;
+    }
 
     if (!token) {
-      // Also check for token in Authorization header (Bearer)
-      const authHeader = req.header('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-      } else {
-        return res.status(401).json({ message: 'No token, authorization denied' });
-      }
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
     const jwtSecret = process.env.JWT_SECRET;
