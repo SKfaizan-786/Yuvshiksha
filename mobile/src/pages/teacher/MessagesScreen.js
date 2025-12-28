@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Header from '../../components/Header';
 import COLORS from '../../constants/colors';
 import axios from 'axios';
@@ -28,6 +28,13 @@ const MessagesScreen = () => {
   useEffect(() => {
     loadConversations();
   }, []);
+
+  // Reload messages when screen comes into focus (e.g., after sending a message)
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [])
+  );
 
   const loadConversations = async () => {
     try {

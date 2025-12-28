@@ -328,11 +328,11 @@ const StudentProfileFormScreen = () => {
           style: 'destructive',
           onPress: async () => {
             await logout();
-            // Navigate back to auth flow
+            // Navigate to Landing screen in Auth stack
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
-                routes: [{ name: 'Auth' }],
+                routes: [{ name: 'Auth', state: { routes: [{ name: 'Landing' }] } }],
               })
             );
           },
