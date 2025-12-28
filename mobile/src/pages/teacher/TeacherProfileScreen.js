@@ -151,7 +151,7 @@ const TeacherProfileScreen = () => {
       subtitle: 'Get help and contact support',
       icon: 'help-circle-outline',
       onPress: () => {
-        Alert.alert('Coming Soon', 'Help & Support feature will be available soon');
+        navigation.navigate('HelpSupport', { userRole: 'teacher' });
       },
     },
     {
@@ -305,62 +305,62 @@ const TeacherProfileScreen = () => {
         {((teacherProfile.subjects?.length > 0 || teacherProfile.subjectsTaught?.length > 0) ||
           (teacherProfile.boards?.length > 0 || teacherProfile.boardsTaught?.length > 0) ||
           (teacherProfile.classes?.length > 0 || teacherProfile.classesTaught?.length > 0)) && (
-          <Card style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>Teaching Information</Text>
+            <Card style={styles.detailsCard}>
+              <Text style={styles.cardTitle}>Teaching Information</Text>
 
-            {(teacherProfile.subjects?.length > 0 || teacherProfile.subjectsTaught?.length > 0) && (
-              <View style={styles.chipSection}>
-                <Text style={styles.chipLabel}>Subjects</Text>
-                <View style={styles.chipContainer}>
-                  {(teacherProfile.subjects || teacherProfile.subjectsTaught || []).map((subject, index) => (
-                    <View key={index} style={styles.chip}>
-                      <Text style={styles.chipText}>{subject.text || subject}</Text>
-                    </View>
-                  ))}
+              {(teacherProfile.subjects?.length > 0 || teacherProfile.subjectsTaught?.length > 0) && (
+                <View style={styles.chipSection}>
+                  <Text style={styles.chipLabel}>Subjects</Text>
+                  <View style={styles.chipContainer}>
+                    {(teacherProfile.subjects || teacherProfile.subjectsTaught || []).map((subject, index) => (
+                      <View key={index} style={styles.chip}>
+                        <Text style={styles.chipText}>{subject.text || subject}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {(teacherProfile.boards?.length > 0 || teacherProfile.boardsTaught?.length > 0) && (
-              <View style={styles.chipSection}>
-                <Text style={styles.chipLabel}>Boards</Text>
-                <View style={styles.chipContainer}>
-                  {(teacherProfile.boards || teacherProfile.boardsTaught || []).map((board, index) => (
-                    <View key={index} style={styles.chip}>
-                      <Text style={styles.chipText}>{board.text || board}</Text>
-                    </View>
-                  ))}
+              {(teacherProfile.boards?.length > 0 || teacherProfile.boardsTaught?.length > 0) && (
+                <View style={styles.chipSection}>
+                  <Text style={styles.chipLabel}>Boards</Text>
+                  <View style={styles.chipContainer}>
+                    {(teacherProfile.boards || teacherProfile.boardsTaught || []).map((board, index) => (
+                      <View key={index} style={styles.chip}>
+                        <Text style={styles.chipText}>{board.text || board}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {(teacherProfile.classes?.length > 0 || teacherProfile.classesTaught?.length > 0) && (
-              <View style={styles.chipSection}>
-                <Text style={styles.chipLabel}>Classes</Text>
-                <View style={styles.chipContainer}>
-                  {(teacherProfile.classes || teacherProfile.classesTaught || []).map((cls, index) => (
-                    <View key={index} style={styles.chip}>
-                      <Text style={styles.chipText}>{cls.text || cls}</Text>
-                    </View>
-                  ))}
+              {(teacherProfile.classes?.length > 0 || teacherProfile.classesTaught?.length > 0) && (
+                <View style={styles.chipSection}>
+                  <Text style={styles.chipLabel}>Classes</Text>
+                  <View style={styles.chipContainer}>
+                    {(teacherProfile.classes || teacherProfile.classesTaught || []).map((cls, index) => (
+                      <View key={index} style={styles.chip}>
+                        <Text style={styles.chipText}>{cls.text || cls}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {teacherProfile.teachingMode?.length > 0 && (
-              <View style={styles.chipSection}>
-                <Text style={styles.chipLabel}>Teaching Mode</Text>
-                <View style={styles.chipContainer}>
-                  {teacherProfile.teachingMode.map((mode, index) => (
-                    <View key={index} style={styles.chip}>
-                      <Text style={styles.chipText}>{mode}</Text>
-                    </View>
-                  ))}
+              {teacherProfile.teachingMode?.length > 0 && (
+                <View style={styles.chipSection}>
+                  <Text style={styles.chipLabel}>Teaching Mode</Text>
+                  <View style={styles.chipContainer}>
+                    {teacherProfile.teachingMode.map((mode, index) => (
+                      <View key={index} style={styles.chip}>
+                        <Text style={styles.chipText}>{mode}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
-          </Card>
-        )}
+              )}
+            </Card>
+          )}
 
         {/* Bio */}
         {teacherProfile.bio && (

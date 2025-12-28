@@ -16,6 +16,7 @@ import BookingsScreen from '../pages/teacher/BookingsScreen';
 import MessagesScreen from '../pages/teacher/MessagesScreen';
 import ChatScreen from '../pages/teacher/ChatScreen';
 import NotificationsScreen from '../pages/common/NotificationsScreen';
+import HelpSupportScreen from '../pages/common/HelpSupportScreen';
 
 // Import payment screens
 import PaymentProcessingScreen from '../pages/payment/PaymentProcessingScreen';
@@ -146,6 +147,7 @@ const TeacherStack = () => {
         component={PaymentFailedScreen}
         options={{ gestureEnabled: false }} // Prevent going back after failure
       />
+      <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
     </Stack.Navigator>
   );
 };

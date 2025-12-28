@@ -144,7 +144,7 @@ const StudentProfileScreen = () => {
       subtitle: 'Get help and contact support',
       icon: 'help-circle-outline',
       onPress: () => {
-        Alert.alert('Coming Soon', 'Help & Support feature will be available soon');
+        navigation.navigate('HelpSupport', { userRole: 'student' });
       },
     },
     {

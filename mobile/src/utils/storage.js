@@ -23,7 +23,6 @@ export const getFromStorage = async (key) => {
   try {
     const jsonValue = await AsyncStorage.getItem(key);
     const value = jsonValue != null ? JSON.parse(jsonValue) : null;
-    console.log(`📖 Retrieved from storage: ${key}`, value ? 'Found' : 'Not found');
     return value;
   } catch (error) {
     console.error(`❌ Error reading from storage (${key}):`, error);
