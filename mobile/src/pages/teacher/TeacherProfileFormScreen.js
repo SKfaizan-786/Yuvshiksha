@@ -15,7 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,7 +27,7 @@ const TeacherProfileFormScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { updateUser, user } = useAuth();
+  const { updateUser, user, logout } = useAuth();
   const isEdit = route.params?.isEdit || false;
 
   const [loading, setLoading] = useState(isEdit);
@@ -292,7 +292,15 @@ const TeacherProfileFormScreen = () => {
       formDataToSend.append('availability', JSON.stringify(formData.availability));
       formDataToSend.append('achievements', JSON.stringify(achievementsArray));
 
+      // Debug logging
+      console.log('🔍 Teacher Profile Setup - Debug Info:');
+      console.log('👤 Current User:', user);
+      console.log('📝 User Role:', user?.role);
+      console.log('📤 Submitting to API...');
+
       const response = await profileAPI.teacherSetup(formDataToSend);
+
+      console.log('📥 API Response:', response);
 
       if (response.success) {
         await updateUser({ profileComplete: true });
@@ -373,9 +381,53 @@ const TeacherProfileFormScreen = () => {
 
   const isNextDisabled = !isStepValid();
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? Your profile will not be saved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            // Navigate back to auth flow
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              })
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <View style={styles.headerContent}>
+        <Text style={styles.headerTitle}>
+          {isEdit ? 'Edit Profile' : 'Complete Profile'}
+        </Text>
+        {!isEdit && (
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title={isEdit ? 'Edit Profile' : 'Complete Profile'} showBack={false} />
+      {renderHeader()}
       {renderStepIndicator()}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -528,6 +580,38 @@ const TeacherProfileFormScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  headerContainer: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.white,
+    letterSpacing: 0.5,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  logoutText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   loader: { flex: 1 },
   progressContainer: { padding: 20, paddingBottom: 10, backgroundColor: COLORS.white },
   progressBarBg: { height: 6, backgroundColor: COLORS.gray[200], borderRadius: 3, marginBottom: 8, overflow: 'hidden' },

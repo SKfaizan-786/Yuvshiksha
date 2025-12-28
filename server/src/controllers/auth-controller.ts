@@ -20,7 +20,7 @@ const generateToken = (payload: object) => {
 // Register
 export const register = async (req: Request, res: Response) => {
   try {
-  const { email, password, role, firstName, lastName, gender, maritalStatus } = req.body;
+    const { email, password, role, firstName, lastName, gender, maritalStatus } = req.body;
 
     if (!email || !password || !role || !firstName || !lastName || (role === 'teacher' && !maritalStatus)) {
       return res.status(400).json({
@@ -52,17 +52,18 @@ export const register = async (req: Request, res: Response) => {
 
     const token = generateToken({ _id: user._id });
 
-    // Set the JWT as an httpOnly cookie
+    // Set the JWT as an httpOnly cookie (for web)
     res.cookie('token', token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none',
-  domain: '.yuvshiksha.in',
-  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      domain: '.yuvshiksha.in',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
     res.status(201).json({
       message: 'User registered successfully',
+      token, // Return token in response for mobile app
       user: {
         _id: user._id,
         email: user.email,
@@ -104,13 +105,14 @@ export const login = async (req: Request, res: Response) => {
 
     // Set the JWT as an httpOnly cookie
     res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
     res.status(200).json({
+      token, // Return token in response for mobile app
       user: {
         _id: user._id,
         email: user.email,
@@ -152,13 +154,14 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     // Set the JWT as an httpOnly cookie
     res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
     res.status(200).json({
+      token, // Return token in response for mobile app
       user: {
         _id: user._id,
         email: user.email,
@@ -218,8 +221,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     console.error('Forgot password error:', err);
     const errorMessage =
       process.env.NODE_ENV === 'development' && err instanceof Error
-      ? err.message
-      : undefined;
+        ? err.message
+        : undefined;
     res.status(500).json({
       message: 'Failed to process password reset request',
       error: errorMessage

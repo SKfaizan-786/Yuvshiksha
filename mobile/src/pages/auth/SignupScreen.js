@@ -17,6 +17,7 @@ import Button from '../../components/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import authAPI from '../../services/authAPI';
 import validators from '../../utils/validation';
+import { saveToStorage, STORAGE_KEYS } from '../../utils/storage';
 import COLORS from '../../constants/colors';
 import USER_ROLES from '../../constants/roles';
 
@@ -100,7 +101,17 @@ const SignupScreen = () => {
       const { confirmPassword, ...signupData } = formData;
       const response = await authAPI.signup(signupData);
 
+      console.log('📥 Signup Response:', response);
+
       if (response.success) {
+        // Save token if present in response
+        if (response.data.token) {
+          await saveToStorage(STORAGE_KEYS.AUTH_TOKEN, response.data.token);
+          console.log('🔑 Token saved to storage');
+        } else {
+          console.warn('⚠️ No token in signup response');
+        }
+
         // Save user data to context and storage
         await login(response.data.user);
 

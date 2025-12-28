@@ -23,11 +23,14 @@ apiClient.interceptors.request.use(
     try {
       // Get auth token from storage if available
       const token = await getFromStorage(STORAGE_KEYS.AUTH_TOKEN);
-      
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 Token found and added to request');
+      } else {
+        console.log('⚠️ No token found in storage');
       }
-      
+
       console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     } catch (error) {
@@ -45,7 +48,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
-                `Status: ${response.status}`);
+      `Status: ${response.status}`);
     return response;
   },
   async (error) => {
@@ -57,7 +60,7 @@ apiClient.interceptors.response.use(
 
     if (!isLoginEndpoint || !is401Error) {
       console.error(`❌ API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
-                    `Status: ${error.response?.status}`);
+        `Status: ${error.response?.status}`);
     }
 
     // Handle 401 Unauthorized - Token expired or invalid
