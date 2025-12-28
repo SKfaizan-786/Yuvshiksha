@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,18 +30,43 @@ const MessagesScreen = () => {
     loadConversations();
   }, []);
 
-  // Reload messages when screen comes into focus (e.g., after sending a message)
+  // Keep useFocusEffect for when you just navigate back manually
   useFocusEffect(
     useCallback(() => {
       loadConversations();
     }, [])
   );
 
+  // Persistent listener that stays alive in the background
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('refresh_msg_list', () => {
+      console.log('⚡ Event Received.');
+
+      // 1. First fast check (in case backend is super fast)
+      loadConversations();
+
+      // 2. CRITICAL: The Safety Delay (Wait 1 second and check again)
+      // This ensures if the first check failed, this one catches it.
+      setTimeout(() => {
+        console.log('🐢 Safety Check: Refreshing again to be sure...');
+        loadConversations();
+      }, 1000);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const loadConversations = async () => {
     try {
-      setLoading(true);
+      // Don't show loading spinner on background refreshes to keep it smooth
+      // only show if it's the very first load
+      if (conversations.length === 0) setLoading(true);
+
+      // Add timestamp to URL to prevent Caching
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/api/messages/conversations`,
+        `${API_CONFIG.BASE_URL}/api/messages/conversations?t=${new Date().getTime()}`,
         { withCredentials: true }
       );
 

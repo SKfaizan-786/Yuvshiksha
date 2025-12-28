@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Header from '../../components/Header';
 import COLORS from '../../constants/colors';
 import axios from 'axios';
@@ -29,11 +30,42 @@ const MessagesScreen = () => {
     loadConversations();
   }, []);
 
+  // Keep useFocusEffect for when you just navigate back manually
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [])
+  );
+
+  // Persistent listener that stays alive in the background
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('refresh_msg_list', () => {
+      console.log('⚡ Event Received.');
+
+      // 1. First fast check (in case backend is super fast)
+      loadConversations();
+
+      // 2. CRITICAL: The Safety Delay (Wait 1 second and check again)
+      // This ensures if the first check failed, this one catches it.
+      setTimeout(() => {
+        console.log('🐢 Safety Check: Refreshing again to be sure...');
+        loadConversations();
+      }, 1000);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const loadConversations = async () => {
     try {
-      setLoading(true);
+      // Don't show loading spinner on background refreshes
+      if (conversations.length === 0) setLoading(true);
+
+      // Add timestamp to prevent caching
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/api/messages/conversations`,
+        `${API_CONFIG.BASE_URL}/api/messages/conversations?t=${new Date().getTime()}`,
         { withCredentials: true }
       );
 

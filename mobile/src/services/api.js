@@ -26,12 +26,8 @@ apiClient.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('🔑 Token found and added to request');
-      } else {
-        console.log('⚠️ No token found in storage');
       }
 
-      console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     } catch (error) {
       console.error('❌ Request interceptor error:', error);
@@ -47,8 +43,6 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle responses and errors
 apiClient.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
-      `Status: ${response.status}`);
     return response;
   },
   async (error) => {

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,6 +84,11 @@ const ChatScreen = ({ route, navigation }) => {
 
       if (response.data) {
         setMessages([...messages, response.data]);
+
+        // Emit event to refresh messages list BEFORE navigating back
+        DeviceEventEmitter.emit('refresh_msg_list');
+        console.log('📤 Emitted refresh_msg_list event');
+
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);

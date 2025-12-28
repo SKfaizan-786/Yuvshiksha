@@ -384,13 +384,7 @@ const TeacherProfileFormScreen = () => {
           style: 'destructive',
           onPress: async () => {
             await logout();
-            // Navigate to Landing screen in Auth stack
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Auth', state: { routes: [{ name: 'Landing' }] } }],
-              })
-            );
+            // Navigation handled automatically by RootNavigator when user state changes
           },
         },
       ]
