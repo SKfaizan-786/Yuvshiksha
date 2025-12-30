@@ -79,7 +79,7 @@ const NotificationsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Header title="Notifications" showBack />
 
       {/* Tabs */}

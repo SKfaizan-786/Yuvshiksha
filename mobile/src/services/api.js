@@ -48,11 +48,19 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Don't log error for login endpoint with 401 (invalid credentials)
+    // Don't log error for expected validation failures
     const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
+    const isOtpEndpoint = originalRequest?.url?.includes('/email-otp/verify-otp');
     const is401Error = error.response?.status === 401;
+    const is400Error = error.response?.status === 400;
 
-    if (!isLoginEndpoint || !is401Error) {
+    // Only log unexpected errors (not validation failures)
+    const shouldLog = !(
+      (isLoginEndpoint && is401Error) ||
+      (isOtpEndpoint && is400Error)
+    );
+
+    if (shouldLog) {
       console.error(`❌ API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
         `Status: ${error.response?.status}`);
     }

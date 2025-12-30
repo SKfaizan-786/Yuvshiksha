@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,8 @@ const SignupScreen = () => {
   const [otp, setOtp] = useState(''); // Store OTP input
   const [otpError, setOtpError] = useState('');
   const [toast, setToast] = useState({ visible: false, type: 'success', message: '' });
+  const [timer, setTimer] = useState(300); // 5 minutes in seconds
+  const [canResend, setCanResend] = useState(false);
 
   const showToast = (type, message) => {
     setToast({ visible: true, type, message });
@@ -53,6 +55,30 @@ const SignupScreen = () => {
 
   const hideToast = () => {
     setToast({ ...toast, visible: false });
+  };
+
+  // Countdown timer for OTP
+  useEffect(() => {
+    let interval;
+    if (otpStep && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpStep, timer]);
+
+  // Format timer as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleChange = (field, value) => {
@@ -116,8 +142,10 @@ const SignupScreen = () => {
       const response = await emailOtpAPI.sendOtp(formData.email);
 
       if (response.success) {
-        // Show OTP verification screen
+        // Show OTP verification screen and reset timer
         setOtpStep(true);
+        setTimer(300); // Reset to 5 minutes
+        setCanResend(false);
         showToast('success', 'OTP sent to your email');
       } else {
         showToast('error', response.message || 'Failed to send OTP');
@@ -239,11 +267,24 @@ const SignupScreen = () => {
                     setOtp(text.replace(/[^0-9]/g, ''));
                     setOtpError('');
                   }}
-                  placeholder="Enter 6-digit OTP"
+                  placeholder="000000"
+                  placeholderTextColor={COLORS.gray?.[400] || '#9ca3af'}
                   keyboardType="number-pad"
                   maxLength={6}
                   autoFocus
                 />
+              </View>
+
+              {/* Timer Display */}
+              <View style={styles.timerContainer}>
+                <Ionicons
+                  name={timer > 60 ? "time-outline" : "warning-outline"}
+                  size={20}
+                  color={timer > 60 ? COLORS.primary : '#f59e0b'}
+                />
+                <Text style={[styles.timerText, timer <= 60 && styles.timerTextWarning]}>
+                  {timer > 0 ? `Code expires in ${formatTime(timer)}` : 'Code expired'}
+                </Text>
               </View>
 
               {otpError ? (
@@ -260,10 +301,10 @@ const SignupScreen = () => {
 
               <TouchableOpacity
                 onPress={handleSignup}
-                disabled={loading}
-                style={styles.resendButton}
+                disabled={loading || !canResend}
+                style={[styles.resendButton, !canResend && styles.resendButtonDisabled]}
               >
-                <Text style={styles.resendButtonText}>
+                <Text style={[styles.resendButtonText, !canResend && styles.resendButtonTextDisabled]}>
                   Didn't receive the code? <Text style={styles.resendLink}>Resend</Text>
                 </Text>
               </TouchableOpacity>
@@ -702,11 +743,31 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 20,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 8,
+    letterSpacing: 4,
     color: COLORS.textPrimary,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: 20,
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginLeft: 6,
+  },
+  timerTextWarning: {
+    color: '#f59e0b',
   },
   verifyButton: {
     marginTop: 8,
@@ -715,10 +776,16 @@ const styles = StyleSheet.create({
   resendButton: {
     paddingVertical: 12,
   },
+  resendButtonDisabled: {
+    opacity: 0.6,
+  },
   resendButtonText: {
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  resendButtonTextDisabled: {
+    color: COLORS.gray?.[400] || '#9ca3af',
   },
   resendLink: {
     color: COLORS.primary,
@@ -727,9 +794,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignupScreen;
-
-
-
-
-
-

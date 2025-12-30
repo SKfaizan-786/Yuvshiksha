@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/Header';
+import CustomAlert from '../../components/CustomAlert';
 import COLORS from '../../constants/colors';
 import profileAPI from '../../services/profileAPI';
 
@@ -55,8 +55,61 @@ const StudentProfileFormScreen = () => {
     photoUrl: '',
   });
 
+  // Alert state
+  const [alert, setAlert] = useState({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    buttons: [],
+  });
+
+  const showAlert = (type, title, message, buttons = []) => {
+    setAlert({ visible: true, type, title, message, buttons });
+  };
+
+  const hideAlert = () => {
+    setAlert({ ...alert, visible: false });
+  };
+
+  // Validation errors for phone and PIN
+  const [validationErrors, setValidationErrors] = useState({
+    phone: '',
+    pinCode: '',
+  });
+
+  const validatePhone = (phone) => {
+    // Remove all spaces and special characters except +
+    const cleaned = phone.replace(/[^0-9+]/g, '');
+
+    // Check if it's with country code (+91 followed by 10 digits) or just 10 digits
+    const withCountryCode = /^\+\d{1,3}\d{10}$/; // +91 or other country codes
+    const withoutCountryCode = /^\d{10}$/; // Just 10 digits
+
+    if (withCountryCode.test(cleaned) || withoutCountryCode.test(cleaned)) {
+      setValidationErrors(prev => ({ ...prev, phone: '' }));
+      return true;
+    } else {
+      setValidationErrors(prev => ({ ...prev, phone: 'Enter 10 digits or with country code (e.g., +91)' }));
+      return false;
+    }
+  };
+
+  const validatePinCode = (pin) => {
+    const cleaned = pin.replace(/[^0-9]/g, '');
+
+    if (cleaned.length === 6) {
+      setValidationErrors(prev => ({ ...prev, pinCode: '' }));
+      return true;
+    } else {
+      setValidationErrors(prev => ({ ...prev, pinCode: 'Enter 6 digits' }));
+      return false;
+    }
+  };
+
   // Animated value for progress bar
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -79,6 +132,16 @@ const StudentProfileFormScreen = () => {
       }));
     }
   }, [isEdit, user]);
+
+  // Validate phone and PIN when they change
+  useEffect(() => {
+    if (formData.phone) {
+      validatePhone(formData.phone);
+    }
+    if (formData.pinCode) {
+      validatePinCode(formData.pinCode);
+    }
+  }, [formData.phone, formData.pinCode]);
 
   const loadProfile = async () => {
     try {
@@ -122,7 +185,9 @@ const StudentProfileFormScreen = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant access to your photo library.');
+        showAlert('warning', 'Permission Required', 'Please grant access to your photo library.', [
+          { text: 'OK', style: 'default' }
+        ]);
         return;
       }
 
@@ -138,7 +203,9 @@ const StudentProfileFormScreen = () => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image.');
+      showAlert('error', 'Error', 'Failed to pick image.', [
+        { text: 'OK', style: 'default' }
+      ]);
     }
   };
 
@@ -176,7 +243,9 @@ const StudentProfileFormScreen = () => {
       return (
         !!formData.phone.trim() &&
         !!formData.location.trim() &&
-        !!formData.pinCode.trim()
+        !!formData.pinCode.trim() &&
+        !validationErrors.phone &&
+        !validationErrors.pinCode
       );
     } else if (currentStep === 1) {
       return (
@@ -194,6 +263,7 @@ const StudentProfileFormScreen = () => {
   const handleNext = () => {
     if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       handleSubmit();
     }
@@ -256,16 +326,24 @@ const StudentProfileFormScreen = () => {
       if (response.success) {
         await updateUser({ profileComplete: true });
         if (isEdit) {
-          Alert.alert('Success', 'Profile updated!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+          showAlert('success', 'Success!', 'Your profile has been updated successfully.', [
+            { text: 'OK', onPress: () => navigation.goBack(), style: 'default' }
+          ]);
         } else {
-          Alert.alert('Success', 'Profile completed!', [{ text: 'OK', onPress: () => navigation.replace('StudentTabs') }]);
+          showAlert('success', 'Profile Completed!', 'Welcome to Yuvshiksha! Your profile is now complete.', [
+            { text: 'Get Started', onPress: () => navigation.replace('StudentTabs'), style: 'default' }
+          ]);
         }
       } else {
-        Alert.alert('Error', response.message || 'Failed to save profile');
+        showAlert('error', 'Error', response.message || 'Failed to save profile. Please try again.', [
+          { text: 'OK', style: 'default' }
+        ]);
       }
 
     } catch (error) {
-      Alert.alert('Error', 'Failed to save profile');
+      showAlert('error', 'Error', 'Failed to save profile. Please try again.', [
+        { text: 'OK', style: 'default' }
+      ]);
       console.error(error);
     } finally {
       setSubmitting(false);
@@ -318,25 +396,21 @@ const StudentProfileFormScreen = () => {
   const isNextDisabled = !isStepValid();
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout? Your profile will not be saved.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            // Navigation handled automatically by RootNavigator when user state changes
-          },
+    showAlert('confirm', 'Logout', 'Are you sure you want to logout? Your profile will not be saved.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          // Navigation handled automatically by RootNavigator when user state changes
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderHeader = () => (
-    <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
+    <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
       <View style={styles.headerContainer}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
@@ -354,7 +428,7 @@ const StudentProfileFormScreen = () => {
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 
   return (
@@ -364,7 +438,7 @@ const StudentProfileFormScreen = () => {
       {renderStepIndicator()}
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView ref={scrollViewRef} style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
 
           {currentStep === 0 && (
             <View style={styles.stepContainer}>
@@ -398,8 +472,16 @@ const StudentProfileFormScreen = () => {
               {renderInput('Email Address', formData.email, 'email', '', false, 'email-address', false)}
 
               {renderInput('Phone Number *', formData.phone, 'phone', 'e.g., +91 98765 43210', false, 'phone-pad')}
+              {validationErrors.phone ? (
+                <Text style={styles.validationError}>{validationErrors.phone}</Text>
+              ) : null}
+
               {renderInput('Location *', formData.location, 'location', 'e.g., Kolkata, West Bengal')}
+
               {renderInput('Pin Code *', formData.pinCode, 'pinCode', 'e.g., 700001', false, 'number-pad')}
+              {validationErrors.pinCode ? (
+                <Text style={styles.validationError}>{validationErrors.pinCode}</Text>
+              ) : null}
             </View>
           )}
 
@@ -412,7 +494,7 @@ const StudentProfileFormScreen = () => {
                 <View style={styles.tagInputContainer}>
                   <TextInput
                     style={styles.tagInput}
-                    placeholder="Add an interest, e.g., Mathematics, Python"
+                    placeholder="Add an interest, e.g., Mathematics"
                     value={subjectInput}
                     onChangeText={setSubjectInput}
                     onSubmitEditing={() => addTag('interests', subjectInput, setSubjectInput)}
@@ -453,9 +535,9 @@ const StudentProfileFormScreen = () => {
                 </View>
               </View>
 
-              {renderInput('Medium of Instruction *', formData.medium, 'medium', 'e.g., English, Hindi, Bengali')}
-              {renderInput('Board/University *', formData.board, 'board', 'e.g., CBSE, ICSE, State Board')}
-              {renderInput('Class/Course *', formData.grade, 'grade', 'e.g., Class 12, B.Tech CSE')}
+              {renderInput('Medium of Instruction *', formData.medium, 'medium', 'e.g., English')}
+              {renderInput('Board/University *', formData.board, 'board', 'e.g., CBSE')}
+              {renderInput('Class/Course *', formData.grade, 'grade', 'e.g., Class 12')}
             </View>
           )}
 
@@ -493,7 +575,7 @@ const StudentProfileFormScreen = () => {
             </View>
           )}
 
-          <View style={{ height: 100 }} />
+          <View style={{ height: 300 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -521,6 +603,15 @@ const StudentProfileFormScreen = () => {
           )}
         </TouchableOpacity>
       </View>
+
+      <CustomAlert
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        buttons={alert.buttons}
+        onClose={hideAlert}
+      />
     </SafeAreaView>
   );
 };
@@ -604,6 +695,13 @@ const styles = StyleSheet.create({
   tagInput: { flex: 1, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.gray[200], borderRadius: 16, padding: 16, fontSize: 16 },
   addButton: { backgroundColor: COLORS.primary, width: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  validationError: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: -12,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
   tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 24, gap: 8, borderWidth: 1, borderColor: '#E0E7FF', maxWidth: '100%' },
   tagText: { color: COLORS.primary, fontWeight: '600', fontSize: 13, flexShrink: 1 },
 

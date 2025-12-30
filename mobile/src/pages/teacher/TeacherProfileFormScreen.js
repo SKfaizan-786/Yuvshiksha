@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/Header';
+import CustomAlert from '../../components/CustomAlert';
 import COLORS from '../../constants/colors';
 import profileAPI from '../../services/profileAPI';
 
@@ -61,6 +61,56 @@ const TeacherProfileFormScreen = () => {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
 
+  // Alert state
+  const [alert, setAlert] = useState({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    buttons: [],
+  });
+
+  const showAlert = (type, title, message, buttons = []) => {
+    setAlert({ visible: true, type, title, message, buttons });
+  };
+
+  const hideAlert = () => {
+    setAlert({ ...alert, visible: false });
+  };
+
+  // Validation errors for phone and PIN
+  const [validationErrors, setValidationErrors] = useState({
+    phone: '',
+    pinCode: '',
+  });
+
+  const validatePhone = (phone) => {
+    const cleaned = phone.replace(/[^0-9+]/g, '');
+    const withCountryCode = /^\+\d{1,3}\d{10}$/;
+    const withoutCountryCode = /^\d{10}$/;
+
+    if (withCountryCode.test(cleaned) || withoutCountryCode.test(cleaned)) {
+      setValidationErrors(prev => ({ ...prev, phone: '' }));
+      return true;
+    } else {
+      setValidationErrors(prev => ({ ...prev, phone: 'Enter 10 digits or with country code (e.g., +91)' }));
+      return false;
+    }
+  };
+
+  const validatePinCode = (pin) => {
+    if (!pin.trim()) return true; // PIN is optional for teachers
+    const cleaned = pin.replace(/[^0-9]/g, '');
+
+    if (cleaned.length === 6) {
+      setValidationErrors(prev => ({ ...prev, pinCode: '' }));
+      return true;
+    } else {
+      setValidationErrors(prev => ({ ...prev, pinCode: 'Enter 6 digits' }));
+      return false;
+    }
+  };
+
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: (currentStep + 1) / 3,
@@ -81,6 +131,16 @@ const TeacherProfileFormScreen = () => {
       }));
     }
   }, [isEdit, user]);
+
+  // Validate phone and PIN when they change
+  useEffect(() => {
+    if (formData.phone) {
+      validatePhone(formData.phone);
+    }
+    if (formData.pinCode) {
+      validatePinCode(formData.pinCode);
+    }
+  }, [formData.phone, formData.pinCode]);
 
   const loadProfile = async () => {
     try {
@@ -139,7 +199,9 @@ const TeacherProfileFormScreen = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant access.');
+        showAlert('warning', 'Permission Required', 'Please grant access to your photo library.', [
+          { text: 'OK', style: 'default' }
+        ]);
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
@@ -178,14 +240,18 @@ const TeacherProfileFormScreen = () => {
 
   const addAvailabilitySlot = () => {
     if (!newSlot.day || !newSlot.startTime || !newSlot.endTime) {
-      Alert.alert('Required', 'Please fill in all fields');
+      showAlert('warning', 'Required Fields', 'Please fill in all fields for the time slot.', [
+        { text: 'OK', style: 'default' }
+      ]);
       return;
     }
 
     // Time format validation (HH:MM)
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(newSlot.startTime) || !timeRegex.test(newSlot.endTime)) {
-      Alert.alert('Invalid Time', 'Please use HH:MM format (e.g., 09:00, 14:30)');
+      showAlert('error', 'Invalid Time Format', 'Please use HH:MM format (e.g., 09:00, 14:30).', [
+        { text: 'OK', style: 'default' }
+      ]);
       return;
     }
 
@@ -198,7 +264,9 @@ const TeacherProfileFormScreen = () => {
       )
     );
     if (hasOverlap) {
-      Alert.alert('Overlap', 'Time slot overlaps with existing slot');
+      showAlert('warning', 'Time Slot Overlap', 'This time slot overlaps with an existing slot. Please choose a different time.', [
+        { text: 'OK', style: 'default' }
+      ]);
       return;
     }
     setFormData({ ...formData, availability: [...formData.availability, { ...newSlot }] });
@@ -215,7 +283,9 @@ const TeacherProfileFormScreen = () => {
       return (
         !!formData.phone &&
         !!formData.location &&
-        !!formData.qualifications
+        !!formData.qualifications &&
+        !validationErrors.phone &&
+        !validationErrors.pinCode
       );
     } else if (currentStep === 1) {
       return (
@@ -296,13 +366,24 @@ const TeacherProfileFormScreen = () => {
 
       if (response.success) {
         await updateUser({ profileComplete: true });
-        if (isEdit) Alert.alert('Success', 'Profile updated!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
-        else Alert.alert('Success', 'Profile completed!', [{ text: 'OK', onPress: () => navigation.replace('TeacherTabs') }]);
+        if (isEdit) {
+          showAlert('success', 'Success!', 'Your profile has been updated successfully.', [
+            { text: 'OK', onPress: () => navigation.goBack(), style: 'default' }
+          ]);
+        } else {
+          showAlert('success', 'Profile Completed!', 'Welcome to Yuvshiksha! Your teaching profile is now complete.', [
+            { text: 'Get Started', onPress: () => navigation.replace('TeacherTabs'), style: 'default' }
+          ]);
+        }
       } else {
-        Alert.alert('Error', response.message || 'Failed to save profile');
+        showAlert('error', 'Error', response.message || 'Failed to save profile. Please try again.', [
+          { text: 'OK', style: 'default' }
+        ]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to save profile');
+      showAlert('error', 'Error', 'Failed to save profile. Please try again.', [
+        { text: 'OK', style: 'default' }
+      ]);
       console.error(error);
     } finally {
       setSubmitting(false);
@@ -374,25 +455,21 @@ const TeacherProfileFormScreen = () => {
   const isNextDisabled = !isStepValid();
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout? Your profile will not be saved.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            // Navigation handled automatically by RootNavigator when user state changes
-          },
+    showAlert('confirm', 'Logout', 'Are you sure you want to logout? Your profile will not be saved.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          // Navigation handled automatically by RootNavigator when user state changes
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderHeader = () => (
-    <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
+    <View style={[styles.headerSafeArea, { paddingTop: insets.top }]}>
       <View style={styles.headerContainer}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
@@ -410,7 +487,7 @@ const TeacherProfileFormScreen = () => {
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 
   return (
@@ -444,6 +521,10 @@ const TeacherProfileFormScreen = () => {
               </View>
               {renderInput('Email Address', formData.email, 'email', 'john@example.com', false, 'email-address', false)}
               {renderInput('Phone Number *', formData.phone, 'phone', 'e.g., +91 98765 43210', false, 'phone-pad')}
+              {validationErrors.phone ? (
+                <Text style={styles.validationError}>{validationErrors.phone}</Text>
+              ) : null}
+
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Location *</Text>
                 <TextInput
@@ -457,10 +538,14 @@ const TeacherProfileFormScreen = () => {
                   textAlignVertical="top"
                 />
               </View>
+
               {renderInput('Pin Code', formData.pinCode, 'pinCode', 'e.g., 700001', false, 'number-pad')}
-              {renderInput('Qualifications *', formData.qualifications, 'qualifications', 'e.g., M.Sc. Physics, B.Tech CSE')}
+              {validationErrors.pinCode ? (
+                <Text style={styles.validationError}>{validationErrors.pinCode}</Text>
+              ) : null}
+              {renderInput('Qualifications *', formData.qualifications, 'qualifications', 'e.g., M.Sc. Physics')}
               {renderInput('Experience (Years)', formData.experienceYears, 'experienceYears', 'e.g., 5', false, 'number-pad')}
-              {renderInput('Current Occupation', formData.currentOccupation, 'currentOccupation', 'e.g., Full-time Teacher, Freelance Tutor')}
+              {renderInput('Current Occupation', formData.currentOccupation, 'currentOccupation', 'e.g., Full-time Teacher')}
             </View>
           )}
 
@@ -469,7 +554,7 @@ const TeacherProfileFormScreen = () => {
               <Text style={styles.stepTitle}>Teaching Expertise</Text>
               {renderTagInput('Subjects *', formData.subjects, subjectInput, setSubjectInput, 'subjects', 'Add a subject, e.g., Mathematics')}
               {renderTagInput('Boards *', formData.boards, boardInput, setBoardInput, 'boards', 'Add a board, e.g., CBSE, ICSE')}
-              {renderTagInput('Classes *', formData.classes, classInput, setClassInput, 'classes', 'Add a class/course, e.g., Class 10, JEE Mains')}
+              {renderTagInput('Classes *', formData.classes, classInput, setClassInput, 'classes', 'Add a class/course, e.g., Class 10')}
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Teaching Mode *</Text>
@@ -483,7 +568,7 @@ const TeacherProfileFormScreen = () => {
                 </View>
               </View>
 
-              {renderInput('Medium *', formData.medium, 'medium', 'e.g., English, Hindi, Bengali')}
+              {renderInput('Medium *', formData.medium, 'medium', 'e.g., English')}
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Availability *</Text>
@@ -532,11 +617,11 @@ const TeacherProfileFormScreen = () => {
               <Text style={styles.stepTitle}>Profile Details</Text>
               {renderInput('Bio', formData.bio, 'bio', 'Share your teaching philosophy, experience highlights, etc.', true)}
               {renderInput('Teaching Approach', formData.teachingApproach, 'teachingApproach', 'How do you structure your classes? What makes your teaching unique?', true)}
-              {renderTagInput('Achievements', formData.achievements, achievementInput, setAchievementInput, 'achievements', 'Add an achievement, e.g., 90% students scored A+')}
+              {renderTagInput('Achievements', formData.achievements, achievementInput, setAchievementInput, 'achievements', 'Add an achievement')}
               {renderInput('Hourly Rate (₹)', formData.hourlyRate, 'hourlyRate', 'e.g., 500', false, 'number-pad')}
             </View>
           )}
-          <View style={{ height: 100 }} />
+          <View style={{ height: 300 }} />
         </ScrollView>
 
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -564,6 +649,15 @@ const TeacherProfileFormScreen = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <CustomAlert
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        buttons={alert.buttons}
+        onClose={hideAlert}
+      />
     </SafeAreaView>
   );
 };
@@ -633,6 +727,13 @@ const styles = StyleSheet.create({
   tagInput: { flex: 1, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.gray[200], borderRadius: 16, padding: 16, fontSize: 16 },
   addButton: { backgroundColor: COLORS.primary, width: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  validationError: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: -12,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
   tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 24, gap: 8, borderWidth: 1, borderColor: '#E0E7FF' },
   tagText: { color: COLORS.primary, fontWeight: '600', fontSize: 14 },
   checkboxGroup: { gap: 12 },
