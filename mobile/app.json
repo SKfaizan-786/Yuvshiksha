@@ -55,7 +55,9 @@
         {
           "photosPermission": "The app needs access to your photos to let you upload profile pictures."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ],
     "extra": {
       "backendUrl": "https://api.yuvsiksha.in",

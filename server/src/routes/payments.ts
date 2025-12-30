@@ -13,6 +13,31 @@ const router = express.Router();
 
 router.post('/cashfree-order', authMiddleware, createCashfreeOrder);
 router.post('/verify', verifyPayment); // Removed authMiddleware
+router.get('/verify/:orderId', async (req, res) => {
+    // Mobile app payment verification endpoint
+    try {
+        const { orderId } = req.params;
+        const response = await axios.get(
+            `${process.env.CASHFREE_BASE_URL}/orders/${orderId}`,
+            {
+                headers: {
+                    'x-client-id': process.env.CASHFREE_APP_ID,
+                    'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+                    'x-api-version': '2022-09-01',
+                }
+            }
+        );
+        const data: any = response.data;
+        res.json({
+            success: true,
+            status: data?.order_status || 'PENDING',
+            message: data?.order_status === 'PAID' ? 'Payment successful' : 'Payment pending or failed'
+        });
+    } catch (error: any) {
+        console.error('Payment verification error:', error);
+        res.status(500).json({ success: false, status: 'ERROR', message: 'Verification failed' });
+    }
+});
 router.get('/status', authMiddleware, getPaymentStatus);
 
 // Mobile payment bridge page

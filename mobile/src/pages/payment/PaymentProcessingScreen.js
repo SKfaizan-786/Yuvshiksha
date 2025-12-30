@@ -80,16 +80,49 @@ const PaymentProcessingScreen = () => {
 
       console.log('WebBrowser result:', result);
 
-      // If browser was dismissed without deep link callback, return to dashboard
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.log('User dismissed browser, returning to dashboard');
-        navigation.goBack();
-      }
+      // After browser closes, check payment status
+      // (User might have completed payment or cancelled)
+      console.log('Browser closed, checking payment status...');
+      await checkPaymentStatus();
 
     } catch (err) {
       console.error('Payment initialization error:', err);
+      setError('Failed to open payment gateway');
+      setStatus('error');
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    try {
+      console.log('Checking payment status for order:', orderId);
+
+      // Call backend to check payment status
+      const response = await fetch(`https://api.yuvsiksha.in/api/payments/verify/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('Payment status response:', data);
+
+      if (data.success && data.status === 'SUCCESS') {
+        // Payment successful!
+        console.log('Payment verified as successful');
+        navigation.replace('PaymentSuccess', { orderId });
+      } else if (data.status === 'PENDING') {
+        // Still processing, wait a bit and check again
+        console.log('Payment still pending, checking again in 2 seconds...');
+        setTimeout(() => checkPaymentStatus(), 2000);
+      } else {
+        // Payment failed or cancelled
+        console.log('Payment failed or cancelled');
+        navigation.replace('PaymentFailed', { orderId, reason: data.message || 'Payment was not completed' });
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
       // On error, go back to dashboard
-      console.log('Payment error, returning to dashboard');
       navigation.goBack();
     }
   };
