@@ -92,9 +92,9 @@ const PaymentProcessingScreen = () => {
     }
   };
 
-  const checkPaymentStatus = async () => {
+  const checkPaymentStatus = async (retryCount = 0) => {
     try {
-      console.log('Checking payment status for order:', orderId);
+      console.log(`Checking payment status for order: ${orderId} (attempt ${retryCount + 1})`);
 
       // Call backend to check payment status
       const response = await fetch(`https://api.yuvsiksha.in/api/payments/verify/${orderId}`, {
@@ -107,23 +107,39 @@ const PaymentProcessingScreen = () => {
       const data = await response.json();
       console.log('Payment status response:', data);
 
-      if (data.success && data.status === 'SUCCESS') {
+      if (data.success && data.status === 'PAID') {
         // Payment successful!
         console.log('Payment verified as successful');
         navigation.replace('PaymentSuccess', { orderId });
-      } else if (data.status === 'PENDING') {
-        // Still processing, wait a bit and check again
-        console.log('Payment still pending, checking again in 2 seconds...');
-        setTimeout(() => checkPaymentStatus(), 2000);
+      } else if (data.status === 'PENDING' || data.status === 'ACTIVE') {
+        // Still processing - ACTIVE means payment is being processed
+        // Retry up to 10 times (20 seconds total)
+        if (retryCount < 10) {
+          console.log(`Payment still ${data.status}, checking again in 2 seconds... (${retryCount + 1}/10)`);
+          setTimeout(() => checkPaymentStatus(retryCount + 1), 2000);
+        } else {
+          // After 10 retries, show error
+          console.log('Payment verification timeout - taking too long');
+          navigation.replace('PaymentFailed', {
+            orderId,
+            reason: 'Payment verification is taking longer than expected. Please check your payment status or contact support.'
+          });
+        }
       } else {
         // Payment failed or cancelled
-        console.log('Payment failed or cancelled');
+        console.log('Payment failed or cancelled, status:', data.status);
         navigation.replace('PaymentFailed', { orderId, reason: data.message || 'Payment was not completed' });
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
-      // On error, go back to dashboard
-      navigation.goBack();
+      // On error, retry a few times before giving up
+      if (retryCount < 3) {
+        console.log('Error checking status, retrying...');
+        setTimeout(() => checkPaymentStatus(retryCount + 1), 2000);
+      } else {
+        // After 3 retries, go back to dashboard
+        navigation.goBack();
+      }
     }
   };
 
