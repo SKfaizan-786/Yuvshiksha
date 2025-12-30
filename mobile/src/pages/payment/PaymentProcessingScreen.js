@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   TouchableOpacity,
   Linking,
+  AppState, // ✅ Logic: Added for auto-detection
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -17,8 +18,12 @@ import COLORS from '../../constants/colors';
 const PaymentProcessingScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const appState = useRef(AppState.currentState);
+
   const [error, setError] = useState('');
   const [status, setStatus] = useState('initializing'); // initializing, processing, interrupted, error
+  const [hasOpenedBrowser, setHasOpenedBrowser] = useState(false);
+  const [isChecking, setIsChecking] = useState(false); // ✅ Logic: Track manual check for spinner
 
   const { orderId, paymentSessionId } = route.params || {};
 
@@ -29,52 +34,54 @@ const PaymentProcessingScreen = () => {
       return;
     }
 
+    // 1. Deep Link Handler
     const handleDeepLink = (event) => {
       const url = event.url;
-      console.log('Deep link received:', url);
-
       if (url.includes('payment-success')) {
         navigation.replace('PaymentSuccess', { orderId });
       } else if (url.includes('payment-cancelled') || url.includes('payment-failed')) {
         navigation.goBack();
       }
     };
+    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
 
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    // 2. AppState Handler (Auto-check logic)
+    const handleAppStateChange = (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('📱 User returned to app. Silent check started...');
+        // Only auto-check if they have actually opened the browser at least once
+        if (hasOpenedBrowser) {
+           checkPaymentStatus(true); // true = Silent Mode
+        }
+      }
+      appState.current = nextAppState;
+    };
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Start payment immediately
+    // Initial Start
     initializePayment();
 
     return () => {
-      subscription.remove();
+      linkSubscription.remove();
+      appStateSubscription.remove();
     };
-  }, [orderId, paymentSessionId]);
+  }, [orderId, paymentSessionId, hasOpenedBrowser]);
 
   const initializePayment = async () => {
     try {
-      console.log('Initializing Cashfree payment with:', { orderId, paymentSessionId });
       setStatus('processing');
-
       const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}&source=mobile`;
-      console.log('Opening payment bridge URL:', paymentUrl);
 
       const result = await WebBrowser.openBrowserAsync(paymentUrl, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
         controlsColor: COLORS.primary,
       });
 
-      console.log('WebBrowser result:', result);
+      setHasOpenedBrowser(true);
 
-      // KEY FIX: Check if user cancelled/closed the browser
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.log('Browser closed by user. Checking status once...');
-        // Check status ONCE. If pending, show resume button instead of failing.
-        await checkPaymentStatus(0, true);
-      } else {
-        // If it wasn't a cancel (e.g. some other close event), check normally
-        console.log('Browser closed, checking payment status...');
-        await checkPaymentStatus();
-      }
+      // Immediately show "Interrupted" state so user can Resume or Check Status manually
+      // We rely on AppState or Manual Button for the actual check
+      setStatus('interrupted');
 
     } catch (err) {
       console.error('Payment initialization error:', err);
@@ -83,24 +90,29 @@ const PaymentProcessingScreen = () => {
     }
   };
 
-  // Added isManualCheck flag to prevent loop if user closed browser
-  const checkPaymentStatus = async (retryCount = 0, isManualCheck = false) => {
-    try {
-      console.log(`Checking payment status for order: ${orderId} (attempt ${retryCount + 1})`);
+  /**
+   * Check Payment Status
+   * @param {boolean} isAutoCheck - If true, run silently (no alerts, no spinner)
+   */
+  const checkPaymentStatus = async (isAutoCheck = false) => {
+    if (isChecking) return; // Prevent double taps
 
+    // Only show spinner if user clicked the button manually
+    if (!isAutoCheck) setIsChecking(true);
+
+    try {
+      console.log(`Checking status (Auto: ${isAutoCheck})...`);
       const response = await fetch(`https://api.yuvsiksha.in/api/payments/verify/${orderId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
 
       const data = await response.json();
-      console.log('Payment status response:', data);
 
       if (data.success && data.status === 'PAID') {
-        // Payment successful!
-        console.log('Payment verified as successful');
-
-        // Update listing status on backend immediately
+        // --- SUCCESS ---
+        console.log('✅ Payment Paid! Redirecting...');
+        
         try {
           await fetch('https://api.yuvsiksha.in/api/profile/update-listing-status', {
             method: 'POST',
@@ -108,79 +120,85 @@ const PaymentProcessingScreen = () => {
             credentials: 'include',
             body: JSON.stringify({ isListed: true }),
           });
-          console.log('Listing status updated on backend');
-        } catch (e) {
-          console.error('Failed to update listing:', e);
-        }
+        } catch (e) {}
 
-        navigation.navigate('PaymentSuccess', { orderId });
-      } else if (data.status === 'PENDING' || data.status === 'ACTIVE') {
-        // KEY FIX: If user manually closed browser, DO NOT loop. Show "Interrupted" state.
-        if (isManualCheck) {
-          console.log('Payment still pending after browser close - showing interrupted state');
-          setStatus('interrupted'); // New state showing "Resume" button
+        navigation.replace('PaymentSuccess', { orderId });
+      } 
+      else {
+        // --- PENDING / FAILED ---
+        if (isAutoCheck) {
+           // Silent mode: Do nothing. User might be copying UPI ID.
+           console.log('Silent check: Payment still pending. Waiting...');
         } else {
-          // Normal loop logic
-          if (retryCount < 10) {
-            console.log(`Payment still ${data.status}, checking again in 2 seconds... (${retryCount + 1}/10)`);
-            setTimeout(() => checkPaymentStatus(retryCount + 1, false), 2000);
-          } else {
-            console.log('Payment verification timeout');
-            navigation.navigate('PaymentFailed', {
-              orderId,
-              reason: 'Payment verification timed out. Please contact support if money was deducted.'
-            });
-          }
+           // Manual mode: Show alert
+           if (data.status === 'PENDING' || data.status === 'ACTIVE') {
+              Alert.alert(
+                'Payment Pending', 
+                'We haven\'t received the confirmation yet. If you just paid, please wait a few seconds and try again.'
+              );
+           } else {
+              Alert.alert('Payment Failed', data.message || 'Transaction failed.');
+           }
         }
-      } else {
-        // Payment failed
-        console.log('Payment failed or cancelled, status:', data.status);
-        navigation.navigate('PaymentFailed', { orderId, reason: data.message || 'Payment was not completed' });
       }
     } catch (error) {
-      console.error('Error checking payment status:', error);
-
-      if (retryCount < 3 && !isManualCheck) {
-        console.log('Error checking status, retrying...');
-        setTimeout(() => checkPaymentStatus(retryCount + 1, false), 2000);
-      } else {
-        // If error during manual check, just show resume button
-        console.log('Error during manual check - showing interrupted state');
-        setStatus('interrupted');
-      }
+      console.error('Check error:', error);
+      if (!isAutoCheck) Alert.alert('Connection Error', 'Please check your internet.');
+    } finally {
+      setIsChecking(false);
     }
   };
 
   const handleCancel = () => {
     Alert.alert('Cancel Payment', 'Are you sure you want to cancel?', [
-      { text: 'Continue Payment', style: 'cancel' },
+      { text: 'No, Wait', style: 'cancel' },
       { text: 'Yes, Cancel', onPress: () => navigation.goBack(), style: 'destructive' }
     ]);
   };
 
-  // RENDER: Interrupted state (browser closed without payment)
+  // --- RENDER ---
+
+  // State 1: Interrupted (Browser Closed / User Returned)
   if (status === 'interrupted') {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.contentContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={COLORS.warning || '#f59e0b'} style={{ marginBottom: 20 }} />
-          <Text style={styles.title}>Payment Interrupted</Text>
+          <Text style={styles.title}>
+            {hasOpenedBrowser ? 'Payment In Progress' : 'Payment Interrupted'}
+          </Text>
           <Text style={styles.subtitle}>
-            You closed the payment window. If you haven't paid yet, you can resume.
+            {hasOpenedBrowser
+              ? 'The payment page was closed. You can resume to complete your payment.'
+              : 'You closed the payment window. If you haven\'t paid yet, you can resume.'}
           </Text>
 
+          {/* Resume Button */}
           <TouchableOpacity
             style={[styles.resumeButton]}
             onPress={initializePayment}
+            disabled={isChecking}
           >
-            <Text style={styles.resumeButtonText}>Resume Payment</Text>
+            <Ionicons name="card-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.resumeButtonText}>
+              {hasOpenedBrowser ? 'Continue Payment' : 'Resume Payment'}
+            </Text>
           </TouchableOpacity>
 
+          {/* Manual Check Button (Updated with Loading Spinner logic) */}
           <TouchableOpacity
-            style={[styles.checkButton]}
-            onPress={() => checkPaymentStatus(0, false)}
+            style={[styles.checkButton, isChecking && { opacity: 0.7 }]}
+            onPress={() => checkPaymentStatus(false)}
+            disabled={isChecking}
           >
-            <Text style={styles.checkButtonText}>I Already Paid - Check Status</Text>
+            {isChecking ? (
+              <ActivityIndicator size="small" color={COLORS.textPrimary} style={{ marginRight: 8 }} />
+            ) : (
+              <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.textPrimary} style={{ marginRight: 8 }} />
+            )}
+            <Text style={styles.checkButtonText}>
+              {isChecking ? 'Checking Status...' : 'I Already Paid - Check Status'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={{ marginTop: 20 }} onPress={() => navigation.goBack()}>
@@ -191,7 +209,7 @@ const PaymentProcessingScreen = () => {
     );
   }
 
-  // RENDER: Processing/Initializing state
+  // State 2: Processing (Initial Load)
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.contentContainer}>
@@ -343,6 +361,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 30,
   },
   resumeButtonText: {
@@ -357,6 +377,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 15,
     borderWidth: 1.5,
     borderColor: COLORS.gray[300],
