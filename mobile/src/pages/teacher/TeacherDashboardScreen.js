@@ -11,7 +11,7 @@ import axios from 'axios';
 import API_CONFIG from '../../config/api';
 import paymentAPI from '../../services/paymentAPI';
 
-const LISTING_FEE = 1; // Listing fee in rupees (TESTING ONLY - change back to 100)
+const LISTING_FEE = 100; // Listing fee in rupees
 
 const TeacherDashboardScreen = () => {
   const { user } = useAuth();

@@ -97,8 +97,15 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user || !(await user.matchPassword(password))) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Check if user exists
+    if (!user) {
+      return res.status(401).json({ message: 'Email not registered. Please sign up first' });
+    }
+
+    // Check if password is correct
+    if (!(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Invalid password' });
     }
 
     const token = generateToken({ _id: user._id });
@@ -112,6 +119,7 @@ export const login = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
+      message: 'Successfully logged in',
       token, // Return token in response for mobile app
       user: {
         _id: user._id,

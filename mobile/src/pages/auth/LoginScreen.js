@@ -6,7 +6,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Toast from '../../components/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import authAPI from '../../services/authAPI';
 import validators from '../../utils/validation';
@@ -32,6 +32,15 @@ const LoginScreen = () => {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ visible: false, type: 'success', message: '' });
+
+  const showToast = (type, message) => {
+    setToast({ visible: true, type, message });
+  };
+
+  const hideToast = () => {
+    setToast({ ...toast, visible: false });
+  };
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -69,17 +78,21 @@ const LoginScreen = () => {
       const response = await authAPI.login(formData.email, formData.password);
 
       if (response.success) {
+        // Show success toast
+        showToast('success', response.data.message || 'Successfully logged in');
+
         // Save user data to context and storage
         await login(response.data.user);
 
         // Navigation will be handled automatically by RootNavigator
         console.log('✅ Login successful');
       } else {
-        Alert.alert('Login Failed', response.message || 'Invalid credentials');
+        // Show specific error message from backend
+        showToast('error', response.message || 'Login failed');
       }
     } catch (error) {
       console.error('❌ Login error:', error);
-      Alert.alert('Error', 'An error occurred. Please try again.');
+      showToast('error', 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -87,6 +100,12 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}

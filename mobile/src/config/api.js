@@ -45,6 +45,11 @@ const API_CONFIG = {
       VERIFY_EMAIL: '/api/auth/verify-email',
       GOOGLE_AUTH: '/api/auth/google',
     },
+    // Email OTP endpoints
+    EMAIL_OTP: {
+      SEND_OTP: '/api/email-otp/send-otp',
+      VERIFY_OTP: '/api/email-otp/verify-otp',
+    },
     // Profile endpoints
     PROFILE: {
       GET: '/api/profile',
