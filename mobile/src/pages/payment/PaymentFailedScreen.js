@@ -21,19 +21,13 @@ const PaymentFailedScreen = () => {
 
   const handleRetry = () => {
     // Go back to teacher dashboard where user can initiate payment again
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TeacherDashboard' }],
-    });
+    navigation.navigate('TeacherTabs', { screen: 'Dashboard' });
   };
 
   const handleContactSupport = () => {
     // Navigate to a support/help screen or show contact information
     // For now, just go back to dashboard
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TeacherDashboard' }],
-    });
+    navigation.navigate('TeacherTabs', { screen: 'Dashboard' });
   };
 
   return (
@@ -87,10 +81,7 @@ const PaymentFailedScreen = () => {
           <Text style={styles.supportButtonText}>Contact Support</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.dashboardButton} onPress={() => navigation.reset({
-          index: 0,
-          routes: [{ name: 'TeacherDashboard' }],
-        })}>
+        <TouchableOpacity style={styles.dashboardButton} onPress={() => navigation.navigate('TeacherTabs', { screen: 'Dashboard' })}>
           <Text style={styles.dashboardButtonText}>Back to Dashboard</Text>
         </TouchableOpacity>
       </View>

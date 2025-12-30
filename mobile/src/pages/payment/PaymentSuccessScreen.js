@@ -51,10 +51,7 @@ const PaymentSuccessScreen = () => {
 
       // Auto redirect after 3 seconds
       const timer = setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'TeacherDashboard' }],
-        });
+        navigation.navigate('TeacherTabs', { screen: 'Dashboard' });
       }, 3000);
 
       return () => clearTimeout(timer);
@@ -107,10 +104,7 @@ const PaymentSuccessScreen = () => {
   };
 
   const handleGoToDashboard = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TeacherDashboard' }],
-    });
+    navigation.navigate('TeacherTabs', { screen: 'Dashboard' });
   };
 
   if (status === 'verifying') {

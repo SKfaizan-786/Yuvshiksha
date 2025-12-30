@@ -1,6 +1,7 @@
 ﻿import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 import {
     createCashfreeOrder,
     verifyPayment,
@@ -17,6 +18,8 @@ router.get('/verify/:orderId', async (req, res) => {
     // Mobile app payment verification endpoint
     try {
         const { orderId } = req.params;
+        console.log('🔍 Verifying payment for order:', orderId);
+
         const response = await axios.get(
             `${process.env.CASHFREE_BASE_URL}/orders/${orderId}`,
             {
@@ -27,15 +30,24 @@ router.get('/verify/:orderId', async (req, res) => {
                 }
             }
         );
+
         const data: any = response.data;
+        console.log('💳 Cashfree order status:', data?.order_status);
+
         res.json({
             success: true,
             status: data?.order_status || 'PENDING',
-            message: data?.order_status === 'PAID' ? 'Payment successful' : 'Payment pending or failed'
+            message: data?.order_status === 'PAID' ? 'Payment successful' : 'Payment pending or failed',
+            orderId: orderId
         });
     } catch (error: any) {
-        console.error('Payment verification error:', error);
-        res.status(500).json({ success: false, status: 'ERROR', message: 'Verification failed' });
+        console.error('❌ Payment verification error:', error.response?.data || error.message);
+        res.status(500).json({
+            success: false,
+            status: 'ERROR',
+            message: 'Verification failed',
+            error: error.response?.data || error.message
+        });
     }
 });
 router.get('/status', authMiddleware, getPaymentStatus);
