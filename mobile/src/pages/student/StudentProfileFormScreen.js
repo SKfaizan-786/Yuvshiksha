@@ -462,23 +462,23 @@ const StudentProfileFormScreen = () => {
 
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  {renderInput('First Name', formData.firstName, 'firstName', '', false, 'default', false)}
+                  {renderInput('First Name', formData.firstName, 'firstName', 'John', false, 'default', false)}
                 </View>
                 <View style={{ flex: 1, marginLeft: 8 }}>
-                  {renderInput('Last Name', formData.lastName, 'lastName', '', false, 'default', false)}
+                  {renderInput('Last Name', formData.lastName, 'lastName', 'Doe', false, 'default', false)}
                 </View>
               </View>
 
-              {renderInput('Email Address', formData.email, 'email', '', false, 'email-address', false)}
+              {renderInput('Email Address', formData.email, 'email', 'john@example.com', false, 'email-address', false)}
 
-              {renderInput('Phone Number *', formData.phone, 'phone', 'e.g., +91 98765 43210', false, 'phone-pad')}
+              {renderInput('Phone Number *', formData.phone, 'phone', 'e.g. +91 9876543210', false, 'phone-pad')}
               {validationErrors.phone ? (
                 <Text style={styles.validationError}>{validationErrors.phone}</Text>
               ) : null}
 
-              {renderInput('Location *', formData.location, 'location', 'e.g., Kolkata, West Bengal')}
+              {renderInput('Location *', formData.location, 'location', 'e.g. Kolkata')}
 
-              {renderInput('Pin Code *', formData.pinCode, 'pinCode', 'e.g., 700001', false, 'number-pad')}
+              {renderInput('Pin Code *', formData.pinCode, 'pinCode', 'e.g. 700001', false, 'number-pad')}
               {validationErrors.pinCode ? (
                 <Text style={styles.validationError}>{validationErrors.pinCode}</Text>
               ) : null}
@@ -494,7 +494,7 @@ const StudentProfileFormScreen = () => {
                 <View style={styles.tagInputContainer}>
                   <TextInput
                     style={styles.tagInput}
-                    placeholder="Add an interest, e.g., Mathematics"
+                    placeholder="e.g. Mathematics"
                     value={subjectInput}
                     onChangeText={setSubjectInput}
                     onSubmitEditing={() => addTag('interests', subjectInput, setSubjectInput)}
@@ -535,9 +535,9 @@ const StudentProfileFormScreen = () => {
                 </View>
               </View>
 
-              {renderInput('Medium of Instruction *', formData.medium, 'medium', 'e.g., English')}
-              {renderInput('Board/University *', formData.board, 'board', 'e.g., CBSE')}
-              {renderInput('Class/Course *', formData.grade, 'grade', 'e.g., Class 12')}
+              {renderInput('Medium of Instruction *', formData.medium, 'medium', 'e.g. English')}
+              {renderInput('Board/University *', formData.board, 'board', 'e.g. CBSE')}
+              {renderInput('Class/Course *', formData.grade, 'grade', 'e.g. Class 12')}
             </View>
           )}
 
@@ -552,7 +552,7 @@ const StudentProfileFormScreen = () => {
                 <View style={styles.tagInputContainer}>
                   <TextInput
                     style={styles.tagInput}
-                    placeholder="Add a learning goal..."
+                    placeholder="e.g. Learn Python"
                     value={goalInput}
                     onChangeText={setGoalInput}
                     onSubmitEditing={() => addTag('learningGoals', goalInput, setGoalInput)}

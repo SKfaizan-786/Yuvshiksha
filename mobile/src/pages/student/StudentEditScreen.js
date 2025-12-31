@@ -338,16 +338,6 @@ const StudentEditScreen = () => {
                             />
                         </View>
 
-                        {/* School / College (Not strictly in req sequence list but should be here) */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>School / College</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={formData.school}
-                                onChangeText={(text) => setFormData({ ...formData, school: text })}
-                                placeholder="Your institution"
-                            />
-                        </View>
 
                         {/* 2. Subjects of Interest (Interactive Tags) */}
                         <View style={styles.inputGroup}>
@@ -355,7 +345,7 @@ const StudentEditScreen = () => {
                             <View style={styles.tagInputContainer}>
                                 <TextInput
                                     style={styles.tagInput}
-                                    placeholder="Add a subject..."
+                                    placeholder="e.g. Mathematics"
                                     value={subjectInput}
                                     onChangeText={setSubjectInput}
                                     onSubmitEditing={() => addTag('interests', subjectInput, setSubjectInput)}
@@ -414,7 +404,7 @@ const StudentEditScreen = () => {
                             <View style={styles.tagInputContainer}>
                                 <TextInput
                                     style={styles.tagInput}
-                                    placeholder="Add a goal..."
+                                    placeholder="e.g. Learn Python"
                                     value={goalInput}
                                     onChangeText={setGoalInput}
                                     onSubmitEditing={() => addTag('learningGoals', goalInput, setGoalInput)}

@@ -271,7 +271,13 @@ const StudentProfileScreen = () => {
           <InfoItem
             icon="location-outline"
             label="Location"
-            value={studentProfile.location ? `${studentProfile.location}${studentProfile.pinCode ? `, ${studentProfile.pinCode}` : ''}` : null}
+            value={
+              studentProfile.location
+                ? (studentProfile.pinCode && !studentProfile.location.includes(studentProfile.pinCode)
+                  ? `${studentProfile.location}, ${studentProfile.pinCode}`
+                  : studentProfile.location)
+                : null
+            }
           />
 
           <InfoItem icon="information-circle-outline" label="Bio" value={studentProfile.bio} />
@@ -283,7 +289,7 @@ const StudentProfileScreen = () => {
         </View>
         <Card style={styles.detailsCard}>
           <InfoItem icon="school-outline" label="Grade Level" value={studentProfile.grade} />
-          <InfoItem icon="business-outline" label="School/Institution" value={studentProfile.school} />
+
           <ArrayItem icon="book-outline" label="Subjects of Interest" items={studentProfile.subjects || studentProfile.interests} />
           <ArrayItem icon="laptop-outline" label="Preferred Learning Mode" items={studentProfile.mode} />
           <InfoItem icon="language-outline" label="Medium of Instruction" value={studentProfile.medium} />

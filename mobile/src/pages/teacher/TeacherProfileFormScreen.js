@@ -520,7 +520,7 @@ const TeacherProfileFormScreen = () => {
                 <View style={{ flex: 1, marginLeft: 8 }}>{renderInput('Last Name', formData.lastName, 'lastName', 'Doe', false, 'default', false)}</View>
               </View>
               {renderInput('Email Address', formData.email, 'email', 'john@example.com', false, 'email-address', false)}
-              {renderInput('Phone Number *', formData.phone, 'phone', 'e.g., +91 98765 43210', false, 'phone-pad')}
+              {renderInput('Phone Number *', formData.phone, 'phone', 'e.g. +91 9876543210', false, 'phone-pad')}
               {validationErrors.phone ? (
                 <Text style={styles.validationError}>{validationErrors.phone}</Text>
               ) : null}
@@ -529,7 +529,7 @@ const TeacherProfileFormScreen = () => {
                 <Text style={styles.label}>Location *</Text>
                 <TextInput
                   style={[styles.input, styles.multilineInput]}
-                  placeholder="e.g., Kolkata, West Bengal — please include your locality for better accuracy"
+                  placeholder="e.g. Kolkata"
                   placeholderTextColor={COLORS.gray[400]}
                   value={formData.location}
                   onChangeText={(text) => setFormData({ ...formData, location: text })}
@@ -539,22 +539,22 @@ const TeacherProfileFormScreen = () => {
                 />
               </View>
 
-              {renderInput('Pin Code', formData.pinCode, 'pinCode', 'e.g., 700001', false, 'number-pad')}
+              {renderInput('Pin Code', formData.pinCode, 'pinCode', 'e.g. 700001', false, 'number-pad')}
               {validationErrors.pinCode ? (
                 <Text style={styles.validationError}>{validationErrors.pinCode}</Text>
               ) : null}
-              {renderInput('Qualifications *', formData.qualifications, 'qualifications', 'e.g., M.Sc. Physics')}
-              {renderInput('Experience (Years)', formData.experienceYears, 'experienceYears', 'e.g., 5', false, 'number-pad')}
-              {renderInput('Current Occupation', formData.currentOccupation, 'currentOccupation', 'e.g., Full-time Teacher')}
+              {renderInput('Qualifications *', formData.qualifications, 'qualifications', 'e.g. M.Sc. Physics')}
+              {renderInput('Experience (Years)', formData.experienceYears, 'experienceYears', 'e.g. 5', false, 'number-pad')}
+              {renderInput('Current Occupation', formData.currentOccupation, 'currentOccupation', 'e.g. Full-time Teacher')}
             </View>
           )}
 
           {currentStep === 1 && (
             <View style={styles.stepContainer}>
               <Text style={styles.stepTitle}>Teaching Expertise</Text>
-              {renderTagInput('Subjects *', formData.subjects, subjectInput, setSubjectInput, 'subjects', 'Add a subject, e.g., Mathematics')}
-              {renderTagInput('Boards *', formData.boards, boardInput, setBoardInput, 'boards', 'Add a board, e.g., CBSE, ICSE')}
-              {renderTagInput('Classes *', formData.classes, classInput, setClassInput, 'classes', 'Add a class/course, e.g., Class 10')}
+              {renderTagInput('Subjects *', formData.subjects, subjectInput, setSubjectInput, 'subjects', 'e.g. Mathematics')}
+              {renderTagInput('Boards *', formData.boards, boardInput, setBoardInput, 'boards', 'e.g. CBSE')}
+              {renderTagInput('Classes *', formData.classes, classInput, setClassInput, 'classes', 'e.g. Class 10')}
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Teaching Mode *</Text>
@@ -568,7 +568,7 @@ const TeacherProfileFormScreen = () => {
                 </View>
               </View>
 
-              {renderInput('Medium *', formData.medium, 'medium', 'e.g., English')}
+              {renderInput('Medium *', formData.medium, 'medium', 'e.g. English')}
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Availability *</Text>
@@ -617,8 +617,8 @@ const TeacherProfileFormScreen = () => {
               <Text style={styles.stepTitle}>Profile Details</Text>
               {renderInput('Bio', formData.bio, 'bio', 'Share your teaching philosophy, experience highlights, etc.', true)}
               {renderInput('Teaching Approach', formData.teachingApproach, 'teachingApproach', 'How do you structure your classes? What makes your teaching unique?', true)}
-              {renderTagInput('Achievements', formData.achievements, achievementInput, setAchievementInput, 'achievements', 'Add an achievement')}
-              {renderInput('Hourly Rate (₹)', formData.hourlyRate, 'hourlyRate', 'e.g., 500', false, 'number-pad')}
+              {renderTagInput('Achievements', formData.achievements, achievementInput, setAchievementInput, 'achievements', 'e.g. Best Teacher Award')}
+              {renderInput('Hourly Rate (₹)', formData.hourlyRate, 'hourlyRate', 'e.g. 500', false, 'number-pad')}
             </View>
           )}
           <View style={{ height: 300 }} />
