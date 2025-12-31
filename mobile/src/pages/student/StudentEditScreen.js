@@ -255,6 +255,7 @@ const StudentEditScreen = () => {
                                 value={formData.firstName}
                                 onChangeText={(text) => setFormData({ ...formData, firstName: text })}
                                 placeholder="John"
+                                placeholderTextColor={COLORS.gray[400]}
                             />
                         </View>
 
@@ -265,6 +266,7 @@ const StudentEditScreen = () => {
                                 value={formData.lastName}
                                 onChangeText={(text) => setFormData({ ...formData, lastName: text })}
                                 placeholder="Doe"
+                                placeholderTextColor={COLORS.gray[400]}
                             />
                         </View>
 
@@ -285,6 +287,7 @@ const StudentEditScreen = () => {
                                 value={formData.phone}
                                 onChangeText={(text) => setFormData({ ...formData, phone: text })}
                                 placeholder="+91..."
+                                placeholderTextColor={COLORS.gray[400]}
                                 keyboardType="phone-pad"
                             />
                         </View>
@@ -296,6 +299,7 @@ const StudentEditScreen = () => {
                                 value={formData.location}
                                 onChangeText={(text) => setFormData({ ...formData, location: text })}
                                 placeholder="City, State"
+                                placeholderTextColor={COLORS.gray[400]}
                             />
                         </View>
 
@@ -306,6 +310,7 @@ const StudentEditScreen = () => {
                                 value={formData.pinCode}
                                 onChangeText={(text) => setFormData({ ...formData, pinCode: text })}
                                 placeholder="Zip Code"
+                                placeholderTextColor={COLORS.gray[400]}
                                 keyboardType="number-pad"
                             />
                         </View>
@@ -317,6 +322,7 @@ const StudentEditScreen = () => {
                                 value={formData.bio}
                                 onChangeText={(text) => setFormData({ ...formData, bio: text })}
                                 placeholder="Tell us about yourself..."
+                                placeholderTextColor={COLORS.gray[400]}
                                 multiline
                                 numberOfLines={3}
                             />
@@ -335,6 +341,7 @@ const StudentEditScreen = () => {
                                 value={formData.grade}
                                 onChangeText={(text) => setFormData({ ...formData, grade: text })}
                                 placeholder="e.g., Class 10"
+                                placeholderTextColor={COLORS.gray[400]}
                             />
                         </View>
 
@@ -346,6 +353,7 @@ const StudentEditScreen = () => {
                                 <TextInput
                                     style={styles.tagInput}
                                     placeholder="e.g. Mathematics"
+                                    placeholderTextColor={COLORS.gray[400]}
                                     value={subjectInput}
                                     onChangeText={setSubjectInput}
                                     onSubmitEditing={() => addTag('interests', subjectInput, setSubjectInput)}
@@ -395,6 +403,7 @@ const StudentEditScreen = () => {
                                 value={formData.medium}
                                 onChangeText={(text) => setFormData({ ...formData, medium: text })}
                                 placeholder="English / Hindi"
+                                placeholderTextColor={COLORS.gray[400]}
                             />
                         </View>
 
@@ -405,6 +414,7 @@ const StudentEditScreen = () => {
                                 <TextInput
                                     style={styles.tagInput}
                                     placeholder="e.g. Learn Python"
+                                    placeholderTextColor={COLORS.gray[400]}
                                     value={goalInput}
                                     onChangeText={setGoalInput}
                                     onSubmitEditing={() => addTag('learningGoals', goalInput, setGoalInput)}

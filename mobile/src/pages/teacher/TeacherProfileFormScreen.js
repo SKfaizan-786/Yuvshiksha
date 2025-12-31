@@ -414,6 +414,7 @@ const TeacherProfileFormScreen = () => {
         <TextInput
           style={styles.tagInput}
           placeholder={placeholder || `Add ${label}...`}
+          placeholderTextColor={COLORS.gray[400]}
           value={inputVal}
           onChangeText={setInputFunc}
           onSubmitEditing={() => addTag(field, inputVal, setInputFunc)}

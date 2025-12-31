@@ -495,6 +495,7 @@ const StudentProfileFormScreen = () => {
                   <TextInput
                     style={styles.tagInput}
                     placeholder="e.g. Mathematics"
+                    placeholderTextColor={COLORS.gray[400]}
                     value={subjectInput}
                     onChangeText={setSubjectInput}
                     onSubmitEditing={() => addTag('interests', subjectInput, setSubjectInput)}
@@ -553,6 +554,7 @@ const StudentProfileFormScreen = () => {
                   <TextInput
                     style={styles.tagInput}
                     placeholder="e.g. Learn Python"
+                    placeholderTextColor={COLORS.gray[400]}
                     value={goalInput}
                     onChangeText={setGoalInput}
                     onSubmitEditing={() => addTag('learningGoals', goalInput, setGoalInput)}
