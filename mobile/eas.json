@@ -12,7 +12,13 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "image": "latest",
+        "env": {
+          "EAS_BUILD_JDK": "17"
+        }
+      }
     }
   },
   "submit": {
