@@ -219,7 +219,7 @@ const StudentDashboardScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Dashboard" showNotification />
+      <Header title="Yuvsiksha" showNotification />
       <ScrollView
         style={styles.scrollView}
         refreshControl={

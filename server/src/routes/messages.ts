@@ -155,12 +155,12 @@ router.get('/conversation/:participantId', authMiddleware, async (req: Authentic
       ],
       isDeleted: false
     })
-    .populate('sender', 'firstName lastName avatar email')
-    .populate('recipient', 'firstName lastName avatar email')
-    .populate('replyTo')
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit as string))
-    .skip((parseInt(page as string) - 1) * parseInt(limit as string));
+      .populate('sender', 'firstName lastName avatar email')
+      .populate('recipient', 'firstName lastName avatar email')
+      .populate('replyTo')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit as string))
+      .skip((parseInt(page as string) - 1) * parseInt(limit as string));
 
     // Mark messages as read
     await Message.updateMany({
@@ -223,6 +223,15 @@ router.post('/send', authMiddleware, async (req: AuthenticatedRequest, res) => {
     }
 
     console.log('✅ Recipient found:', recipientUser.firstName, recipientUser.lastName);
+
+    // Validate sender !== receiver
+    if (userId.toString() === recipient.toString()) {
+      console.log('❌ Sender and receiver cannot be the same');
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot send a message to yourself'
+      });
+    }
 
     const newMessage = new Message({
       sender: userId,

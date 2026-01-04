@@ -183,7 +183,7 @@ const TeacherDashboardScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <Header title="Dashboard" showNotification />
+        <Header title="Yuvsiksha" showNotification />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
@@ -194,7 +194,7 @@ const TeacherDashboardScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title="Dashboard" showNotification />
+      <Header title="Yuvsiksha" showNotification />
 
       <ScrollView
         style={styles.scrollView}

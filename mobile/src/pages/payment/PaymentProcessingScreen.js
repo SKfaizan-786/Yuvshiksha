@@ -21,7 +21,7 @@ const PaymentProcessingScreen = () => {
   const appState = useRef(AppState.currentState);
 
   const [error, setError] = useState('');
-  const [status, setStatus] = useState('initializing'); // initializing, processing, interrupted, error
+  const [status, setStatus] = useState('processing'); // processing, interrupted, error
   const [hasOpenedBrowser, setHasOpenedBrowser] = useState(false);
   const [isChecking, setIsChecking] = useState(false); // ✅ Logic: Track manual check for spinner
 
@@ -51,7 +51,7 @@ const PaymentProcessingScreen = () => {
         console.log('📱 User returned to app. Silent check started...');
         // Only auto-check if they have actually opened the browser at least once
         if (hasOpenedBrowser) {
-           checkPaymentStatus(true); // true = Silent Mode
+          checkPaymentStatus(true); // true = Silent Mode
         }
       }
       appState.current = nextAppState;
@@ -68,12 +68,15 @@ const PaymentProcessingScreen = () => {
   }, [orderId, paymentSessionId, hasOpenedBrowser]);
 
   const initializePayment = async () => {
+    // Prevent accidental multi-opens
+    if (hasOpenedBrowser) return;
+
     try {
       setStatus('processing');
       const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}&source=mobile`;
 
       const result = await WebBrowser.openBrowserAsync(paymentUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
         controlsColor: COLORS.primary,
       });
 
@@ -112,7 +115,7 @@ const PaymentProcessingScreen = () => {
       if (data.success && data.status === 'PAID') {
         // --- SUCCESS ---
         console.log('✅ Payment Paid! Redirecting...');
-        
+
         try {
           await fetch('https://api.yuvsiksha.in/api/profile/update-listing-status', {
             method: 'POST',
@@ -120,25 +123,25 @@ const PaymentProcessingScreen = () => {
             credentials: 'include',
             body: JSON.stringify({ isListed: true }),
           });
-        } catch (e) {}
+        } catch (e) { }
 
         navigation.replace('PaymentSuccess', { orderId });
-      } 
+      }
       else {
         // --- PENDING / FAILED ---
         if (isAutoCheck) {
-           // Silent mode: Do nothing. User might be copying UPI ID.
-           console.log('Silent check: Payment still pending. Waiting...');
+          // Silent mode: Do nothing. User might be copying UPI ID.
+          console.log('Silent check: Payment still pending. Waiting...');
         } else {
-           // Manual mode: Show alert
-           if (data.status === 'PENDING' || data.status === 'ACTIVE') {
-              Alert.alert(
-                'Payment Pending', 
-                'We haven\'t received the confirmation yet. If you just paid, please wait a few seconds and try again.'
-              );
-           } else {
-              Alert.alert('Payment Failed', data.message || 'Transaction failed.');
-           }
+          // Manual mode: Show alert
+          if (data.status === 'PENDING' || data.status === 'ACTIVE') {
+            Alert.alert(
+              'Payment Pending',
+              'We haven\'t received the confirmation yet. If you just paid, please wait a few seconds and try again.'
+            );
+          } else {
+            Alert.alert('Payment Failed', data.message || 'Transaction failed.');
+          }
         }
       }
     } catch (error) {
