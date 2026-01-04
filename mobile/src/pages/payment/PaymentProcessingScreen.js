@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,26 +6,27 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  Linking,
-  AppState, // ✅ Logic: Added for auto-detection
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  CFPaymentGatewayService,
+  CFEnvironment,
+  CFSession,
+  CFPaymentComponentBuilder
+} from 'react-native-cashfree-pg-sdk';
 import COLORS from '../../constants/colors';
 
 const PaymentProcessingScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const appState = useRef(AppState.currentState);
 
   const [error, setError] = useState('');
-  const [status, setStatus] = useState('processing'); // processing, interrupted, error
-  const [hasOpenedBrowser, setHasOpenedBrowser] = useState(false);
-  const [isChecking, setIsChecking] = useState(false); // ✅ Logic: Track manual check for spinner
+  const [status, setStatus] = useState('processing'); // processing, error
+  const [isChecking, setIsChecking] = useState(false);
 
-  const { orderId, paymentSessionId } = route.params || {};
+  const { orderId, paymentSessionId, amount } = route.params || {};
 
   useEffect(() => {
     if (!orderId || !paymentSessionId) {
@@ -34,77 +35,76 @@ const PaymentProcessingScreen = () => {
       return;
     }
 
-    // 1. Deep Link Handler
-    const handleDeepLink = (event) => {
-      const url = event.url;
-      if (url.includes('payment-success')) {
-        navigation.replace('PaymentSuccess', { orderId });
-      } else if (url.includes('payment-cancelled') || url.includes('payment-failed')) {
-        navigation.goBack();
-      }
-    };
-    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
+    // Set payment callback
+    CFPaymentGatewayService.setCallback({
+      onVerify: (orderID) => {
+        console.log('✅ Payment verification triggered for:', orderID);
+        // Navigate to success
+        navigation.replace('PaymentSuccess', { orderId: orderID });
+      },
+      onError: (error, orderID) => {
+        console.error('❌ Payment error:', error, 'for order:', orderID);
+        setStatus('error');
+        setError(error.message || 'Payment failed');
+      },
+    });
 
-    // 2. AppState Handler (Auto-check logic)
-    const handleAppStateChange = (nextAppState) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('📱 User returned to app. Silent check started...');
-        // Only auto-check if they have actually opened the browser at least once
-        if (hasOpenedBrowser) {
-          checkPaymentStatus(true); // true = Silent Mode
-        }
-      }
-      appState.current = nextAppState;
-    };
-    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
-
-    // Initial Start
+    // Initialize payment
     initializePayment();
 
+    // Cleanup
     return () => {
-      linkSubscription.remove();
-      appStateSubscription.remove();
+      CFPaymentGatewayService.removeCallback();
     };
-  }, [orderId, paymentSessionId, hasOpenedBrowser]);
+  }, [orderId, paymentSessionId]);
 
   const initializePayment = async () => {
-    // Prevent accidental multi-opens
-    if (hasOpenedBrowser) return;
-
     try {
       setStatus('processing');
-      const paymentUrl = `https://api.yuvsiksha.in/api/payments/mobile-checkout?session=${paymentSessionId}&orderId=${orderId}&source=mobile`;
+      setError('');
 
-      const result = await WebBrowser.openBrowserAsync(paymentUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
-        controlsColor: COLORS.primary,
+      console.log('🚀 Starting native Cashfree payment');
+      console.log('Order ID:', orderId);
+      console.log('Session ID:', paymentSessionId);
+
+      // Create CFSession with CFEnvironment enum
+      const session = new CFSession(
+        paymentSessionId,
+        orderId,
+        CFEnvironment.PRODUCTION
+      );
+
+      // Create payment component with all payment modes
+      const paymentComponent = new CFPaymentComponentBuilder()
+        .add(CFPaymentComponentBuilder.CFPaymentModes.UPI)
+        .add(CFPaymentComponentBuilder.CFPaymentModes.CARD)
+        .add(CFPaymentComponentBuilder.CFPaymentModes.NB)
+        .add(CFPaymentComponentBuilder.CFPaymentModes.WALLET)
+        .build();
+
+      // Start payment with object parameter
+      await CFPaymentGatewayService.doPayment({
+        session,
+        paymentComponent
       });
-
-      setHasOpenedBrowser(true);
-
-      // Immediately show "Interrupted" state so user can Resume or Check Status manually
-      // We rely on AppState or Manual Button for the actual check
-      setStatus('interrupted');
 
     } catch (err) {
       console.error('Payment initialization error:', err);
-      setError('Failed to open payment gateway');
+      setError('Failed to initialize payment');
       setStatus('error');
     }
   };
 
   /**
-   * Check Payment Status
-   * @param {boolean} isAutoCheck - If true, run silently (no alerts, no spinner)
+   * Check Payment Status (Manual)
    */
   const checkPaymentStatus = async (isAutoCheck = false) => {
-    if (isChecking) return; // Prevent double taps
+    if (isChecking) return;
 
-    // Only show spinner if user clicked the button manually
-    if (!isAutoCheck) setIsChecking(true);
+    setIsChecking(true);
 
     try {
-      console.log(`Checking status (Auto: ${isAutoCheck})...`);
+      console.log(`Checking payment status for order: ${orderId}`);
       const response = await fetch(`https://api.yuvsiksha.in/api/payments/verify/${orderId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -113,9 +113,9 @@ const PaymentProcessingScreen = () => {
       const data = await response.json();
 
       if (data.success && data.status === 'PAID') {
-        // --- SUCCESS ---
-        console.log('✅ Payment Paid! Redirecting...');
+        console.log('✅ Payment verified as PAID');
 
+        // Update listing status
         try {
           await fetch('https://api.yuvsiksha.in/api/profile/update-listing-status', {
             method: 'POST',
@@ -123,30 +123,24 @@ const PaymentProcessingScreen = () => {
             credentials: 'include',
             body: JSON.stringify({ isListed: true }),
           });
-        } catch (e) { }
+        } catch (e) {
+          console.error('Failed to update listing status:', e);
+        }
 
         navigation.replace('PaymentSuccess', { orderId });
-      }
-      else {
-        // --- PENDING / FAILED ---
-        if (isAutoCheck) {
-          // Silent mode: Do nothing. User might be copying UPI ID.
-          console.log('Silent check: Payment still pending. Waiting...');
-        } else {
-          // Manual mode: Show alert
-          if (data.status === 'PENDING' || data.status === 'ACTIVE') {
-            Alert.alert(
-              'Payment Pending',
-              'We haven\'t received the confirmation yet. If you just paid, please wait a few seconds and try again.'
-            );
-          } else {
-            Alert.alert('Payment Failed', data.message || 'Transaction failed.');
-          }
+      } else {
+        if (!isAutoCheck) {
+          Alert.alert(
+            'Payment Pending',
+            'We haven\'t received confirmation yet. If you just paid, please wait a few seconds and try again.'
+          );
         }
       }
     } catch (error) {
       console.error('Check error:', error);
-      if (!isAutoCheck) Alert.alert('Connection Error', 'Please check your internet.');
+      if (!isAutoCheck) {
+        Alert.alert('Connection Error', 'Please check your internet connection.');
+      }
     } finally {
       setIsChecking(false);
     }
@@ -161,34 +155,27 @@ const PaymentProcessingScreen = () => {
 
   // --- RENDER ---
 
-  // State 1: Interrupted (Browser Closed / User Returned)
-  if (status === 'interrupted') {
+  // State: Error
+  if (status === 'error') {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.contentContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color={COLORS.warning || '#f59e0b'} style={{ marginBottom: 20 }} />
-          <Text style={styles.title}>
-            {hasOpenedBrowser ? 'Payment In Progress' : 'Payment Interrupted'}
-          </Text>
+          <Ionicons name="alert-circle-outline" size={64} color={COLORS.error || '#ef4444'} style={{ marginBottom: 20 }} />
+          <Text style={styles.title}>Payment Failed</Text>
           <Text style={styles.subtitle}>
-            {hasOpenedBrowser
-              ? 'The payment page was closed. You can resume to complete your payment.'
-              : 'You closed the payment window. If you haven\'t paid yet, you can resume.'}
+            {error || 'Something went wrong. Please try again.'}
           </Text>
 
-          {/* Resume Button */}
+          {/* Retry Button */}
           <TouchableOpacity
             style={[styles.resumeButton]}
             onPress={initializePayment}
-            disabled={isChecking}
           >
-            <Ionicons name="card-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.resumeButtonText}>
-              {hasOpenedBrowser ? 'Continue Payment' : 'Resume Payment'}
-            </Text>
+            <Ionicons name="refresh-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.resumeButtonText}>Try Again</Text>
           </TouchableOpacity>
 
-          {/* Manual Check Button (Updated with Loading Spinner logic) */}
+          {/* Manual Check Button */}
           <TouchableOpacity
             style={[styles.checkButton, isChecking && { opacity: 0.7 }]}
             onPress={() => checkPaymentStatus(false)}
@@ -212,7 +199,7 @@ const PaymentProcessingScreen = () => {
     );
   }
 
-  // State 2: Processing (Initial Load)
+  // State: Processing (Initial Load)
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.contentContainer}>
@@ -244,8 +231,8 @@ const PaymentProcessingScreen = () => {
             <Text style={styles.infoText}>Your data is protected</Text>
           </View>
           <View style={styles.infoRow}>
-            <Ionicons name="time" size={20} color={COLORS.primary} />
-            <Text style={styles.infoText}>Payment will open in browser</Text>
+            <Ionicons name="phone-portrait" size={20} color={COLORS.primary} />
+            <Text style={styles.infoText}>Native secure payment</Text>
           </View>
         </View>
 

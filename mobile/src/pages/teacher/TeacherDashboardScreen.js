@@ -166,6 +166,7 @@ const TeacherDashboardScreen = () => {
         orderId,
         paymentSessionId,
         paymentLink,
+        amount: LISTING_FEE.toString(), // For native SDK
       });
 
     } catch (error) {
