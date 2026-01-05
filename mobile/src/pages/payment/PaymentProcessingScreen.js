@@ -10,12 +10,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+// Cashfree SDK - Service from main package
 import {
   CFPaymentGatewayService,
+  CFErrorResponse
+} from 'react-native-cashfree-pg-sdk';
+// Cashfree SDK - Models and Enums from contract package
+import {
   CFEnvironment,
   CFSession,
-  CFPaymentComponentBuilder
-} from 'react-native-cashfree-pg-sdk';
+  CFPaymentComponentBuilder,
+  CFPaymentModes
+} from 'cashfree-pg-api-contract';
 import COLORS from '../../constants/colors';
 
 const PaymentProcessingScreen = () => {
