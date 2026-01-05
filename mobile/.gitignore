@@ -49,3 +49,5 @@ yarn-error.*
 *.swp
 *.swo
 *~
+android/
+ios/

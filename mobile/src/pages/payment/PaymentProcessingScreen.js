@@ -20,9 +20,12 @@ import {
   CFEnvironment,
   CFSession,
   CFPaymentComponentBuilder,
-  CFPaymentModes
+  CFPaymentModes,
+  CFDropCheckoutPayment,
+  CFThemeBuilder
 } from 'cashfree-pg-api-contract';
 import COLORS from '../../constants/colors';
+
 
 const PaymentProcessingScreen = () => {
   const route = useRoute();
@@ -73,15 +76,14 @@ const PaymentProcessingScreen = () => {
       console.log('Order ID:', orderId);
       console.log('Session ID:', paymentSessionId);
 
-      // Create CFSession with CFEnvironment enum
+      // 1. Create Session
       const session = new CFSession(
         paymentSessionId,
         orderId,
         CFEnvironment.PRODUCTION
       );
 
-      // Create payment component with all payment modes
-      // Use CFPaymentModes directly (not CFPaymentComponentBuilder.CFPaymentModes)
+      // 2. Create Payment Component (Modes)
       const paymentComponent = new CFPaymentComponentBuilder()
         .add(CFPaymentModes.UPI)
         .add(CFPaymentModes.CARD)
@@ -89,11 +91,25 @@ const PaymentProcessingScreen = () => {
         .add(CFPaymentModes.WALLET)
         .build();
 
-      // Start payment with object parameter
-      await CFPaymentGatewayService.doPayment({
+      // 3. Create Theme
+      const theme = new CFThemeBuilder()
+        .setNavigationBarBackgroundColor(COLORS.primary)
+        .setNavigationBarTextColor('#ffffff')
+        .setButtonBackgroundColor(COLORS.primary)
+        .setButtonTextColor('#ffffff')
+        .setPrimaryTextColor('#212121')
+        .setSecondaryTextColor('#757575')
+        .build();
+
+      // 4. Create Drop Payment Object (THE CRITICAL WRAPPER)
+      const dropPayment = new CFDropCheckoutPayment(
         session,
-        paymentComponent
-      });
+        paymentComponent,
+        theme
+      );
+
+      // 5. Start Payment - Pass the class instance, not a raw object
+      await CFPaymentGatewayService.doPayment(dropPayment);
 
     } catch (err) {
       console.error('Payment initialization error:', err);

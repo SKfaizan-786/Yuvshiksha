@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yuvsiksha",
     "slug": "yuvshiksha",
-    "version": "1.0.1",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/Yuvsiksha_logo.png",
     "userInterfaceStyle": "light",
@@ -46,7 +46,7 @@
         "android.permission.ACCESS_NETWORK_STATE"
       ],
       "package": "com.yuvshiksha.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "edgeToEdgeEnabled": true
     },
     "plugins": [
