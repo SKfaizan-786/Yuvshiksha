@@ -81,11 +81,12 @@ const PaymentProcessingScreen = () => {
       );
 
       // Create payment component with all payment modes
+      // Use CFPaymentModes directly (not CFPaymentComponentBuilder.CFPaymentModes)
       const paymentComponent = new CFPaymentComponentBuilder()
-        .add(CFPaymentComponentBuilder.CFPaymentModes.UPI)
-        .add(CFPaymentComponentBuilder.CFPaymentModes.CARD)
-        .add(CFPaymentComponentBuilder.CFPaymentModes.NB)
-        .add(CFPaymentComponentBuilder.CFPaymentModes.WALLET)
+        .add(CFPaymentModes.UPI)
+        .add(CFPaymentModes.CARD)
+        .add(CFPaymentModes.NB)
+        .add(CFPaymentModes.WALLET)
         .build();
 
       // Start payment with object parameter
