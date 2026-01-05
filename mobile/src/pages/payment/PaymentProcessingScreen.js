@@ -46,10 +46,52 @@ const PaymentProcessingScreen = () => {
 
     // Set payment callback
     CFPaymentGatewayService.setCallback({
-      onVerify: (orderID) => {
+      onVerify: async (orderID) => {
         console.log('✅ Payment verification triggered for:', orderID);
-        // Navigate to success
-        navigation.replace('PaymentSuccess', { orderId: orderID });
+        console.log('🔍 Verifying payment status with backend...');
+
+        try {
+          // CRITICAL: Verify payment status with backend before showing success
+          const response = await fetch(`https://api.yuvsiksha.in/api/payments/verify/${orderID}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          const data = await response.json();
+          console.log('Backend verification response:', data);
+
+          if (data.success && data.status === 'PAID') {
+            console.log('✅ Payment confirmed as PAID by backend');
+
+            // Update listing status
+            try {
+              await fetch('https://api.yuvsiksha.in/api/profile/update-listing-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ isListed: true }),
+              });
+            } catch (e) {
+              console.error('Failed to update listing status:', e);
+            }
+
+            // Navigate to success only if payment is confirmed
+            navigation.replace('PaymentSuccess', { orderId: orderID });
+          } else {
+            // Payment not confirmed - show specific error based on status
+            console.log('❌ Payment not confirmed:', data.status);
+            setStatus('error');
+            if (data.status === 'PENDING') {
+              setError('Payment is currently pending. Please wait a moment and check status.');
+            } else {
+              setError('Payment failed or was cancelled.');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Backend verification failed:', error);
+          setStatus('error');
+          setError('Unable to verify payment. Please check your payment status.');
+        }
       },
       onError: (error, orderID) => {
         console.error('❌ Payment error:', error, 'for order:', orderID);
