@@ -8,8 +8,8 @@ const router = express.Router();
 // Add debug route (temporarily)
 router.get('/debug', authMiddleware, getListedTeachers);
 
-// Get list of all available teachers
-router.get('/list', authMiddleware, async (req: AuthenticatedRequest, res) => {
+// Get list of all available teachers (PUBLIC - no auth required)
+router.get('/list', async (req, res) => {
   try {
     console.log('ðŸ” API: Getting teacher list...');
     
