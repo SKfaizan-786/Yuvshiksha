@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
@@ -18,6 +19,7 @@ import axios from 'axios';
 import API_CONFIG from '../../config/api';
 
 const BookingsScreen = () => {
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('pending'); // pending, confirmed, completed, cancelled
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,17 +116,16 @@ const BookingsScreen = () => {
     return (
       <Card key={bookingId} style={styles.bookingCard}>
         <View style={styles.bookingHeader}>
-          <Text style={styles.studentName}>{booking.student.name}</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.studentName}>{booking.student.name}</Text>
+            <Text style={styles.studentEmail}>{booking.student.email}</Text>
+          </View>
           <View style={[styles.statusBadge, styles[`${activeTab}Badge`]]}>
             <Text style={styles.badgeText}>₹{booking.amount}</Text>
           </View>
         </View>
 
         <View style={styles.bookingDetails}>
-          <View style={styles.detailRow}>
-            <Ionicons name="call-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{booking.student.phone}</Text>
-          </View>
           <View style={styles.detailRow}>
             <Ionicons name="book-outline" size={16} color={COLORS.textSecondary} />
             <Text style={styles.detailText}>{booking.subject}</Text>
@@ -135,39 +136,41 @@ const BookingsScreen = () => {
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{booking.time}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="hourglass-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{formatDuration(booking.duration)}</Text>
+            <Text style={styles.detailText}>{booking.time} ({booking.duration}h)</Text>
           </View>
         </View>
 
-        {activeTab === 'cancelled' && booking.cancelReason && (
-          <View style={styles.cancelReasonContainer}>
-            <Text style={styles.cancelReasonLabel}>Cancellation Reason:</Text>
-            <Text style={styles.cancelReasonText}>{booking.cancelReason}</Text>
-          </View>
-        )}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.detailsButton]}
+            onPress={() => navigation.navigate('BookingDetails', { booking, onRefresh: loadBookings })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.detailsButtonText}>Details</Text>
+          </TouchableOpacity>
 
-        {activeTab === 'pending' && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.rejectButton]}
-              onPress={() => handleReject(bookingId)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rejectButtonText}>Reject</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.acceptButton]}
-              onPress={() => handleAccept(bookingId)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.acceptButtonText}>Accept</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {activeTab === 'pending' && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.rejectButton]}
+                onPress={() => handleReject(bookingId)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={18} color="#FFF" />
+                <Text style={styles.rejectButtonText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.acceptButton]}
+                onPress={() => handleAccept(bookingId)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                <Text style={styles.acceptButtonText}>Accept</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </Card>
     );
   };
@@ -310,14 +313,22 @@ const styles = StyleSheet.create({
   bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  headerLeft: {
+    flex: 1,
+    marginRight: 12,
   },
   studentName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.textPrimary,
-    flex: 1,
+    marginBottom: 4,
+  },
+  studentEmail: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -374,30 +385,43 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginTop: 12,
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  detailsButton: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  detailsButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   rejectButton: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#EF4444',
   },
   acceptButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#10B981',
   },
   rejectButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#dc2626',
+    color: '#FFF',
   },
   acceptButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#FFF',
   },
   emptyState: {
     alignItems: 'center',

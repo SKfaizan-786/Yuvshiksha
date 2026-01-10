@@ -280,7 +280,7 @@ const BookClassScreen = () => {
 
       if (response.success) {
         Alert.alert('Success', 'Booking request sent successfully!', [
-          { text: 'OK', onPress: () => navigation.navigate('StudentDashboard') }
+          { text: 'OK', onPress: () => navigation.navigate('StudentTabs', { screen: 'Dashboard' }) }
         ]);
       } else {
         Alert.alert('Error', response.message || 'Failed to create booking');

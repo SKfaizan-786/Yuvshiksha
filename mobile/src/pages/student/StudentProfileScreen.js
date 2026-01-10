@@ -9,8 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -149,18 +149,16 @@ const StudentProfileScreen = () => {
     },
     {
       id: 'about',
-      title: 'About Yuvsiksha',
-      subtitle: 'Version 1.0.0',
+      title: 'About Yuvshiksha',
+      subtitle: 'Version 3.0.2',
       icon: 'information-circle-outline',
-      onPress: () => {
-        Alert.alert('About Yuvsiksha', 'Yuvsiksha - Connect with the best teachers\n\nVersion 1.0.0');
-      },
+      onPress: () => navigation.navigate('About'),
     },
   ];
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <SafeAreaView style={styles.container}>
         <Header title="My Profile" showNotification={false} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -211,7 +209,7 @@ const StudentProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container}>
       <Header title="My Profile" showNotification={false} />
 
       <ScrollView
@@ -417,9 +415,3 @@ const styles = StyleSheet.create({
 });
 
 export default StudentProfileScreen;
-
-
-
-
-
-

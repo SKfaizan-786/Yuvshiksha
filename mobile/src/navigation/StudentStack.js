@@ -15,6 +15,7 @@ import BookClassScreen from '../pages/student/BookClassScreen';
 import MessagesScreen from '../pages/student/MessagesScreen';
 import NotificationsScreen from '../pages/common/NotificationsScreen';
 import HelpSupportScreen from '../pages/common/HelpSupportScreen';
+import AboutScreen from '../pages/common/AboutScreen';
 import ChatScreen from '../pages/teacher/ChatScreen';
 import MySessionsScreen from '../pages/student/MySessionsScreen';
 import FavoriteTeachersScreen from '../pages/student/FavoriteTeachersScreen';
@@ -90,6 +91,7 @@ const StudentStack = () => {
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="FavoriteTeachers" component={FavoriteTeachersScreen} />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );
 };

@@ -13,10 +13,12 @@ import TeacherProfileFormScreen from '../pages/teacher/TeacherProfileFormScreen'
 import TeacherProfileEditScreen from '../pages/teacher/TeacherProfileEditScreen';
 import TeacherScheduleScreen from '../pages/teacher/TeacherScheduleScreen';
 import BookingsScreen from '../pages/teacher/BookingsScreen';
+import BookingDetailsScreen from '../pages/teacher/BookingDetailsScreen';
 import MessagesScreen from '../pages/teacher/MessagesScreen';
 import ChatScreen from '../pages/teacher/ChatScreen';
 import NotificationsScreen from '../pages/common/NotificationsScreen';
 import HelpSupportScreen from '../pages/common/HelpSupportScreen';
+import AboutScreen from '../pages/common/AboutScreen';
 
 // Import payment screens
 import PaymentProcessingScreen from '../pages/payment/PaymentProcessingScreen';
@@ -128,6 +130,7 @@ const TeacherStack = () => {
         options={{ gestureEnabled: false }} // Prevent going back if profile incomplete
       />
       <Stack.Screen name="ProfileEdit" component={TeacherProfileEditScreen} />
+      <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
 
@@ -148,6 +151,7 @@ const TeacherStack = () => {
         options={{ gestureEnabled: false }} // Prevent going back after failure
       />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );
 };
