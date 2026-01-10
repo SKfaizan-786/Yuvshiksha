@@ -271,7 +271,7 @@ const BookClassScreen = () => {
         teacherId,
         subject: selectedSubject,
         date: selectedDate.toISOString(),
-        timeSlots: selectedSlots,
+        slots: selectedSlots, // Changed from timeSlots to slots
         notes,
         totalAmount: calculateTotalAmount(),
       };
@@ -499,7 +499,7 @@ const BookClassScreen = () => {
       </ScrollView>
 
       {/* Bottom Fixed Button */}
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Button
           title={submitting ? 'Confirming...' : `Book for ₹${totalAmount}`}
           onPress={handleBookSession}
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    paddingBottom: 24, // Extra bottom padding for iPhone X+
+    // paddingBottom set dynamically with safe area insets
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.gray[100],

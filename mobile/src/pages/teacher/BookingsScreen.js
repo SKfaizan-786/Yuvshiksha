@@ -81,30 +81,30 @@ const BookingsScreen = () => {
   const handleAccept = async (bookingId) => {
     try {
       await axios.patch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}/accept`,
-        {},
+        `${API_CONFIG.BASE_URL}/api/bookings/${bookingId}/status`,
+        { status: 'confirmed' },
         { withCredentials: true }
       );
       Alert.alert('Success', 'Booking accepted successfully');
       loadBookings();
     } catch (error) {
-      Alert.alert('Success', 'Booking accepted! (Demo mode)');
-      loadBookings();
+      console.error('Error accepting booking:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to accept booking');
     }
   };
 
   const handleReject = async (bookingId) => {
     try {
       await axios.patch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}/reject`,
-        {},
+        `${API_CONFIG.BASE_URL}/api/bookings/${bookingId}/status`,
+        { status: 'cancelled', cancelReason: 'Rejected by teacher' },
         { withCredentials: true }
       );
       Alert.alert('Success', 'Booking rejected');
       loadBookings();
     } catch (error) {
-      Alert.alert('Success', 'Booking rejected! (Demo mode)');
-      loadBookings();
+      console.error('Error rejecting booking:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to reject booking');
     }
   };
 
