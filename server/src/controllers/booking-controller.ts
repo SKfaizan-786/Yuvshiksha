@@ -148,7 +148,13 @@ export const bookingController = {
       // Support both legacy (time/duration) and new (slots) booking
       let { teacherId, subject, date, time, duration, notes, slots } = req.body;
 
-      // If slots is provided (multi-slot booking)
+      // Validate required fields BEFORE slot processing
+      if (!teacherId || !subject || !date) {
+        console.log('Booking failed: Missing required fields (teacherId, subject, or date)', req.body);
+        return res.status(400).json({ message: 'Missing required fields: teacherId, subject, and date are required' });
+      }
+
+      // If slots is provided (multi-slot booking), extract time and duration
       if (Array.isArray(slots) && slots.length > 0) {
         // Assume slot format is "HH:mm - HH:mm" or "HH:mm"
         // Use the first slot's start as time, duration = slots.length
@@ -158,9 +164,10 @@ export const bookingController = {
         duration = slots.length;
       }
 
-      if (!teacherId || !subject || !date || !time || !duration) {
-        console.log('Booking failed: Missing required fields', req.body);
-        return res.status(400).json({ message: 'Missing required fields' });
+      // Now validate time and duration (after slot processing)
+      if (!time || !duration) {
+        console.log('Booking failed: Missing time or duration', req.body);
+        return res.status(400).json({ message: 'Missing required fields: time and duration (or slots) are required' });
       }
 
       const teacher = await UserModel.findById(teacherId);
@@ -299,8 +306,8 @@ export const bookingController = {
       };
 
       if (!validTransitions[booking.status].includes(status)) {
-        return res.status(400).json({ 
-          message: `Cannot change status from ${booking.status} to ${status}` 
+        return res.status(400).json({
+          message: `Cannot change status from ${booking.status} to ${status}`
         });
       }
 
@@ -329,7 +336,7 @@ export const bookingController = {
           // Teacher rejected the booking - initiate refund
           const teacher = await UserModel.findById(userId);
           const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Teacher';
-          
+
           // Find and process refund
           const payment = await Payment.findOne({ booking: booking._id });
           if (payment && payment.status === 'completed') {
@@ -478,13 +485,13 @@ export const bookingController = {
       const availableSlots = [];
       for (let hour = 9; hour < 21; hour++) {
         const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
-        
+
         const hasConflict = bookings.some(booking => {
           const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.time}:00`);
           const bookingEnd = new Date(bookingStart.getTime() + booking.duration * 60 * 60 * 1000);
           const slotStart = new Date(`${booking.date.toISOString().split('T')[0]}T${timeSlot}:00`);
           const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
-          
+
           return slotStart < bookingEnd && slotEnd > bookingStart;
         });
 
